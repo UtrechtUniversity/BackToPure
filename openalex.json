@@ -1,0 +1,1773 @@
+{
+    "id": "https://openalex.org/W4387661197",
+    "doi": "https://doi.org/10.1002/ijc.34742",
+    "title": "Exploring the impact of patient\u2010specific clinical features on osimertinib effectiveness in a real\u2010world cohort of patients with <i>EGFR</i> mutated non\u2010small cell lung cancer",
+    "display_name": "Exploring the impact of patient\u2010specific clinical features on osimertinib effectiveness in a real\u2010world cohort of patients with <i>EGFR</i> mutated non\u2010small cell lung cancer",
+    "publication_year": 2023,
+    "publication_date": "2023-10-15",
+    "ids": {
+        "openalex": "https://openalex.org/W4387661197",
+        "doi": "https://doi.org/10.1002/ijc.34742",
+        "pmid": "https://pubmed.ncbi.nlm.nih.gov/37840304"
+    },
+    "language": "en",
+    "primary_location": {
+        "is_oa": true,
+        "landing_page_url": "https://doi.org/10.1002/ijc.34742",
+        "pdf_url": "https://onlinelibrary.wiley.com/doi/pdfdirect/10.1002/ijc.34742",
+        "source": {
+            "id": "https://openalex.org/S5382288",
+            "display_name": "International Journal of Cancer",
+            "issn_l": "0020-7136",
+            "issn": [
+                "1097-0215",
+                "0020-7136"
+            ],
+            "is_oa": false,
+            "is_in_doaj": false,
+            "host_organization": "https://openalex.org/P4310320595",
+            "host_organization_name": "Wiley",
+            "host_organization_lineage": [
+                "https://openalex.org/P4310320595"
+            ],
+            "host_organization_lineage_names": [
+                "Wiley"
+            ],
+            "type": "journal"
+        },
+        "license": "cc-by-nc-nd",
+        "version": "publishedVersion",
+        "is_accepted": true,
+        "is_published": true
+    },
+    "type": "article",
+    "type_crossref": "journal-article",
+    "indexed_in": [
+        "crossref",
+        "pubmed"
+    ],
+    "open_access": {
+        "is_oa": true,
+        "oa_status": "hybrid",
+        "oa_url": "https://onlinelibrary.wiley.com/doi/pdfdirect/10.1002/ijc.34742",
+        "any_repository_has_fulltext": false
+    },
+    "authorships": [
+        {
+            "author_position": "first",
+            "author": {
+                "id": "https://openalex.org/A5056362784",
+                "display_name": "A. van Veelen",
+                "orcid": "https://orcid.org/0000-0002-4869-5791"
+            },
+            "institutions": [
+                {
+                    "id": "https://openalex.org/I34352273",
+                    "display_name": "Maastricht University",
+                    "ror": "https://ror.org/02jz4aj89",
+                    "country_code": "NL",
+                    "type": "education",
+                    "lineage": [
+                        "https://openalex.org/I34352273"
+                    ]
+                },
+                {
+                    "id": "https://openalex.org/I4210120609",
+                    "display_name": "Pharmo Institute",
+                    "ror": "https://ror.org/01wfg6h04",
+                    "country_code": "NL",
+                    "type": "facility",
+                    "lineage": [
+                        "https://openalex.org/I4210120609"
+                    ]
+                }
+            ],
+            "countries": [
+                "NL"
+            ],
+            "is_corresponding": false,
+            "raw_author_name": "Ard van Veelen",
+            "raw_affiliation_string": "Department of Clinical Pharmacy & Toxicology, Maastricht University Medical Center+, Maastricht, The Netherlands.; Division of Pharmacoepidemiology and Clinical Pharmacology, Utrecht Institute for Pharmaceutical Sciences, Utrecht, The Netherlands.",
+            "raw_affiliation_strings": [
+                "Department of Clinical Pharmacy & Toxicology, Maastricht University Medical Center+, Maastricht, The Netherlands.",
+                "Division of Pharmacoepidemiology and Clinical Pharmacology, Utrecht Institute for Pharmaceutical Sciences, Utrecht, The Netherlands."
+            ]
+        },
+        {
+            "author_position": "middle",
+            "author": {
+                "id": "https://openalex.org/A5031401973",
+                "display_name": "K. Cohen",
+                "orcid": "0000-0002-0095-390"
+            },
+            "institutions": [
+                {
+                    "id": "https://openalex.org/I4210149908",
+                    "display_name": "Erasmus MC Cancer Institute",
+                    "ror": "https://ror.org/03r4m3349",
+                    "country_code": "NL",
+                    "type": "healthcare",
+                    "lineage": [
+                        "https://openalex.org/I2801952686",
+                        "https://openalex.org/I4210149908"
+                    ]
+                }
+            ],
+            "countries": [
+                "NL"
+            ],
+            "is_corresponding": false,
+            "raw_author_name": "G D Marijn Veerman",
+            "raw_affiliation_string": "Department of Medical Oncology, Erasmus MC Cancer Institute, Rotterdam, The Netherlands.",
+            "raw_affiliation_strings": [
+                "Department of Medical Oncology, Erasmus MC Cancer Institute, Rotterdam, The Netherlands."
+            ]
+        },
+        {
+            "author_position": "middle",
+            "author": {
+                "id": "https://openalex.org/A5032196417",
+                "display_name": "Marjon V Verschueren",
+                "orcid": "https://orcid.org/0000-0002-2448-9168"
+            },
+            "institutions": [
+                {
+                    "id": "https://openalex.org/I4210120609",
+                    "display_name": "Pharmo Institute",
+                    "ror": "https://ror.org/01wfg6h04",
+                    "country_code": "NL",
+                    "type": "facility",
+                    "lineage": [
+                        "https://openalex.org/I4210120609"
+                    ]
+                },
+                {
+                    "id": "https://openalex.org/I4210103448",
+                    "display_name": "St. Antonius Ziekenhuis",
+                    "ror": "https://ror.org/01jvpb595",
+                    "country_code": "NL",
+                    "type": "healthcare",
+                    "lineage": [
+                        "https://openalex.org/I4210103448"
+                    ]
+                }
+            ],
+            "countries": [
+                "NL"
+            ],
+            "is_corresponding": false,
+            "raw_author_name": "Marjon V Verschueren",
+            "raw_affiliation_string": "Department of Clinical Pharmacy, St. Antonius Hospital, Utrecht/Nieuwegein, The Netherlands.; Division of Pharmacoepidemiology and Clinical Pharmacology, Utrecht Institute for Pharmaceutical Sciences, Utrecht, The Netherlands.",
+            "raw_affiliation_strings": [
+                "Department of Clinical Pharmacy, St. Antonius Hospital, Utrecht/Nieuwegein, The Netherlands.",
+                "Division of Pharmacoepidemiology and Clinical Pharmacology, Utrecht Institute for Pharmaceutical Sciences, Utrecht, The Netherlands."
+            ]
+        },
+        {
+            "author_position": "middle",
+            "author": {
+                "id": "https://openalex.org/A5064962879",
+                "display_name": "Judith L Gulikers",
+                "orcid": "https://orcid.org/0000-0002-8844-6992"
+            },
+            "institutions": [
+                {
+                    "id": "https://openalex.org/I34352273",
+                    "display_name": "Maastricht University",
+                    "ror": "https://ror.org/02jz4aj89",
+                    "country_code": "NL",
+                    "type": "education",
+                    "lineage": [
+                        "https://openalex.org/I34352273"
+                    ]
+                }
+            ],
+            "countries": [
+                "NL"
+            ],
+            "is_corresponding": false,
+            "raw_author_name": "Judith L Gulikers",
+            "raw_affiliation_string": "Department of Clinical Pharmacy & Toxicology, Maastricht University Medical Center+, Maastricht, The Netherlands.",
+            "raw_affiliation_strings": [
+                "Department of Clinical Pharmacy & Toxicology, Maastricht University Medical Center+, Maastricht, The Netherlands."
+            ]
+        },
+        {
+            "author_position": "middle",
+            "author": {
+                "id": "https://openalex.org/A5000027915",
+                "display_name": "Christi M.J. Steendam",
+                "orcid": "https://orcid.org/0000-0002-8487-9344"
+            },
+            "institutions": [
+                {
+                    "id": "https://openalex.org/I2801238018",
+                    "display_name": "Catharina Ziekenhuis",
+                    "ror": "https://ror.org/01qavk531",
+                    "country_code": "NL",
+                    "type": "healthcare",
+                    "lineage": [
+                        "https://openalex.org/I2801238018"
+                    ]
+                },
+                {
+                    "id": "https://openalex.org/I145872427",
+                    "display_name": "Radboud University Nijmegen",
+                    "ror": "https://ror.org/016xsfp80",
+                    "country_code": "NL",
+                    "type": "education",
+                    "lineage": [
+                        "https://openalex.org/I145872427"
+                    ]
+                },
+                {
+                    "id": "https://openalex.org/I2801952686",
+                    "display_name": "Erasmus MC",
+                    "ror": "https://ror.org/018906e22",
+                    "country_code": "NL",
+                    "type": "healthcare",
+                    "lineage": [
+                        "https://openalex.org/I2801952686"
+                    ]
+                }
+            ],
+            "countries": [
+                "NL"
+            ],
+            "is_corresponding": false,
+            "raw_author_name": "Christi M J Steendam",
+            "raw_affiliation_string": "Department of Pulmonary Diseases, Catharina Hospital, Eindhoven, The Netherlands; Department of Respiratory Medicine, Erasmus Medical Center, Rotterdam, The Netherlands",
+            "raw_affiliation_strings": [
+                "Department of Pulmonary Diseases, Catharina Hospital, Eindhoven, The Netherlands",
+                "Department of Respiratory Medicine, Erasmus Medical Center, Rotterdam, The Netherlands"
+            ]
+        },
+        {
+            "author_position": "middle",
+            "author": {
+                "id": "https://openalex.org/A5025712146",
+                "display_name": "A. Brouns",
+                "orcid": "https://orcid.org/0000-0003-3701-2729"
+            },
+            "institutions": [
+                {
+                    "id": "https://openalex.org/I4210133559",
+                    "display_name": "Zuyderland Medisch Centrum",
+                    "ror": "https://ror.org/03bfc4534",
+                    "country_code": "NL",
+                    "type": "healthcare",
+                    "lineage": [
+                        "https://openalex.org/I4210133559",
+                        "https://openalex.org/I4210166163"
+                    ]
+                },
+                {
+                    "id": "https://openalex.org/I34352273",
+                    "display_name": "Maastricht University",
+                    "ror": "https://ror.org/02jz4aj89",
+                    "country_code": "NL",
+                    "type": "education",
+                    "lineage": [
+                        "https://openalex.org/I34352273"
+                    ]
+                }
+            ],
+            "countries": [
+                "NL"
+            ],
+            "is_corresponding": false,
+            "raw_author_name": "Anita J W M Brouns",
+            "raw_affiliation_string": "Department of Pulmonary Diseases, GROW-School for Oncology and Reproduction, Maastricht University Medical Center+, Maastricht, The Netherlands.; Department of Respiratory Medicine, Zuyderland, Geleen, The Netherlands.",
+            "raw_affiliation_strings": [
+                "Department of Pulmonary Diseases, GROW-School for Oncology and Reproduction, Maastricht University Medical Center+, Maastricht, The Netherlands.",
+                "Department of Respiratory Medicine, Zuyderland, Geleen, The Netherlands."
+            ]
+        },
+        {
+            "author_position": "middle",
+            "author": {
+                "id": "https://openalex.org/A5025719040",
+                "display_name": "Safiye Dursun",
+                "orcid": null
+            },
+            "institutions": [
+                {
+                    "id": "https://openalex.org/I34352273",
+                    "display_name": "Maastricht University",
+                    "ror": "https://ror.org/02jz4aj89",
+                    "country_code": "NL",
+                    "type": "education",
+                    "lineage": [
+                        "https://openalex.org/I34352273"
+                    ]
+                }
+            ],
+            "countries": [
+                "NL"
+            ],
+            "is_corresponding": false,
+            "raw_author_name": "Safiye Dursun",
+            "raw_affiliation_string": "Department of Pulmonary Diseases, GROW-School for Oncology and Reproduction, Maastricht University Medical Center+, Maastricht, The Netherlands.",
+            "raw_affiliation_strings": [
+                "Department of Pulmonary Diseases, GROW-School for Oncology and Reproduction, Maastricht University Medical Center+, Maastricht, The Netherlands."
+            ]
+        },
+        {
+            "author_position": "middle",
+            "author": {
+                "id": "https://openalex.org/A5005308154",
+                "display_name": "Marthe S. Paats",
+                "orcid": null
+            },
+            "institutions": [
+                {
+                    "id": "https://openalex.org/I2801952686",
+                    "display_name": "Erasmus MC",
+                    "ror": "https://ror.org/018906e22",
+                    "country_code": "NL",
+                    "type": "healthcare",
+                    "lineage": [
+                        "https://openalex.org/I2801952686"
+                    ]
+                }
+            ],
+            "countries": [
+                "NL"
+            ],
+            "is_corresponding": false,
+            "raw_author_name": "Marthe S Paats",
+            "raw_affiliation_string": "Department of Respiratory Medicine, Erasmus Medical Center, Rotterdam, The Netherlands.",
+            "raw_affiliation_strings": [
+                "Department of Respiratory Medicine, Erasmus Medical Center, Rotterdam, The Netherlands."
+            ]
+        },
+        {
+            "author_position": "middle",
+            "author": {
+                "id": "https://openalex.org/A5054754505",
+                "display_name": "Vivianne C. G. Tjan\u2010Heijnen",
+                "orcid": "https://orcid.org/0000-0002-3935-7440"
+            },
+            "institutions": [
+                {
+                    "id": "https://openalex.org/I34352273",
+                    "display_name": "Maastricht University",
+                    "ror": "https://ror.org/02jz4aj89",
+                    "country_code": "NL",
+                    "type": "education",
+                    "lineage": [
+                        "https://openalex.org/I34352273"
+                    ]
+                }
+            ],
+            "countries": [
+                "NL"
+            ],
+            "is_corresponding": false,
+            "raw_author_name": "Vivianne C G Tjan-Heijnen",
+            "raw_affiliation_string": "Department of Medical Oncology, Maastricht University Medical Center+, Maastricht, The Netherlands.",
+            "raw_affiliation_strings": [
+                "Department of Medical Oncology, Maastricht University Medical Center+, Maastricht, The Netherlands."
+            ]
+        },
+        {
+            "author_position": "middle",
+            "author": {
+                "id": "https://openalex.org/A5010093281",
+                "display_name": "Cor van der Leest",
+                "orcid": null
+            },
+            "institutions": [
+                {
+                    "id": "https://openalex.org/I4210105981",
+                    "display_name": "Amphia Ziekenhuis",
+                    "ror": "https://ror.org/01g21pa45",
+                    "country_code": "NL",
+                    "type": "healthcare",
+                    "lineage": [
+                        "https://openalex.org/I4210105981"
+                    ]
+                }
+            ],
+            "countries": [
+                "NL"
+            ],
+            "is_corresponding": false,
+            "raw_author_name": "Cor van der Leest",
+            "raw_affiliation_string": "Department of Pulmonology, Amphia Hospital, Breda, The Netherlands.",
+            "raw_affiliation_strings": [
+                "Department of Pulmonology, Amphia Hospital, Breda, The Netherlands."
+            ]
+        },
+        {
+            "author_position": "middle",
+            "author": {
+                "id": "https://openalex.org/A5016567527",
+                "display_name": "Anne\u2010Marie C. Dingemans",
+                "orcid": "https://orcid.org/0000-0001-6105-182X"
+            },
+            "institutions": [
+                {
+                    "id": "https://openalex.org/I2801952686",
+                    "display_name": "Erasmus MC",
+                    "ror": "https://ror.org/018906e22",
+                    "country_code": "NL",
+                    "type": "healthcare",
+                    "lineage": [
+                        "https://openalex.org/I2801952686"
+                    ]
+                }
+            ],
+            "countries": [
+                "NL"
+            ],
+            "is_corresponding": false,
+            "raw_author_name": "Anne-Marie C Dingemans",
+            "raw_affiliation_string": "Department of Respiratory Medicine, Erasmus Medical Center, Rotterdam, The Netherlands.",
+            "raw_affiliation_strings": [
+                "Department of Respiratory Medicine, Erasmus Medical Center, Rotterdam, The Netherlands."
+            ]
+        },
+        {
+            "author_position": "middle",
+            "author": {
+                "id": "https://openalex.org/A5074174053",
+                "display_name": "Ron H.J. Mathijssen",
+                "orcid": "https://orcid.org/0000-0001-5667-5697"
+            },
+            "institutions": [
+                {
+                    "id": "https://openalex.org/I4210149908",
+                    "display_name": "Erasmus MC Cancer Institute",
+                    "ror": "https://ror.org/03r4m3349",
+                    "country_code": "NL",
+                    "type": "healthcare",
+                    "lineage": [
+                        "https://openalex.org/I2801952686",
+                        "https://openalex.org/I4210149908"
+                    ]
+                }
+            ],
+            "countries": [
+                "NL"
+            ],
+            "is_corresponding": false,
+            "raw_author_name": "Ron H J Mathijssen",
+            "raw_affiliation_string": "Department of Medical Oncology, Erasmus MC Cancer Institute, Rotterdam, The Netherlands.",
+            "raw_affiliation_strings": [
+                "Department of Medical Oncology, Erasmus MC Cancer Institute, Rotterdam, The Netherlands."
+            ]
+        },
+        {
+            "author_position": "middle",
+            "author": {
+                "id": "https://openalex.org/A5012889533",
+                "display_name": "E.M.W. van de Garde",
+                "orcid": "https://orcid.org/0000-0002-1334-2144"
+            },
+            "institutions": [
+                {
+                    "id": "https://openalex.org/I4210120609",
+                    "display_name": "Pharmo Institute",
+                    "ror": "https://ror.org/01wfg6h04",
+                    "country_code": "NL",
+                    "type": "facility",
+                    "lineage": [
+                        "https://openalex.org/I4210120609"
+                    ]
+                },
+                {
+                    "id": "https://openalex.org/I4210103448",
+                    "display_name": "St. Antonius Ziekenhuis",
+                    "ror": "https://ror.org/01jvpb595",
+                    "country_code": "NL",
+                    "type": "healthcare",
+                    "lineage": [
+                        "https://openalex.org/I4210103448"
+                    ]
+                }
+            ],
+            "countries": [
+                "NL"
+            ],
+            "is_corresponding": false,
+            "raw_author_name": "Ewoudt M W van de Garde",
+            "raw_affiliation_string": "Department of Clinical Pharmacy, St. Antonius Hospital, Utrecht/Nieuwegein, The Netherlands.; Division of Pharmacoepidemiology and Clinical Pharmacology, Utrecht Institute for Pharmaceutical Sciences, Utrecht, The Netherlands.",
+            "raw_affiliation_strings": [
+                "Department of Clinical Pharmacy, St. Antonius Hospital, Utrecht/Nieuwegein, The Netherlands.",
+                "Division of Pharmacoepidemiology and Clinical Pharmacology, Utrecht Institute for Pharmaceutical Sciences, Utrecht, The Netherlands."
+            ]
+        },
+        {
+            "author_position": "middle",
+            "author": {
+                "id": "https://openalex.org/A5084013498",
+                "display_name": "Patrick C. Souverein",
+                "orcid": "0000000392263686"
+            },
+            "institutions": [
+                {
+                    "id": "https://openalex.org/I4210120609",
+                    "display_name": "Pharmo Institute",
+                    "ror": "https://ror.org/01wfg6h04",
+                    "country_code": "NL",
+                    "type": "facility",
+                    "lineage": [
+                        "https://openalex.org/I4210120609"
+                    ]
+                }
+            ],
+            "countries": [
+                "NL"
+            ],
+            "is_corresponding": false,
+            "raw_author_name": "Patrick Souverein",
+            "raw_affiliation_string": "Division of Pharmacoepidemiology and Clinical Pharmacology, Utrecht Institute for Pharmaceutical Sciences, Utrecht, The Netherlands.",
+            "raw_affiliation_strings": [
+                "Division of Pharmacoepidemiology and Clinical Pharmacology, Utrecht Institute for Pharmaceutical Sciences, Utrecht, The Netherlands."
+            ]
+        },
+        {
+            "author_position": "middle",
+            "author": {
+                "id": "https://openalex.org/A5051231925",
+                "display_name": "Johanna H M Driessen",
+                "orcid": "https://orcid.org/0000-0002-4503-6408"
+            },
+            "institutions": [
+                {
+                    "id": "https://openalex.org/I34352273",
+                    "display_name": "Maastricht University",
+                    "ror": "https://ror.org/02jz4aj89",
+                    "country_code": "NL",
+                    "type": "education",
+                    "lineage": [
+                        "https://openalex.org/I34352273"
+                    ]
+                },
+                {
+                    "id": "https://openalex.org/I4210120609",
+                    "display_name": "Pharmo Institute",
+                    "ror": "https://ror.org/01wfg6h04",
+                    "country_code": "NL",
+                    "type": "facility",
+                    "lineage": [
+                        "https://openalex.org/I4210120609"
+                    ]
+                },
+                {
+                    "id": "https://openalex.org/I2800191616",
+                    "display_name": "Maastricht University Medical Centre",
+                    "ror": "https://ror.org/02d9ce178",
+                    "country_code": "NL",
+                    "type": "healthcare",
+                    "lineage": [
+                        "https://openalex.org/I2800191616"
+                    ]
+                }
+            ],
+            "countries": [
+                "NL"
+            ],
+            "is_corresponding": false,
+            "raw_author_name": "Johanna H M Driessen",
+            "raw_affiliation_string": "Department of Clinical Pharmacy & Toxicology, Maastricht University Medical Center+, Maastricht, The Netherlands.; Division of Pharmacoepidemiology and Clinical Pharmacology, Utrecht Institute for Pharmaceutical Sciences, Utrecht, The Netherlands.; NUTRIM School for Nutrition and Translational Research in Metabolism, Maastricht University Medical Centre, Maastricht, The Netherlands.",
+            "raw_affiliation_strings": [
+                "Department of Clinical Pharmacy & Toxicology, Maastricht University Medical Center+, Maastricht, The Netherlands.",
+                "Division of Pharmacoepidemiology and Clinical Pharmacology, Utrecht Institute for Pharmaceutical Sciences, Utrecht, The Netherlands.",
+                "NUTRIM School for Nutrition and Translational Research in Metabolism, Maastricht University Medical Centre, Maastricht, The Netherlands."
+            ]
+        },
+        {
+            "author_position": "middle",
+            "author": {
+                "id": "https://openalex.org/A5001400077",
+                "display_name": "Lizza Hendriks",
+                "orcid": "https://orcid.org/0000-0002-3521-2535"
+            },
+            "institutions": [
+                {
+                    "id": "https://openalex.org/I34352273",
+                    "display_name": "Maastricht University",
+                    "ror": "https://ror.org/02jz4aj89",
+                    "country_code": "NL",
+                    "type": "education",
+                    "lineage": [
+                        "https://openalex.org/I34352273"
+                    ]
+                }
+            ],
+            "countries": [
+                "NL"
+            ],
+            "is_corresponding": false,
+            "raw_author_name": "Lizza E L Hendriks",
+            "raw_affiliation_string": "Department of Pulmonary Diseases, GROW-School for Oncology and Reproduction, Maastricht University Medical Center+, Maastricht, The Netherlands.",
+            "raw_affiliation_strings": [
+                "Department of Pulmonary Diseases, GROW-School for Oncology and Reproduction, Maastricht University Medical Center+, Maastricht, The Netherlands."
+            ]
+        },
+        {
+            "author_position": "middle",
+            "author": {
+                "id": "https://openalex.org/A5018295447",
+                "display_name": "Robin M.J.M. van Geel",
+                "orcid": "https://orcid.org/0000-0003-1880-8131"
+            },
+            "institutions": [
+                {
+                    "id": "https://openalex.org/I34352273",
+                    "display_name": "Maastricht University",
+                    "ror": "https://ror.org/02jz4aj89",
+                    "country_code": "NL",
+                    "type": "education",
+                    "lineage": [
+                        "https://openalex.org/I34352273"
+                    ]
+                }
+            ],
+            "countries": [
+                "NL"
+            ],
+            "is_corresponding": false,
+            "raw_author_name": "Robin M J M van Geel",
+            "raw_affiliation_string": "Department of Clinical Pharmacy & Toxicology, Maastricht University Medical Center+, Maastricht, The Netherlands.",
+            "raw_affiliation_strings": [
+                "Department of Clinical Pharmacy & Toxicology, Maastricht University Medical Center+, Maastricht, The Netherlands."
+            ]
+        },
+        {
+            "author_position": "last",
+            "author": {
+                "id": "https://openalex.org/A5067044619",
+                "display_name": "Sander Croes",
+                "orcid": null
+            },
+            "institutions": [
+                {
+                    "id": "https://openalex.org/I34352273",
+                    "display_name": "Maastricht University",
+                    "ror": "https://ror.org/02jz4aj89",
+                    "country_code": "NL",
+                    "type": "education",
+                    "lineage": [
+                        "https://openalex.org/I34352273"
+                    ]
+                }
+            ],
+            "countries": [
+                "NL"
+            ],
+            "is_corresponding": true,
+            "raw_author_name": "Sander Croes",
+            "raw_affiliation_string": "Department of Clinical Pharmacy &amp; Toxicology Maastricht University Medical Center+ Maastricht The Netherlands",
+            "raw_affiliation_strings": [
+                "Department of Clinical Pharmacy &amp; Toxicology Maastricht University Medical Center+ Maastricht The Netherlands"
+            ]
+        }
+    ],
+    "countries_distinct_count": 1,
+    "institutions_distinct_count": 10,
+    "corresponding_author_ids": [
+        "https://openalex.org/A5067044619"
+    ],
+    "corresponding_institution_ids": [
+        "https://openalex.org/I34352273"
+    ],
+    "apc_list": {
+        "value": 4840,
+        "currency": "USD",
+        "value_usd": 4840,
+        "provenance": "doaj"
+    },
+    "apc_paid": {
+        "value": 4840,
+        "currency": "USD",
+        "value_usd": 4840,
+        "provenance": "doaj"
+    },
+    "has_fulltext": false,
+    "cited_by_count": 0,
+    "cited_by_percentile_year": {
+        "min": 0,
+        "max": 84
+    },
+    "biblio": {
+        "volume": "154",
+        "issue": "2",
+        "first_page": "332",
+        "last_page": "342"
+    },
+    "is_retracted": false,
+    "is_paratext": false,
+    "topics": [
+        {
+            "id": "https://openalex.org/T10417",
+            "display_name": "Advancements in Lung Cancer Research",
+            "score": 0.9999
+        },
+        {
+            "id": "https://openalex.org/T11067",
+            "display_name": "Advancements in Colorectal Cancer Research",
+            "score": 0.9971
+        },
+        {
+            "id": "https://openalex.org/T10231",
+            "display_name": "Pancreatic Cancer Research and Treatment",
+            "score": 0.9932
+        },
+        {
+            "id": "https://openalex.org/T12505",
+            "display_name": "Role of Fibroblast Activation in Cancer Progression",
+            "score": 0.9896
+        },
+        {
+            "id": "https://openalex.org/T10952",
+            "display_name": "mTOR Signaling in Growth and Disease",
+            "score": 0.9894
+        }
+    ],
+    "keywords": [
+        {
+            "keyword": "osimertinib effectiveness",
+            "score": 0.593
+        },
+        {
+            "keyword": "lung cancer",
+            "score": 0.4703
+        },
+        {
+            "keyword": "cell lung cancer",
+            "score": 0.4534
+        }
+    ],
+    "concepts": [
+        {
+            "id": "https://openalex.org/C2777626846",
+            "wikidata": "https://www.wikidata.org/wiki/Q21506464",
+            "display_name": "Osimertinib",
+            "level": 5,
+            "score": 0.905678
+        },
+        {
+            "id": "https://openalex.org/C71924100",
+            "wikidata": "https://www.wikidata.org/wiki/Q11190",
+            "display_name": "Medicine",
+            "level": 0,
+            "score": 0.8075583
+        },
+        {
+            "id": "https://openalex.org/C126322002",
+            "wikidata": "https://www.wikidata.org/wiki/Q11180",
+            "display_name": "Internal medicine",
+            "level": 1,
+            "score": 0.7406833
+        },
+        {
+            "id": "https://openalex.org/C207103383",
+            "wikidata": "https://www.wikidata.org/wiki/Q3930246",
+            "display_name": "Hazard ratio",
+            "level": 3,
+            "score": 0.68374455
+        },
+        {
+            "id": "https://openalex.org/C203092338",
+            "wikidata": "https://www.wikidata.org/wiki/Q1340863",
+            "display_name": "Clinical endpoint",
+            "level": 3,
+            "score": 0.66500187
+        },
+        {
+            "id": "https://openalex.org/C2776256026",
+            "wikidata": "https://www.wikidata.org/wiki/Q47912",
+            "display_name": "Lung cancer",
+            "level": 2,
+            "score": 0.64649594
+        },
+        {
+            "id": "https://openalex.org/C143998085",
+            "wikidata": "https://www.wikidata.org/wiki/Q162555",
+            "display_name": "Oncology",
+            "level": 1,
+            "score": 0.6000792
+        },
+        {
+            "id": "https://openalex.org/C2780739268",
+            "wikidata": "https://www.wikidata.org/wiki/Q2112244",
+            "display_name": "Progression-free survival",
+            "level": 3,
+            "score": 0.510715
+        },
+        {
+            "id": "https://openalex.org/C72563966",
+            "wikidata": "https://www.wikidata.org/wiki/Q1303415",
+            "display_name": "Cohort",
+            "level": 2,
+            "score": 0.49632555
+        },
+        {
+            "id": "https://openalex.org/C2777930144",
+            "wikidata": "https://www.wikidata.org/wiki/Q25100112",
+            "display_name": "T790M",
+            "level": 5,
+            "score": 0.48447868
+        },
+        {
+            "id": "https://openalex.org/C2779177807",
+            "wikidata": "https://www.wikidata.org/wiki/Q3658562",
+            "display_name": "non-small cell lung cancer (NSCLC)",
+            "level": 4,
+            "score": 0.47351837
+        },
+        {
+            "id": "https://openalex.org/C50382708",
+            "wikidata": "https://www.wikidata.org/wiki/Q223218",
+            "display_name": "Proportional hazards model",
+            "level": 2,
+            "score": 0.47219002
+        },
+        {
+            "id": "https://openalex.org/C90924648",
+            "wikidata": "https://www.wikidata.org/wiki/Q120569",
+            "display_name": "Gastroenterology",
+            "level": 1,
+            "score": 0.37414223
+        },
+        {
+            "id": "https://openalex.org/C121608353",
+            "wikidata": "https://www.wikidata.org/wiki/Q12078",
+            "display_name": "Cancer",
+            "level": 2,
+            "score": 0.2949714
+        },
+        {
+            "id": "https://openalex.org/C44249647",
+            "wikidata": "https://www.wikidata.org/wiki/Q208498",
+            "display_name": "Confidence interval",
+            "level": 2,
+            "score": 0.22251299
+        },
+        {
+            "id": "https://openalex.org/C3019894029",
+            "wikidata": "https://www.wikidata.org/wiki/Q332823",
+            "display_name": "Overall survival",
+            "level": 2,
+            "score": 0.19628942
+        },
+        {
+            "id": "https://openalex.org/C2779438470",
+            "wikidata": "https://www.wikidata.org/wiki/Q424401",
+            "display_name": "Epidermal growth factor receptor",
+            "level": 3,
+            "score": 0.18244699
+        },
+        {
+            "id": "https://openalex.org/C2780580887",
+            "wikidata": "https://www.wikidata.org/wiki/Q417824",
+            "display_name": "Gefitinib",
+            "level": 4,
+            "score": 0.15843701
+        },
+        {
+            "id": "https://openalex.org/C535046627",
+            "wikidata": "https://www.wikidata.org/wiki/Q30612",
+            "display_name": "Clinical trial",
+            "level": 2,
+            "score": 0.120498925
+        },
+        {
+            "id": "https://openalex.org/C2778087573",
+            "wikidata": "https://www.wikidata.org/wiki/Q418369",
+            "display_name": "Erlotinib",
+            "level": 4,
+            "score": 0.06901932
+        },
+        {
+            "id": "https://openalex.org/C81729549",
+            "wikidata": "https://www.wikidata.org/wiki/Q4649475",
+            "display_name": "A549 cell",
+            "level": 3,
+            "score": 0.0
+        }
+    ],
+    "mesh": [
+        {
+            "descriptor_ui": "D002289",
+            "descriptor_name": "Carcinoma, Non-Small-Cell Lung",
+            "qualifier_ui": "",
+            "qualifier_name": null,
+            "is_major_topic": true
+        },
+        {
+            "descriptor_ui": "D008175",
+            "descriptor_name": "Lung Neoplasms",
+            "qualifier_ui": "",
+            "qualifier_name": null,
+            "is_major_topic": true
+        },
+        {
+            "descriptor_ui": "D000814",
+            "descriptor_name": "Aniline Compounds",
+            "qualifier_ui": "",
+            "qualifier_name": null,
+            "is_major_topic": false
+        },
+        {
+            "descriptor_ui": "D000814",
+            "descriptor_name": "Aniline Compounds",
+            "qualifier_ui": "Q000627",
+            "qualifier_name": "therapeutic use",
+            "is_major_topic": false
+        },
+        {
+            "descriptor_ui": "D002289",
+            "descriptor_name": "Carcinoma, Non-Small-Cell Lung",
+            "qualifier_ui": "Q000235",
+            "qualifier_name": "genetics",
+            "is_major_topic": false
+        },
+        {
+            "descriptor_ui": "D002289",
+            "descriptor_name": "Carcinoma, Non-Small-Cell Lung",
+            "qualifier_ui": "Q000188",
+            "qualifier_name": "drug therapy",
+            "is_major_topic": false
+        },
+        {
+            "descriptor_ui": "D015331",
+            "descriptor_name": "Cohort Studies",
+            "qualifier_ui": "",
+            "qualifier_name": null,
+            "is_major_topic": false
+        },
+        {
+            "descriptor_ui": "D066246",
+            "descriptor_name": "ErbB Receptors",
+            "qualifier_ui": "",
+            "qualifier_name": null,
+            "is_major_topic": false
+        },
+        {
+            "descriptor_ui": "D066246",
+            "descriptor_name": "ErbB Receptors",
+            "qualifier_ui": "Q000235",
+            "qualifier_name": "genetics",
+            "is_major_topic": false
+        },
+        {
+            "descriptor_ui": "D005260",
+            "descriptor_name": "Female",
+            "qualifier_ui": "",
+            "qualifier_name": null,
+            "is_major_topic": false
+        },
+        {
+            "descriptor_ui": "D006801",
+            "descriptor_name": "Humans",
+            "qualifier_ui": "",
+            "qualifier_name": null,
+            "is_major_topic": false
+        },
+        {
+            "descriptor_ui": "D008175",
+            "descriptor_name": "Lung Neoplasms",
+            "qualifier_ui": "Q000235",
+            "qualifier_name": "genetics",
+            "is_major_topic": false
+        },
+        {
+            "descriptor_ui": "D008175",
+            "descriptor_name": "Lung Neoplasms",
+            "qualifier_ui": "Q000188",
+            "qualifier_name": "drug therapy",
+            "is_major_topic": false
+        },
+        {
+            "descriptor_ui": "D008297",
+            "descriptor_name": "Male",
+            "qualifier_ui": "",
+            "qualifier_name": null,
+            "is_major_topic": false
+        },
+        {
+            "descriptor_ui": "D009154",
+            "descriptor_name": "Mutation",
+            "qualifier_ui": "",
+            "qualifier_name": null,
+            "is_major_topic": false
+        },
+        {
+            "descriptor_ui": "D047428",
+            "descriptor_name": "Protein Kinase Inhibitors",
+            "qualifier_ui": "",
+            "qualifier_name": null,
+            "is_major_topic": false
+        },
+        {
+            "descriptor_ui": "D047428",
+            "descriptor_name": "Protein Kinase Inhibitors",
+            "qualifier_ui": "Q000627",
+            "qualifier_name": "therapeutic use",
+            "is_major_topic": false
+        }
+    ],
+    "locations_count": 2,
+    "locations": [
+        {
+            "is_oa": true,
+            "landing_page_url": "https://doi.org/10.1002/ijc.34742",
+            "pdf_url": "https://onlinelibrary.wiley.com/doi/pdfdirect/10.1002/ijc.34742",
+            "source": {
+                "id": "https://openalex.org/S5382288",
+                "display_name": "International Journal of Cancer",
+                "issn_l": "0020-7136",
+                "issn": [
+                    "1097-0215",
+                    "0020-7136"
+                ],
+                "is_oa": false,
+                "is_in_doaj": false,
+                "host_organization": "https://openalex.org/P4310320595",
+                "host_organization_name": "Wiley",
+                "host_organization_lineage": [
+                    "https://openalex.org/P4310320595"
+                ],
+                "host_organization_lineage_names": [
+                    "Wiley"
+                ],
+                "type": "journal"
+            },
+            "license": "cc-by-nc-nd",
+            "version": "publishedVersion",
+            "is_accepted": true,
+            "is_published": true
+        },
+        {
+            "is_oa": false,
+            "landing_page_url": "https://pubmed.ncbi.nlm.nih.gov/37840304",
+            "pdf_url": null,
+            "source": {
+                "id": "https://openalex.org/S4306525036",
+                "display_name": "PubMed",
+                "issn_l": null,
+                "issn": null,
+                "is_oa": false,
+                "is_in_doaj": false,
+                "host_organization": "https://openalex.org/I1299303238",
+                "host_organization_name": "National Institutes of Health",
+                "host_organization_lineage": [
+                    "https://openalex.org/I1299303238"
+                ],
+                "host_organization_lineage_names": [
+                    "National Institutes of Health"
+                ],
+                "type": "repository"
+            },
+            "license": null,
+            "version": null,
+            "is_accepted": false,
+            "is_published": false
+        }
+    ],
+    "best_oa_location": {
+        "is_oa": true,
+        "landing_page_url": "https://doi.org/10.1002/ijc.34742",
+        "pdf_url": "https://onlinelibrary.wiley.com/doi/pdfdirect/10.1002/ijc.34742",
+        "source": {
+            "id": "https://openalex.org/S5382288",
+            "display_name": "International Journal of Cancer",
+            "issn_l": "0020-7136",
+            "issn": [
+                "1097-0215",
+                "0020-7136"
+            ],
+            "is_oa": false,
+            "is_in_doaj": false,
+            "host_organization": "https://openalex.org/P4310320595",
+            "host_organization_name": "Wiley",
+            "host_organization_lineage": [
+                "https://openalex.org/P4310320595"
+            ],
+            "host_organization_lineage_names": [
+                "Wiley"
+            ],
+            "type": "journal"
+        },
+        "license": "cc-by-nc-nd",
+        "version": "publishedVersion",
+        "is_accepted": true,
+        "is_published": true
+    },
+    "sustainable_development_goals": [
+        {
+            "display_name": "Good health and well-being",
+            "id": "https://metadata.un.org/sdg/3",
+            "score": 0.82
+        }
+    ],
+    "grants": [],
+    "referenced_works_count": 52,
+    "referenced_works": [
+        "https://openalex.org/W2019607817",
+        "https://openalex.org/W2020950228",
+        "https://openalex.org/W2024179174",
+        "https://openalex.org/W2037754934",
+        "https://openalex.org/W2074026346",
+        "https://openalex.org/W2080241329",
+        "https://openalex.org/W2179942617",
+        "https://openalex.org/W2560717039",
+        "https://openalex.org/W2589275050",
+        "https://openalex.org/W2763411776",
+        "https://openalex.org/W2764194947",
+        "https://openalex.org/W2770828094",
+        "https://openalex.org/W2793149105",
+        "https://openalex.org/W2902991043",
+        "https://openalex.org/W2909352383",
+        "https://openalex.org/W2919185754",
+        "https://openalex.org/W2921458278",
+        "https://openalex.org/W2921710610",
+        "https://openalex.org/W2945564860",
+        "https://openalex.org/W2947120713",
+        "https://openalex.org/W2947128784",
+        "https://openalex.org/W2953660906",
+        "https://openalex.org/W2962915882",
+        "https://openalex.org/W2969366720",
+        "https://openalex.org/W2969577346",
+        "https://openalex.org/W2982302612",
+        "https://openalex.org/W2986089094",
+        "https://openalex.org/W2990041408",
+        "https://openalex.org/W2993216565",
+        "https://openalex.org/W2999350255",
+        "https://openalex.org/W3005341723",
+        "https://openalex.org/W3035104261",
+        "https://openalex.org/W3042798365",
+        "https://openalex.org/W3087210493",
+        "https://openalex.org/W3093483978",
+        "https://openalex.org/W3162576579",
+        "https://openalex.org/W3171763443",
+        "https://openalex.org/W3188414598",
+        "https://openalex.org/W3193677732",
+        "https://openalex.org/W3196416574",
+        "https://openalex.org/W3197329693",
+        "https://openalex.org/W3205631773",
+        "https://openalex.org/W3213427500",
+        "https://openalex.org/W3214996174",
+        "https://openalex.org/W3217306872",
+        "https://openalex.org/W4205593010",
+        "https://openalex.org/W4207054516",
+        "https://openalex.org/W4214620935",
+        "https://openalex.org/W4224031996",
+        "https://openalex.org/W4285292056",
+        "https://openalex.org/W4292267293",
+        "https://openalex.org/W4294168198"
+    ],
+    "related_works": [
+        "https://openalex.org/W2769241338",
+        "https://openalex.org/W2887887720",
+        "https://openalex.org/W2947332762",
+        "https://openalex.org/W2767980048",
+        "https://openalex.org/W2568236141",
+        "https://openalex.org/W4251535157",
+        "https://openalex.org/W2888286093",
+        "https://openalex.org/W4388045995",
+        "https://openalex.org/W2898593427",
+        "https://openalex.org/W4389058531"
+    ],
+    "ngrams_url": "https://api.openalex.org/works/W4387661197/ngrams",
+    "abstract_inverted_index": {
+        "Abstract": [
+            0
+        ],
+        "Osimertinib": [
+            1,
+            97
+        ],
+        "is": [
+            2
+        ],
+        "prescribed": [
+            3
+        ],
+        "to": [
+            4,
+            139,
+            162
+        ],
+        "patients": [
+            5,
+            41,
+            80,
+            189
+        ],
+        "with": [
+            6,
+            45,
+            108,
+            127,
+            144,
+            190,
+            219,
+            251
+        ],
+        "metastatic": [
+            7,
+            46
+        ],
+        "non\u2010small": [
+            8
+        ],
+        "cell": [
+            9
+        ],
+        "lung": [
+            10
+        ],
+        "cancer": [
+            11
+        ],
+        "(NSCLC)": [
+            12
+        ],
+        "and": [
+            13,
+            65,
+            69,
+            92,
+            119,
+            188,
+            235
+        ],
+        "a": [
+            14,
+            35,
+            145,
+            163,
+            220,
+            230,
+            236
+        ],
+        "sensitizing": [
+            15
+        ],
+        "EGFR": [
+            16,
+            47,
+            84,
+            222
+        ],
+        "mutation.": [
+            17
+        ],
+        "Limited": [
+            18
+        ],
+        "data": [
+            19
+        ],
+        "exists": [
+            20
+        ],
+        "on": [
+            21,
+            30
+        ],
+        "the": [
+            22,
+            191
+        ],
+        "impact": [
+            23,
+            216
+        ],
+        "of": [
+            24,
+            254
+        ],
+        "patient": [
+            25
+        ],
+        "characteristics": [
+            26
+        ],
+        "or": [
+            27,
+            105
+        ],
+        "osimertinib": [
+            28
+        ],
+        "exposure": [
+            29
+        ],
+        "effectiveness": [
+            31,
+            252
+        ],
+        "outcomes.": [
+            32
+        ],
+        "This": [
+            33
+        ],
+        "was": [
+            34,
+            55,
+            98,
+            178,
+            206,
+            248
+        ],
+        "Dutch,": [
+            36
+        ],
+        "multicenter": [
+            37
+        ],
+        "cohort": [
+            38
+        ],
+        "study.": [
+            39
+        ],
+        "Eligible": [
+            40
+        ],
+        "were": [
+            42,
+            75,
+            81,
+            86,
+            240
+        ],
+        "\u226518": [
+            43
+        ],
+        "years,": [
+            44
+        ],
+        "m": [
+            48
+        ],
+        "+": [
+            49
+        ],
+        "NSCLC,": [
+            50
+        ],
+        "receiving": [
+            51
+        ],
+        "osimertinib.": [
+            52,
+            255
+        ],
+        "Primary": [
+            53,
+            83
+        ],
+        "endpoint": [
+            54
+        ],
+        "progression\u2010free": [
+            56
+        ],
+        "survival": [
+            57,
+            63
+        ],
+        "(PFS).": [
+            58
+        ],
+        "Secondary": [
+            59
+        ],
+        "endpoints": [
+            60
+        ],
+        "included": [
+            61
+        ],
+        "overall": [
+            62
+        ],
+        "(OS)": [
+            64
+        ],
+        "safety.": [
+            66
+        ],
+        "Kaplan\u2010Meier": [
+            67
+        ],
+        "analyses": [
+            68
+        ],
+        "multivariate": [
+            70
+        ],
+        "Cox": [
+            71
+        ],
+        "proportional": [
+            72
+        ],
+        "hazard": [
+            73
+        ],
+        "models": [
+            74
+        ],
+        "performed.": [
+            76
+        ],
+        "In": [
+            77
+        ],
+        "total,": [
+            78
+        ],
+        "294": [
+            79
+        ],
+        "included.": [
+            82
+        ],
+        "\u2010mutations": [
+            85
+        ],
+        "mainly": [
+            87
+        ],
+        "exon": [
+            88,
+            192,
+            223
+        ],
+        "19": [
+            89,
+            193,
+            224
+        ],
+        "deletions": [
+            90
+        ],
+        "(54%)": [
+            91
+        ],
+        "p.L858R": [
+            93
+        ],
+        "point": [
+            94
+        ],
+        "mutations": [
+            95
+        ],
+        "(30%).": [
+            96
+        ],
+        "given": [
+            99
+        ],
+        "in": [
+            100,
+            150,
+            180
+        ],
+        "first\u2010line": [
+            101
+        ],
+        "(40%),": [
+            102
+        ],
+        "second\u2010line": [
+            103
+        ],
+        "(46%)": [
+            104
+        ],
+        "beyond": [
+            106
+        ],
+        "(14%),": [
+            107
+        ],
+        "median": [
+            109
+        ],
+        "PFS": [
+            110,
+            160,
+            177,
+            205,
+            244
+        ],
+        "14.4": [
+            111
+        ],
+        "(95%": [
+            112,
+            116,
+            122
+        ],
+        "CI:": [
+            113,
+            117,
+            123,
+            172,
+            186,
+            199
+        ],
+        "9.4\u201019.3),": [
+            114
+        ],
+        "13.9": [
+            115
+        ],
+        "11.3\u201016.1)": [
+            118
+        ],
+        "8.7": [
+            120
+        ],
+        "months": [
+            121
+        ],
+        "4.6\u201012.7),": [
+            124
+        ],
+        "respectively.": [
+            125
+        ],
+        "Patients": [
+            126,
+            143,
+            218
+        ],
+        "low": [
+            128,
+            164,
+            231
+        ],
+        "BMI": [
+            129
+        ],
+        "(&lt;20.0": [
+            130
+        ],
+        "kg/m": [
+            131
+        ],
+        "2": [
+            132
+        ],
+        ")": [
+            133
+        ],
+        "had": [
+            134,
+            158,
+            226
+        ],
+        "significantly": [
+            135
+        ],
+        "shorter": [
+            136,
+            159,
+            243
+        ],
+        "PFS/OS": [
+            137
+        ],
+        "compared": [
+            138,
+            161
+        ],
+        "all": [
+            140
+        ],
+        "other": [
+            141
+        ],
+        "subgroups.": [
+            142
+        ],
+        "high": [
+            146,
+            237
+        ],
+        "plasma": [
+            147
+        ],
+        "trough": [
+            148
+        ],
+        "concentration": [
+            149
+        ],
+        "steady": [
+            151
+        ],
+        "state": [
+            152
+        ],
+        "(C": [
+            153
+        ],
+        "min,SS": [
+            154,
+            166,
+            239
+        ],
+        ";": [
+            155
+        ],
+        "&gt;271": [
+            156
+        ],
+        "ng/mL)": [
+            157
+        ],
+        "C": [
+            165,
+            238
+        ],
+        "(&lt;163": [
+            167
+        ],
+        "ng/mL;": [
+            168
+        ],
+        "aHR": [
+            169
+        ],
+        "2.29;": [
+            170
+        ],
+        "95%": [
+            171,
+            185,
+            198
+        ],
+        "1.13\u20104.63).": [
+            173
+        ],
+        "A": [
+            174,
+            201
+        ],
+        "significant": [
+            175
+        ],
+        "longer": [
+            176,
+            204,
+            227
+        ],
+        "seen": [
+            179,
+            207
+        ],
+        "females": [
+            181
+        ],
+        "(aHR": [
+            182,
+            195
+        ],
+        "=": [
+            183,
+            196
+        ],
+        "0.61,": [
+            184
+        ],
+        "0.45\u20100.82)": [
+            187
+        ],
+        "deletion": [
+            194,
+            225
+        ],
+        "0.58,": [
+            197
+        ],
+        "0.36\u20100.92).": [
+            200
+        ],
+        "trend": [
+            202
+        ],
+        "towards": [
+            203
+        ],
+        "for": [
+            208,
+            242
+        ],
+        "TP53": [
+            209
+        ],
+        "wild\u2010type": [
+            210
+        ],
+        "patients,": [
+            211
+        ],
+        "while": [
+            212,
+            229
+        ],
+        "age": [
+            213
+        ],
+        "did": [
+            214
+        ],
+        "not": [
+            215,
+            249
+        ],
+        "PFS.": [
+            217
+        ],
+        "primary": [
+            221
+        ],
+        "PFS,": [
+            228
+        ],
+        "BMI,": [
+            232
+        ],
+        "male": [
+            233
+        ],
+        "sex": [
+            234
+        ],
+        "indicative": [
+            241
+        ],
+        "and/or": [
+            245
+        ],
+        "OS.": [
+            246
+        ],
+        "Age": [
+            247
+        ],
+        "associated": [
+            250
+        ],
+        "outcomes": [
+            253
+        ]
+    },
+    "cited_by_api_url": "https://api.openalex.org/works?filter=cites:W4387661197",
+    "counts_by_year": [],
+    "updated_date": "2024-01-29T18:34:27.368992",
+    "created_date": "2023-10-17"
+}

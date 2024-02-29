@@ -1,0 +1,18 @@
+2024-02-29 11:40:53 - INFO - Person found with ORCID: 0000-0002-0014-8625
+2024-02-29 11:43:37 - INFO - Person found with ORCID: 0000-0002-0014-8625
+2024-02-29 11:45:50 - INFO - Person found with name: gerad
+2024-02-29 11:47:26 - WARNING - no persons found for name: geraddd
+2024-02-29 11:59:23 - WARNING - no persons found for name: geraddd
+2024-02-29 12:18:46 - WARNING - no persons found for name: geraddd
+2024-02-29 12:19:03 - ERROR - An error occurred while searching for ORCID: No connection adapters were found for 'hhttps://staging.research-portal.uu.nl/ws/api/persons/search/'
+2024-02-29 12:19:03 - ERROR - An error occurred while searching for ScopusID: No connection adapters were found for 'hhttps://staging.research-portal.uu.nl/ws/api/persons/search/'
+2024-02-29 12:19:03 - ERROR - An error occurred while searching for geraddd: No connection adapters were found for 'hhttps://staging.research-portal.uu.nl/ws/api/persons/search/'
+2024-02-29 12:19:23 - INFO - Person found with name: gerad
+2024-02-29 12:19:35 - INFO - Person found with name: gerad
+2024-02-29 12:19:57 - INFO - Person found with name: gerad
+2024-02-29 12:20:22 - ERROR - Error searching for ORCID: 404 - {"type":"/error","title":"Service not found","status":404,"detail":"Requested service was not found, message was: HTTP 404 Not Found"}
+2024-02-29 12:20:22 - ERROR - Error searching for ScopusID: 404 - {"type":"/error","title":"Service not found","status":404,"detail":"Requested service was not found, message was: HTTP 404 Not Found"}
+2024-02-29 12:20:22 - ERROR - Error searching for gerad: 404 - {"type":"/error","title":"Service not found","status":404,"detail":"Requested service was not found, message was: HTTP 404 Not Found"}
+2024-02-29 12:20:27 - INFO - Person found with name: gerad
+2024-02-29 12:21:56 - INFO - Person found with name: gerad
+2024-02-29 12:22:48 - INFO - Person found with name: gerad

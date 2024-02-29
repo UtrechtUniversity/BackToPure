@@ -1,0 +1,296 @@
+{
+    "typeDiscriminator": "ContributionToJournal",
+    "pureId": 203500259,
+    "uuid": "8c098d11-3b0c-42d5-9715-a39cd1832af6",
+    "createdBy": "UIJL0004",
+    "createdDate": "2023-12-12T11:33:43.588+01:00",
+    "modifiedBy": "4131819",
+    "modifiedDate": "2023-12-12T11:39:33.685+01:00",
+    "portalUrl": "http://10.10.70.176:8080/experts/en/publications/8c098d11-3b0c-42d5-9715-a39cd1832af6",
+    "version": "8712a2d6c5a0ca8354bdc4f9e57a98a4afef65b7",
+    "title": {
+        "value": "Glucocorticoids in relation to behavior, morphology, and physiology as proxy indicators for the assessment of animal welfare"
+    },
+    "subTitle": {
+        "value": "A systematic mapping review"
+    },
+    "type": {
+        "uri": "/dk/atira/pure/researchoutput/researchoutputtypes/contributiontojournal/article",
+        "term": {
+            "en_GB": "Article"
+        }
+    },
+    "category": {
+        "uri": "/dk/atira/pure/researchoutput/category/academic",
+        "term": {
+            "en_GB": "Academic"
+        }
+    },
+    "peerReview": true,
+    "publicationStatuses": [
+        {
+            "pureId": 203500283,
+            "current": true,
+            "publicationStatus": {
+                "uri": "/dk/atira/pure/researchoutput/status/published",
+                "term": {
+                    "en_GB": "Published"
+                }
+            },
+            "publicationDate": {
+                "year": 2023,
+                "month": 1
+            }
+        }
+    ],
+    "language": {
+        "uri": "/dk/atira/pure/core/languages/en_GB",
+        "term": {
+            "en_GB": "English"
+        }
+    },
+    "contributors": [
+        {
+            "typeDiscriminator": "ExternalContributorAssociation",
+            "pureId": 203500278,
+            "externalOrganizations": [
+                {
+                    "systemName": "ExternalOrganization",
+                    "uuid": "246ed11a-346a-47ac-b82a-1aba24916f9e"
+                },
+                {
+                    "systemName": "ExternalOrganization",
+                    "uuid": "b2f871ad-3ff2-43ba-93f8-f7cf7f5ab0d8"
+                }
+            ],
+            "hidden": false,
+            "country": {
+                "uri": "/dk/atira/pure/core/countries/de",
+                "term": {
+                    "en_GB": "Germany"
+                }
+            },
+            "correspondingAuthor": false,
+            "name": {
+                "firstName": "Inga",
+                "lastName": "Tiemann"
+            },
+            "role": {
+                "uri": "/dk/atira/pure/researchoutput/roles/contributiontojournal/author",
+                "term": {
+                    "en_GB": "Author"
+                }
+            },
+            "externalPerson": {
+                "systemName": "ExternalPerson",
+                "uuid": "8fe0ba89-9c61-468d-99e0-eadfab8c3cb4"
+            }
+        },
+        {
+            "typeDiscriminator": "InternalContributorAssociation",
+            "pureId": 203500279,
+            "hidden": false,
+            "correspondingAuthor": false,
+            "name": {
+                "firstName": "Lisa",
+                "lastName": "Fijn"
+            },
+            "role": {
+                "uri": "/dk/atira/pure/researchoutput/roles/contributiontojournal/author",
+                "term": {
+                    "en_GB": "Author"
+                }
+            },
+            "person": {
+                "systemName": "Person",
+                "uuid": "acea4e4c-b31e-46c8-ac7f-e9497264a7e1"
+            },
+            "organizations": [
+                {
+                    "systemName": "Organization",
+                    "uuid": "8a3436b8-4443-4647-88d7-3da6dfd4d31f"
+                }
+            ]
+        },
+        {
+            "typeDiscriminator": "InternalContributorAssociation",
+            "pureId": 203500281,
+            "hidden": false,
+            "correspondingAuthor": false,
+            "name": {
+                "firstName": "Saskia",
+                "lastName": "Arndt"
+            },
+            "role": {
+                "uri": "/dk/atira/pure/researchoutput/roles/contributiontojournal/author",
+                "term": {
+                    "en_GB": "Author"
+                }
+            },
+            "person": {
+                "systemName": "Person",
+                "uuid": "c66f604b-3c6f-4e55-b377-864bf942b94a"
+            },
+            "organizations": [
+                {
+                    "systemName": "Organization",
+                    "uuid": "8a3436b8-4443-4647-88d7-3da6dfd4d31f"
+                }
+            ]
+        }
+    ],
+    "organizations": [
+        {
+            "systemName": "Organization",
+            "uuid": "8a3436b8-4443-4647-88d7-3da6dfd4d31f"
+        }
+    ],
+    "totalNumberOfContributors": 3,
+    "managingOrganization": {
+        "systemName": "Organization",
+        "uuid": "8a3436b8-4443-4647-88d7-3da6dfd4d31f"
+    },
+    "electronicVersions": [
+        {
+            "typeDiscriminator": "DoiElectronicVersion",
+            "pureId": 203500261,
+            "accessType": {
+                "uri": "/dk/atira/pure/core/openaccesspermission/open",
+                "term": {
+                    "en_GB": "Open"
+                }
+            },
+            "licenseType": {
+                "uri": "/dk/atira/pure/core/document/licenses/cc_by",
+                "term": {
+                    "en_GB": "CC BY"
+                }
+            },
+            "visibleOnPortalDate": "2023-12-12",
+            "doi": "10.3389/fvets.2022.954607",
+            "versionType": {
+                "uri": "/dk/atira/pure/researchoutput/electronicversion/versiontype/publishersversion",
+                "term": {
+                    "en_GB": "Final published version"
+                }
+            }
+        },
+        {
+            "typeDiscriminator": "FileElectronicVersion",
+            "pureId": 203500262,
+            "accessType": {
+                "uri": "/dk/atira/pure/core/openaccesspermission/open",
+                "term": {
+                    "en_GB": "Open"
+                }
+            },
+            "licenseType": {
+                "uri": "/dk/atira/pure/core/document/licenses/cc_by",
+                "term": {
+                    "en_GB": "CC BY"
+                }
+            },
+            "visibleOnPortalDate": "2023-12-12",
+            "creator": "UIJL0004",
+            "created": "2023-12-12T11:33:43.583+01:00",
+            "title": "fvets-09-954607.pdf",
+            "file": {
+                "pureId": 203500263,
+                "fileId": "MDBjMjEyYWU3",
+                "fileName": "fvets-09-954607.pdf",
+                "mimeType": "application/pdf",
+                "size": 5193475,
+                "url": "https://staging.research-portal.uu.nl/ws/api/research-outputs/8c098d11-3b0c-42d5-9715-a39cd1832af6/files/MDBjMjEyYWU3/fvets-09-954607.pdf"
+            },
+            "versionType": {
+                "uri": "/dk/atira/pure/researchoutput/electronicversion/versiontype/publishersversion",
+                "term": {
+                    "en_GB": "Final published version"
+                }
+            }
+        }
+    ],
+    "keywordGroups": [
+        {
+            "typeDiscriminator": "FreeKeywordsKeywordGroup",
+            "pureId": 203500264,
+            "logicalName": "keywordContainers",
+            "name": {
+                "en_GB": "Keywords"
+            },
+            "keywords": [
+                {
+                    "pureId": 203500266,
+                    "locale": "en_GB",
+                    "freeKeywords": [
+                        "animal husbandry",
+                        "endocrine biomarkers",
+                        "hormone metabolites",
+                        "readout parameters",
+                        "stress",
+                        "systematic review",
+                        "welfare indicator",
+                        "welfare proxy"
+                    ]
+                }
+            ]
+        }
+    ],
+    "bibliographicalNote": {
+        "en_GB": "Publisher Copyright:\nCopyright © 2023 Tiemann, Fijn, Bagaria, Langen, van der Staay, Arndt, Leenaars and Goerlich."
+    },
+    "visibility": {
+        "key": "FREE",
+        "description": {
+            "en_GB": "Public - No restriction"
+        }
+    },
+    "workflow": {
+        "step": "validated",
+        "description": {
+            "en_GB": "Validated"
+        }
+    },
+    "identifiers": [
+        {
+            "typeDiscriminator": "PrimaryId",
+            "idSource": "PublicationPreSubmission",
+            "value": "203500070"
+        }
+    ],
+    "customDefinedFields": {},
+    "fundingText": {
+        "en_GB": "stress"
+    },
+    "volume": "9",
+    "journalAssociation": {
+        "pureId": 203500260,
+        "title": {
+            "pureId": 6152251,
+            "title": "Frontiers in Veterinary Science"
+        },
+        "issn": {
+            "pureId": 10468470,
+            "issn": "2297-1769"
+        },
+        "journal": {
+            "systemName": "Journal",
+            "uuid": "3df5b0b2-8c10-46fe-a632-d105a3b7525b"
+        }
+    },
+    "articleNumber": "954607",
+    "abstract": {
+        "en_GB": "Translating theoretical concepts of animal welfare into quantitative assessment protocols is an ongoing challenge. Glucocorticoids (GCs) are frequently used as physiological measure in welfare assessment. The interpretation of levels of GCs and especially their relation to welfare, however, is not as straightforward, questioning the informative power of GCs. The aim of this systematic mapping review was therefore to provide an overview of the relevant literature to identify global patterns in studies using GCs as proxy for the assessment of welfare of vertebrate species. Following a systematic protocol and a-priory inclusion criteria, 509 studies with 517 experiments were selected for data extraction. The outcome of the experiments was categorized based on whether the intervention significantly affected levels of GCs, and whether these effects were accompanied by changes in behavior, morphology and physiology. Additional information, such as animal species, type of intervention, experimental set up and sample type used for GC determination was extracted, as well. Given the broad scope and large variation in included experiments, meta-analyses were not performed, but outcomes are presented to encourage further, in-depth analyses of the data set. The interventions did not consistently lead to changes in GCs with respect to the original authors hypothesis. Changes in GCs were not consistently paralleled by changes in additional assessment parameter on behavior, morphology and physiology. The minority of experiment quantified GCs in less invasive sample matrices compared to blood. Interventions showed a large variability, and species such as fish were underrepresented, especially in the assessment of behavior. The inconclusive effects on GCs and additional assessment parameter urges for further validation of techniques and welfare proxies. Several conceptual and technical challenges need to be met to create standardized and robust welfare assessment protocols and to determine the role of GCs herein."
+    },
+    "systemName": "ResearchOutput",
+    "externalOrganizations": [
+        {
+            "systemName": "ExternalOrganization",
+            "uuid": "246ed11a-346a-47ac-b82a-1aba24916f9e"
+        },
+        {
+            "systemName": "ExternalOrganization",
+            "uuid": "b2f871ad-3ff2-43ba-93f8-f7cf7f5ab0d8"
+        }
+    ]
+}

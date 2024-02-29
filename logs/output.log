@@ -1,0 +1,1775 @@
+2024-02-08 09:09:24,007:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:24,184:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:24,188:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:24,337:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:24,344:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:24,533:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:24,536:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:24,714:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:24,720:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:24,886:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:24,889:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:25,042:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:25,049:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:25,214:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:25,216:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:25,369:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:25,375:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:25,562:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:25,564:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:25,825:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:25,831:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:26,234:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:26,237:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:26,440:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:26,447:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:26,746:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:26,750:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:26,966:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:26,970:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:27,259:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:27,262:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:27,565:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:27,571:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:27,872:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:27,877:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:28,030:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:28,033:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:28,188:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:28,195:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:28,362:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:28,364:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:28,564:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:28,570:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:28,896:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:28,899:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:29,076:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:29,082:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:29,302:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:29,305:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:29,507:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:29,513:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:29,676:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:29,678:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:29,841:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:29,847:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:30,041:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:30,042:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:30,209:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:30,215:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:30,379:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:30,382:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:30,740:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:30,746:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:09:30,931:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:09:30,934:ERROR:No internal contributors found in Pure for the research output.
+2024-02-08 09:09:30,934:INFO:skipped research output https://openalex.org/W4387661197.
+2024-02-08 09:15:56,582:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:15:56,995:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:15:56,998:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:15:57,507:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:15:57,514:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:15:57,814:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:15:57,817:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:15:57,975:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:15:57,982:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:15:58,151:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:15:58,154:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:15:58,310:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:15:58,314:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:15:58,474:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:15:58,477:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:15:58,623:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:15:58,629:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:15:58,793:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:15:58,795:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:15:58,949:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:15:58,955:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:15:59,179:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:15:59,180:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:15:59,335:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:15:59,341:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:15:59,515:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:15:59,519:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:15:59,692:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:15:59,697:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:15:59,870:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:15:59,871:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:00,035:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:16:00,042:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:00,206:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:16:00,210:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:00,374:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:16:00,376:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:00,561:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:16:00,568:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:00,785:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:16:00,788:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:00,967:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:16:00,973:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:01,134:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:16:01,137:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:01,501:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:16:01,506:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:03,344:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:16:03,349:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:03,753:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:16:03,756:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:03,968:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:16:03,974:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:04,513:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:16:04,515:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:04,777:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:16:04,784:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:05,187:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:16:05,190:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:05,384:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:16:05,390:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:05,627:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:16:05,629:INFO:Creating external person for A. van Veelen.
+2024-02-08 09:16:05,631:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:08,464:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:16:08,467:INFO:Created external person: 2a3fb9fc-1376-4026-affe-54471ffe3f81
+2024-02-08 09:16:08,467:INFO:Creating external person for K. Cohen.
+2024-02-08 09:16:08,469:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:09,078:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:16:09,080:INFO:Created external person: ecd60b9f-89ec-4303-8329-c32365e39f69
+2024-02-08 09:16:09,081:INFO:Creating external person for Marjon V Verschueren.
+2024-02-08 09:16:09,083:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:09,488:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:16:09,490:INFO:Created external person: 9d72f77c-f747-446f-9f7c-c94dc758a46f
+2024-02-08 09:16:09,491:INFO:Creating external person for Judith L Gulikers.
+2024-02-08 09:16:09,493:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:10,102:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:16:10,104:INFO:Created external person: 32c368a0-5221-49e1-b4a6-896eff56598f
+2024-02-08 09:16:10,106:INFO:Creating external person for Christi M.J. Steendam.
+2024-02-08 09:16:10,108:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:10,512:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:16:10,514:INFO:Created external person: acc7b81f-ea59-4c5d-ae6c-f6840f515a48
+2024-02-08 09:16:10,515:INFO:Creating external person for A. Brouns.
+2024-02-08 09:16:10,517:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:10,922:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:16:10,924:INFO:Created external person: a2ef9ab1-5bcf-442a-be85-112662fda07e
+2024-02-08 09:16:10,925:INFO:Creating external person for Safiye Dursun.
+2024-02-08 09:16:10,927:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:11,434:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:16:11,436:INFO:Created external person: f24f1437-cd8e-4a3e-89b8-7c1669253e3f
+2024-02-08 09:16:11,437:INFO:Creating external person for Marthe S. Paats.
+2024-02-08 09:16:11,439:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:11,843:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:16:11,845:INFO:Created external person: 45f2520d-4aed-477d-a3a0-20e59433604a
+2024-02-08 09:16:11,846:INFO:Creating external person for Vivianne C. G. Tjan‐Heijnen.
+2024-02-08 09:16:11,848:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:12,150:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:16:12,152:INFO:Created external person: fd8f6f31-729c-4559-98b3-7ba7a50cab88
+2024-02-08 09:16:12,153:INFO:Creating external person for Cor van der Leest.
+2024-02-08 09:16:12,155:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:12,458:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:16:12,460:INFO:Created external person: da2abf98-7176-4267-b9f7-ec2ef9bc5e92
+2024-02-08 09:16:12,461:INFO:Creating external person for Anne‐Marie C. Dingemans.
+2024-02-08 09:16:12,463:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:12,765:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:16:12,767:INFO:Created external person: 489cdad5-53b3-4da4-b16b-ca75d77c35e7
+2024-02-08 09:16:12,767:INFO:Creating external person for Ron H.J. Mathijssen.
+2024-02-08 09:16:12,769:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:13,072:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:16:13,074:INFO:Created external person: ef2532f6-4d61-475e-93e6-ff063dc75caf
+2024-02-08 09:16:13,075:INFO:Creating external person for E.M.W. van de Garde.
+2024-02-08 09:16:13,076:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:13,481:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:16:13,482:INFO:Created external person: b4baa61a-a361-4e71-8ab7-ce153ed68ebb
+2024-02-08 09:16:13,482:INFO:Creating external person for Johanna H M Driessen.
+2024-02-08 09:16:13,483:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:13,683:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:16:13,685:INFO:Created external person: 789c66ae-9eab-4a4d-8913-a34bef522694
+2024-02-08 09:16:13,686:INFO:Creating external person for Lizza Hendriks.
+2024-02-08 09:16:13,687:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:13,923:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:16:13,925:INFO:Created external person: a90b91da-9179-4281-8ea6-391d3b957a47
+2024-02-08 09:16:13,926:INFO:Creating external person for Robin M.J.M. van Geel.
+2024-02-08 09:16:13,927:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:14,403:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:16:14,406:INFO:Created external person: 29e8c206-fa67-4da2-902e-24876d82d9a2
+2024-02-08 09:16:14,406:INFO:Creating external person for Sander Croes.
+2024-02-08 09:16:14,408:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:14,609:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:16:14,611:INFO:Created external person: 9b9e8a72-2608-4ace-9b96-3a9711eb24c7
+2024-02-08 09:16:14,614:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:15,530:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/journals/search/ HTTP/1.1" 200 None
+2024-02-08 09:16:15,537:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:16:19,962:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/research-outputs HTTP/1.1" 201 None
+2024-02-08 09:16:19,963:INFO:Processed research output https://openalex.org/W4387661197 successfully.
+2024-02-08 09:17:29,394:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:29,552:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:29,555:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:29,699:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:29,705:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:29,842:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:29,844:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:30,004:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:30,011:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:30,171:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:30,174:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:30,317:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:30,324:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:30,495:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:30,498:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:30,687:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:30,693:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:30,858:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:30,860:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:31,007:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:31,013:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:31,165:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:31,167:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:31,321:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:31,326:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:31,469:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:31,474:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:31,630:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:31,635:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:31,797:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:31,800:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:31,954:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:31,959:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:32,113:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:32,118:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:32,284:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:32,286:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:32,637:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:32,643:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:32,794:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:32,797:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:33,105:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:33,111:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:33,291:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:33,293:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:33,456:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:33,462:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:33,694:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:33,699:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:33,866:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:33,868:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:34,022:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:34,028:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:34,181:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:34,184:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:34,329:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:34,331:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:34,484:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:34,486:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:34,641:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:34,646:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:34,798:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:34,799:INFO:Creating external person for A. van Veelen.
+2024-02-08 09:17:34,800:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:35,023:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:17:35,026:INFO:Created external person: eb072b53-8638-45bf-a474-eaeeda601f18
+2024-02-08 09:17:35,026:INFO:Creating external person for K. Cohen.
+2024-02-08 09:17:35,028:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:35,220:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:17:35,221:INFO:Created external person: 18448558-87cd-4111-8164-74271ab898bc
+2024-02-08 09:17:35,222:INFO:Creating external person for Marjon V Verschueren.
+2024-02-08 09:17:35,223:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:35,413:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:17:35,415:INFO:Created external person: 58233594-1d3c-4931-b9b5-652318466262
+2024-02-08 09:17:35,416:INFO:Creating external person for Judith L Gulikers.
+2024-02-08 09:17:35,417:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:35,709:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:17:35,712:INFO:Created external person: c82b8636-a859-4023-9719-a673d2782634
+2024-02-08 09:17:35,712:INFO:Creating external person for Christi M.J. Steendam.
+2024-02-08 09:17:35,714:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:35,940:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:17:35,942:INFO:Created external person: bce66a35-cd2e-43a7-ad6d-78ec28b2dcd7
+2024-02-08 09:17:35,942:INFO:Creating external person for A. Brouns.
+2024-02-08 09:17:35,944:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:36,147:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:17:36,149:INFO:Created external person: fc4c4ed7-38c3-46ac-a607-2af87d313705
+2024-02-08 09:17:36,150:INFO:Creating external person for Safiye Dursun.
+2024-02-08 09:17:36,152:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:36,529:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:17:36,531:INFO:Created external person: fc03bb85-6391-4fed-9cc8-0bac0e06b66d
+2024-02-08 09:17:36,531:INFO:Creating external person for Marthe S. Paats.
+2024-02-08 09:17:36,533:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:36,728:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:17:36,730:INFO:Created external person: 3efd5d3d-512f-4783-893a-7f615af34fa8
+2024-02-08 09:17:36,731:INFO:Creating external person for Vivianne C. G. Tjan‐Heijnen.
+2024-02-08 09:17:36,733:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:36,908:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:17:36,910:INFO:Created external person: cbe81d92-56c0-43d5-8ad9-5ae636acb695
+2024-02-08 09:17:36,911:INFO:Creating external person for Cor van der Leest.
+2024-02-08 09:17:36,913:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:37,135:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:17:37,137:INFO:Created external person: 1ef3ba5a-7d65-490b-975c-4a6bc2a5bb56
+2024-02-08 09:17:37,138:INFO:Creating external person for Anne‐Marie C. Dingemans.
+2024-02-08 09:17:37,139:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:37,450:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:17:37,452:INFO:Created external person: ecac2134-20fd-48b5-86a6-b5da2e1c077d
+2024-02-08 09:17:37,453:INFO:Creating external person for Ron H.J. Mathijssen.
+2024-02-08 09:17:37,454:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:37,640:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:17:37,642:INFO:Created external person: eec98c99-f70e-436d-80fd-fc680bd31265
+2024-02-08 09:17:37,643:INFO:Creating external person for E.M.W. van de Garde.
+2024-02-08 09:17:37,645:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:37,857:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:17:37,860:INFO:Created external person: e6c25f64-15fa-4d49-849b-2cf44242d549
+2024-02-08 09:17:37,860:INFO:Creating external person for Johanna H M Driessen.
+2024-02-08 09:17:37,862:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:38,056:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:17:38,058:INFO:Created external person: 462186d3-91d9-4db0-93c1-cb9224ca7586
+2024-02-08 09:17:38,059:INFO:Creating external person for Lizza Hendriks.
+2024-02-08 09:17:38,060:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:38,235:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:17:38,238:INFO:Created external person: 480fbf2c-f75d-4dea-91c6-d75b9d1fd4cd
+2024-02-08 09:17:38,238:INFO:Creating external person for Robin M.J.M. van Geel.
+2024-02-08 09:17:38,240:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:38,416:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:17:38,418:INFO:Created external person: 647d1773-2b7c-4bc4-a01a-a21ffd6dbe52
+2024-02-08 09:17:38,418:INFO:Creating external person for Sander Croes.
+2024-02-08 09:17:38,420:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:38,597:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 09:17:38,599:INFO:Created external person: 30f96c0e-b34a-45e8-ad75-d87d9a65d88c
+2024-02-08 09:17:38,602:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:38,805:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/journals/search/ HTTP/1.1" 200 None
+2024-02-08 09:17:38,811:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 09:17:40,215:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/research-outputs HTTP/1.1" 201 None
+2024-02-08 09:17:40,218:INFO:Processed research output https://openalex.org/W4387661197 successfully.
+2024-02-08 11:13:52,583:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:53,016:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:53,019:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:53,425:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:53,432:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:53,732:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:53,735:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:53,911:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:53,916:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:54,231:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:54,234:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:54,395:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:54,401:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:54,757:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:54,760:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:54,920:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:54,926:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:55,166:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:55,168:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:55,352:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:55,358:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:55,678:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:55,681:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:55,836:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:55,842:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:55,997:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:56,001:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:56,169:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:56,174:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:56,390:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:56,392:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:56,546:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:56,552:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:56,774:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:56,780:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:57,112:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:57,114:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:57,328:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:57,334:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:57,623:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:57,626:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:57,802:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:57,808:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:58,238:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:58,241:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:58,393:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:58,399:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:58,941:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:58,946:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:59,251:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:59,253:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:59,411:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:59,417:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:59,671:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:59,674:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:13:59,847:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:13:59,854:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:00,388:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:14:00,391:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:00,695:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:14:00,702:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:00,895:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:14:00,897:INFO:Creating external person for A. van Veelen.
+2024-02-08 11:14:00,900:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:01,618:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:14:01,621:INFO:Created external person: e4625b2e-3459-434d-a470-159f0025938c
+2024-02-08 11:14:01,621:INFO:Creating external person for K. Cohen.
+2024-02-08 11:14:01,621:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:02,027:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:14:02,029:INFO:Created external person: 6295f5d0-4e81-4749-866c-94d5fc2c70b8
+2024-02-08 11:14:02,030:INFO:Creating external person for Marjon V Verschueren.
+2024-02-08 11:14:02,032:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:02,436:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:14:02,439:INFO:Created external person: 10187d42-e9fb-475a-ad43-d10f102b83c2
+2024-02-08 11:14:02,439:INFO:Creating external person for Judith L Gulikers.
+2024-02-08 11:14:02,441:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:02,743:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:14:02,746:INFO:Created external person: 36dfcafd-46e3-4885-a586-ca0438577d17
+2024-02-08 11:14:02,747:INFO:Creating external person for Christi M.J. Steendam.
+2024-02-08 11:14:02,748:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:03,101:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:14:03,103:INFO:Created external person: c613b411-c488-471c-af78-5beaeb4955ea
+2024-02-08 11:14:03,104:INFO:Creating external person for A. Brouns.
+2024-02-08 11:14:03,105:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:03,460:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:14:03,463:INFO:Created external person: 3a4b5618-3de9-4f04-8546-b3c89a2453a9
+2024-02-08 11:14:03,463:INFO:Creating external person for Safiye Dursun.
+2024-02-08 11:14:03,465:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:03,870:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:14:03,873:INFO:Created external person: c1c8d409-aa05-477c-b284-b0de1e8afcc5
+2024-02-08 11:14:03,873:INFO:Creating external person for Marthe S. Paats.
+2024-02-08 11:14:03,875:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:04,280:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:14:04,282:INFO:Created external person: 1d2a0775-44fd-40a9-86a8-c84204fa504d
+2024-02-08 11:14:04,283:INFO:Creating external person for Vivianne C. G. Tjan‐Heijnen.
+2024-02-08 11:14:04,285:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:04,479:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:14:04,481:INFO:Created external person: e7e7f5b4-7c2c-4440-961c-5c6ca018621a
+2024-02-08 11:14:04,482:INFO:Creating external person for Cor van der Leest.
+2024-02-08 11:14:04,483:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:04,663:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:14:04,665:INFO:Created external person: df519b4e-f269-4f12-907e-bf26cb04a894
+2024-02-08 11:14:04,666:INFO:Creating external person for Anne‐Marie C. Dingemans.
+2024-02-08 11:14:04,668:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:04,860:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:14:04,862:INFO:Created external person: d7828e2a-bd89-45ee-9d16-a3a6175cbdbf
+2024-02-08 11:14:04,863:INFO:Creating external person for Ron H.J. Mathijssen.
+2024-02-08 11:14:04,865:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:05,070:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:14:05,072:INFO:Created external person: d2d79691-b24a-4d5a-89d6-585a36e89f74
+2024-02-08 11:14:05,073:INFO:Creating external person for E.M.W. van de Garde.
+2024-02-08 11:14:05,075:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:05,611:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:14:05,613:INFO:Created external person: 03316b23-b741-4f9f-a41a-a7a0c3bd2cdb
+2024-02-08 11:14:05,614:INFO:Creating external person for Johanna H M Driessen.
+2024-02-08 11:14:05,616:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:05,918:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:14:05,920:INFO:Created external person: 8ecd41cb-5f36-4565-bfde-eaffe09c978e
+2024-02-08 11:14:05,921:INFO:Creating external person for Lizza Hendriks.
+2024-02-08 11:14:05,923:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:06,096:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:14:06,098:INFO:Created external person: af903b42-5429-48bc-8f4a-8f10d9622633
+2024-02-08 11:14:06,099:INFO:Creating external person for Robin M.J.M. van Geel.
+2024-02-08 11:14:06,100:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:06,304:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:14:06,306:INFO:Created external person: f4784ee9-7b65-4fa8-9994-278e77a67305
+2024-02-08 11:14:06,307:INFO:Creating external person for Sander Croes.
+2024-02-08 11:14:06,308:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:06,517:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:14:06,519:INFO:Created external person: fb907260-9987-48a1-8619-47f3afe1be77
+2024-02-08 11:14:06,521:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:06,942:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/journals/search/ HTTP/1.1" 200 None
+2024-02-08 11:14:06,948:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:14:09,093:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/research-outputs HTTP/1.1" 201 None
+2024-02-08 11:14:09,095:INFO:Processed research output https://openalex.org/W4387661197 successfully.
+2024-02-08 11:16:20,252:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:20,418:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:20,421:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:20,587:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:20,593:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:20,755:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:20,758:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:20,912:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:20,918:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:21,083:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:21,086:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:21,247:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:21,254:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:21,437:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:21,439:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:21,595:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:21,601:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:21,815:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:21,817:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:21,981:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:21,987:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:22,149:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:22,151:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:22,310:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:22,316:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:22,524:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:22,529:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:22,714:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:22,719:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:23,032:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:23,035:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:23,232:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:23,238:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:23,544:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:23,548:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:23,852:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:23,855:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:24,077:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:24,082:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:24,251:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:24,254:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:24,424:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:24,429:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:24,593:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:24,595:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:24,788:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:24,794:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:25,093:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:25,098:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:25,264:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:25,267:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:25,434:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:25,440:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:25,614:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:25,616:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:25,779:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:25,782:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:25,934:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:25,937:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:26,207:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:26,213:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:26,358:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:26,360:INFO:Creating external person for A. van Veelen.
+2024-02-08 11:16:26,362:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:26,616:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:16:26,618:INFO:Created external person: e6f5711a-dcf3-4e36-a674-48dd25938aa2
+2024-02-08 11:16:26,619:INFO:Creating external person for K. Cohen.
+2024-02-08 11:16:26,620:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:26,835:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:16:26,837:INFO:Created external person: 70ac1de7-d62e-4d7a-a377-3919af28e12e
+2024-02-08 11:16:26,837:INFO:Creating external person for Marjon V Verschueren.
+2024-02-08 11:16:26,839:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:27,129:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:16:27,131:INFO:Created external person: 25cc7bb2-a783-4862-b359-3221f6d8d356
+2024-02-08 11:16:27,132:INFO:Creating external person for Judith L Gulikers.
+2024-02-08 11:16:27,133:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:27,332:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:16:27,334:INFO:Created external person: 53c05d10-c519-45a2-b621-36aaaf17a418
+2024-02-08 11:16:27,335:INFO:Creating external person for Christi M.J. Steendam.
+2024-02-08 11:16:27,337:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:27,641:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:16:27,643:INFO:Created external person: 111ca87a-6ea9-4d98-be4b-c7a1293d7509
+2024-02-08 11:16:27,643:INFO:Creating external person for A. Brouns.
+2024-02-08 11:16:27,645:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:27,873:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:16:27,876:INFO:Created external person: 81dbb127-f300-4340-9049-3609dc8c3160
+2024-02-08 11:16:27,876:INFO:Creating external person for Safiye Dursun.
+2024-02-08 11:16:27,878:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:28,078:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:16:28,080:INFO:Created external person: 747cbfdf-65a0-4bb9-80bc-9d86af019de0
+2024-02-08 11:16:28,081:INFO:Creating external person for Marthe S. Paats.
+2024-02-08 11:16:28,083:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:28,272:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:16:28,275:INFO:Created external person: 193e2830-d070-4ee1-bc16-058b27ee82ea
+2024-02-08 11:16:28,275:INFO:Creating external person for Vivianne C. G. Tjan‐Heijnen.
+2024-02-08 11:16:28,277:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:28,562:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:16:28,564:INFO:Created external person: dce419d3-9b7a-433a-89b5-e159193b2adb
+2024-02-08 11:16:28,565:INFO:Creating external person for Cor van der Leest.
+2024-02-08 11:16:28,567:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:28,757:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:16:28,759:INFO:Created external person: f3d42e58-edf5-4573-8b88-e747887186fa
+2024-02-08 11:16:28,760:INFO:Creating external person for Anne‐Marie C. Dingemans.
+2024-02-08 11:16:28,762:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:29,074:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:16:29,076:INFO:Created external person: 9b3d3500-068c-4912-8726-615f406681c7
+2024-02-08 11:16:29,077:INFO:Creating external person for Ron H.J. Mathijssen.
+2024-02-08 11:16:29,078:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:29,247:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:16:29,249:INFO:Created external person: 56429906-34ac-4d34-b978-f0f4b2c167f4
+2024-02-08 11:16:29,250:INFO:Creating external person for E.M.W. van de Garde.
+2024-02-08 11:16:29,252:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:29,451:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:16:29,453:INFO:Created external person: 65a3c73b-772d-4298-9a2d-f9db004666b8
+2024-02-08 11:16:29,453:INFO:Creating external person for Johanna H M Driessen.
+2024-02-08 11:16:29,455:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:29,630:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:16:29,632:INFO:Created external person: b87aebf8-9d6c-4e0d-b517-e31b405c78e9
+2024-02-08 11:16:29,632:INFO:Creating external person for Lizza Hendriks.
+2024-02-08 11:16:29,634:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:29,815:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:16:29,818:INFO:Created external person: 53478530-8e73-47f9-87d3-d7b90f414b15
+2024-02-08 11:16:29,818:INFO:Creating external person for Robin M.J.M. van Geel.
+2024-02-08 11:16:29,820:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:30,097:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:16:30,098:INFO:Created external person: 95355b5b-c3a8-4d62-b468-ea79c1197573
+2024-02-08 11:16:30,099:INFO:Creating external person for Sander Croes.
+2024-02-08 11:16:30,099:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:30,404:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 11:16:30,405:INFO:Created external person: d7c03dec-3d35-4aa3-9375-5764a1b27cdd
+2024-02-08 11:16:30,406:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:30,712:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/journals/search/ HTTP/1.1" 200 None
+2024-02-08 11:16:30,715:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:16:31,839:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/research-outputs HTTP/1.1" 201 None
+2024-02-08 11:16:31,841:INFO:Processed research output https://openalex.org/W4387661197 successfully.
+2024-02-08 11:18:09,967:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:10,134:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:10,137:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:10,298:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:10,304:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:10,464:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:10,467:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:10,613:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:10,619:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:10,789:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:10,793:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:10,968:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:10,975:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:11,138:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:11,141:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:11,299:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:11,305:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:11,471:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:11,473:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:11,628:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:11,634:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:11,796:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:11,798:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:11,952:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:11,958:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:12,101:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:12,105:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:12,248:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:12,253:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:12,398:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:12,401:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:12,547:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:12,553:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:12,695:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:12,699:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:12,851:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:12,853:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:12,999:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:13,005:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:13,157:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:13,160:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:13,308:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:13,314:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:13,462:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:13,464:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:13,605:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:13,610:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:13,835:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:13,838:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:13,986:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:13,988:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:14,149:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:14,154:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:14,319:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:14,322:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:14,470:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:14,473:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:48,060:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:48,228:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:48,231:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:48,392:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:48,398:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:48,557:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:48,560:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:48,714:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:48,721:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:49,056:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:49,058:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:49,211:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:49,217:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:49,436:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:49,439:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:49,620:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:49,626:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:18:49,801:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:18:49,804:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:16,131:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:16,299:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:16,302:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:16,469:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:16,474:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:16,629:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:16,632:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:16,793:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:16,799:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:16,952:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:16,954:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:17,132:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:17,139:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:17,396:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:17,397:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:17,552:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:17,558:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:17,723:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:17,725:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:17,878:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:17,884:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:18,042:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:18,044:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:18,205:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:18,209:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:18,371:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:18,375:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:18,520:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:18,524:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:18,680:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:18,682:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:18,827:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:18,833:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:18,977:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:18,981:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:19,124:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:19,126:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:19,265:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:19,271:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:19,448:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:19,450:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 11:26:19,600:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 11:26:19,606:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:07,735:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:08,283:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:08,286:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:08,999:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:09,004:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:09,511:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:09,514:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:09,818:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:09,823:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:10,228:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:10,230:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:10,415:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:10,419:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:10,739:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:10,740:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:10,915:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:10,917:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:11,252:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:11,255:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:11,423:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:11,426:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:11,764:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:11,766:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:11,932:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:11,938:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:12,142:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:12,147:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:12,314:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:12,318:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:12,685:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:12,688:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:12,853:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:12,859:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:13,044:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:13,049:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:13,607:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:13,610:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:13,778:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:13,785:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:13,994:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:13,996:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:14,145:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:14,150:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:14,426:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:14,428:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:14,589:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:14,596:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:15,246:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:15,251:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:15,528:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:15,531:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:15,698:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:15,705:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:15,962:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:15,963:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:16,129:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:16,135:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:16,474:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:16,477:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:16,641:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:16,647:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:16,803:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:16,805:INFO:Creating external person for A. van Veelen.
+2024-02-08 13:23:16,807:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:17,268:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:23:17,270:INFO:Created external person: 0c19c4e7-f0f2-4c1c-8568-2af92faee1aa
+2024-02-08 13:23:17,271:INFO:Creating external person for K. Cohen.
+2024-02-08 13:23:17,272:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:17,486:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:23:17,489:INFO:Created external person: dc56d605-d71a-4966-97f6-9b7b0a8e4bce
+2024-02-08 13:23:17,489:INFO:Creating external person for Marjon V Verschueren.
+2024-02-08 13:23:17,491:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:17,703:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:23:17,705:INFO:Created external person: b98bebe2-eecf-4544-abca-208c30f50153
+2024-02-08 13:23:17,706:INFO:Creating external person for Judith L Gulikers.
+2024-02-08 13:23:17,708:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:18,010:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:23:18,012:INFO:Created external person: 24f53788-a4c0-4ebd-a0de-890d40154821
+2024-02-08 13:23:18,012:INFO:Creating external person for Christi M.J. Steendam.
+2024-02-08 13:23:18,014:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:18,317:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:23:18,320:INFO:Created external person: b7bf479d-c916-4212-8223-a382cce2aa3e
+2024-02-08 13:23:18,320:INFO:Creating external person for A. Brouns.
+2024-02-08 13:23:18,322:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:18,625:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:23:18,627:INFO:Created external person: aadb9087-3897-4b54-8a4d-e924a8f3dd14
+2024-02-08 13:23:18,628:INFO:Creating external person for Safiye Dursun.
+2024-02-08 13:23:18,630:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:18,941:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:23:18,942:INFO:Created external person: 1be88ae0-fce6-4344-b63d-950617d76fde
+2024-02-08 13:23:18,943:INFO:Creating external person for Marthe S. Paats.
+2024-02-08 13:23:18,943:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:19,167:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:23:19,169:INFO:Created external person: bbfc23b1-7a8e-4d92-a881-1c008586f2db
+2024-02-08 13:23:19,170:INFO:Creating external person for Vivianne C. G. Tjan‐Heijnen.
+2024-02-08 13:23:19,172:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:19,649:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:23:19,651:INFO:Created external person: 4a1f6527-20af-4eb3-a9ed-7121cd835450
+2024-02-08 13:23:19,651:INFO:Creating external person for Cor van der Leest.
+2024-02-08 13:23:19,652:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:19,956:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:23:19,958:INFO:Created external person: d1988324-c7be-481e-84bc-3cd2cdfd2688
+2024-02-08 13:23:19,959:INFO:Creating external person for Anne‐Marie C. Dingemans.
+2024-02-08 13:23:19,960:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:20,263:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:23:20,265:INFO:Created external person: 31469e3d-cbfa-4c59-b610-5375f5a251be
+2024-02-08 13:23:20,266:INFO:Creating external person for Ron H.J. Mathijssen.
+2024-02-08 13:23:20,267:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:20,560:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:23:20,562:INFO:Created external person: e6189bea-d5ad-433e-a7b9-5cb48054ba8a
+2024-02-08 13:23:20,563:INFO:Creating external person for E.M.W. van de Garde.
+2024-02-08 13:23:20,564:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:20,759:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:23:20,761:INFO:Created external person: d8a21a23-a7b9-4757-8172-1a05f3483c4d
+2024-02-08 13:23:20,762:INFO:Creating external person for Johanna H M Driessen.
+2024-02-08 13:23:20,764:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:21,082:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:23:21,084:INFO:Created external person: 50d099dd-cc1a-434b-9ab0-039f44288fb7
+2024-02-08 13:23:21,085:INFO:Creating external person for Lizza Hendriks.
+2024-02-08 13:23:21,086:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:21,278:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:23:21,280:INFO:Created external person: 47e07448-9bce-462a-adcb-6b1d65783f14
+2024-02-08 13:23:21,281:INFO:Creating external person for Robin M.J.M. van Geel.
+2024-02-08 13:23:21,283:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:21,464:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:23:21,466:INFO:Created external person: 40d4a3eb-f728-4ca3-adb1-95d28479e354
+2024-02-08 13:23:21,467:INFO:Creating external person for Sander Croes.
+2024-02-08 13:23:21,469:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:21,654:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:23:21,655:INFO:Created external person: 4f252514-456f-4edc-ba2f-984b85fa32f2
+2024-02-08 13:23:21,656:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:22,170:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/journals/search/ HTTP/1.1" 200 None
+2024-02-08 13:23:22,433:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:23:24,564:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/research-outputs HTTP/1.1" 201 None
+2024-02-08 13:23:24,566:INFO:Processed research output https://openalex.org/W4387661197 successfully.
+2024-02-08 13:37:36,099:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:37:36,647:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:37:36,650:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:37:37,056:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:37:37,063:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:37:37,363:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:37:37,366:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:37:37,528:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:37:37,534:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:37:37,797:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:37:37,799:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:37:37,963:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:37:37,969:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:37:38,429:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:37:38,432:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:37:38,645:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:37:38,651:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:23,383:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:23,800:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:23,804:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:24,210:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:24,216:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:24,620:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:24,622:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:24,802:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:24,809:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:25,131:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:25,134:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:25,293:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:25,300:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:25,540:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:25,543:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:25,691:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:25,697:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:25,950:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:25,953:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:26,101:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:26,107:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:26,361:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:26,364:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:26,516:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:26,522:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:26,683:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:26,688:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:26,849:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:26,854:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:27,064:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:27,066:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:27,219:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:27,225:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:27,371:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:27,376:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:27,691:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:27,694:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:27,878:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:27,884:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:28,203:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:28,206:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:28,361:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:28,367:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:28,818:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:28,820:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:28,970:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:28,976:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:29,432:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:29,435:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:29,740:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:29,742:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:29,884:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:29,890:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:30,148:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:30,151:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:30,319:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:30,325:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:30,661:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:30,664:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:30,814:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:30,820:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:30,978:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:30,981:INFO:Creating external person for A. van Veelen.
+2024-02-08 13:59:30,983:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:31,275:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:59:31,277:INFO:Created external person: 07ce0c7b-8f2d-4617-a7f3-88fc422368bc
+2024-02-08 13:59:31,278:INFO:Creating external person for K. Cohen.
+2024-02-08 13:59:31,279:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:31,533:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:59:31,535:INFO:Created external person: a039cbd6-79b7-4110-b9a7-73a7f529c988
+2024-02-08 13:59:31,536:INFO:Creating external person for Marjon V Verschueren.
+2024-02-08 13:59:31,537:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:31,724:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:59:31,727:INFO:Created external person: 94e96564-d736-4102-869b-3251809b781f
+2024-02-08 13:59:31,727:INFO:Creating external person for Judith L Gulikers.
+2024-02-08 13:59:31,729:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:31,991:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:59:31,993:INFO:Created external person: dafa1c10-7320-48bc-aaa6-a9fa20c6a59b
+2024-02-08 13:59:31,994:INFO:Creating external person for Christi M.J. Steendam.
+2024-02-08 13:59:31,996:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:32,181:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:59:32,183:INFO:Created external person: b0a4f7a7-3a48-4955-ac0e-bd43b12a4458
+2024-02-08 13:59:32,184:INFO:Creating external person for A. Brouns.
+2024-02-08 13:59:32,185:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:32,373:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:59:32,376:INFO:Created external person: e8bca96f-4b88-4c34-8714-78ece13cff7f
+2024-02-08 13:59:32,377:INFO:Creating external person for Safiye Dursun.
+2024-02-08 13:59:32,379:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:32,708:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:59:32,710:INFO:Created external person: 87c94a90-237d-48ff-8c96-c9bb136ff699
+2024-02-08 13:59:32,711:INFO:Creating external person for Marthe S. Paats.
+2024-02-08 13:59:32,712:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:33,015:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:59:33,018:INFO:Created external person: 58a2beaf-bcd0-462b-ac35-39cdb1804b58
+2024-02-08 13:59:33,018:INFO:Creating external person for Vivianne C. G. Tjan‐Heijnen.
+2024-02-08 13:59:33,020:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:33,202:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:59:33,205:INFO:Created external person: 87e135ce-1733-423f-b2d6-5d97f7379c07
+2024-02-08 13:59:33,205:INFO:Creating external person for Cor van der Leest.
+2024-02-08 13:59:33,207:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:33,527:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:59:33,530:INFO:Created external person: eb3102cf-0990-4508-818b-2d6a7becce7f
+2024-02-08 13:59:33,530:INFO:Creating external person for Anne‐Marie C. Dingemans.
+2024-02-08 13:59:33,531:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:33,748:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:59:33,750:INFO:Created external person: da60aaa1-80cf-45d6-aea8-ef1b489474df
+2024-02-08 13:59:33,751:INFO:Creating external person for Ron H.J. Mathijssen.
+2024-02-08 13:59:33,753:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:33,926:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:59:33,928:INFO:Created external person: 3a0bee72-115b-47fd-bf65-f2fd3e244df6
+2024-02-08 13:59:33,929:INFO:Creating external person for E.M.W. van de Garde.
+2024-02-08 13:59:33,930:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:34,103:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:59:34,106:INFO:Created external person: e4efcfcf-3f1e-4fa8-b5c7-5c2f4ad35923
+2024-02-08 13:59:34,106:INFO:Creating external person for Johanna H M Driessen.
+2024-02-08 13:59:34,108:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:34,313:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:59:34,315:INFO:Created external person: f2ff54e4-c75f-4222-be5f-22f63c87a32d
+2024-02-08 13:59:34,316:INFO:Creating external person for Lizza Hendriks.
+2024-02-08 13:59:34,317:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:34,529:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:59:34,531:INFO:Created external person: 6dc76af4-239a-4d1c-a5f0-953c220089ad
+2024-02-08 13:59:34,532:INFO:Creating external person for Robin M.J.M. van Geel.
+2024-02-08 13:59:34,534:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:34,716:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:59:34,718:INFO:Created external person: b1e18642-79b2-4665-97c3-6baa81bf62d8
+2024-02-08 13:59:34,719:INFO:Creating external person for Sander Croes.
+2024-02-08 13:59:34,720:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:34,898:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-08 13:59:34,900:INFO:Created external person: bd98d2a6-f21f-4206-bb1f-a819eae9fd6b
+2024-02-08 13:59:34,904:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:35,678:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/journals/search/ HTTP/1.1" 200 None
+2024-02-08 13:59:35,684:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-08 13:59:37,419:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/research-outputs HTTP/1.1" 201 None
+2024-02-08 13:59:37,421:INFO:Processed research output https://openalex.org/W4387661197 successfully.
+2024-02-19 12:43:41,598:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:43:44,029:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:43:44,033:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:43:44,568:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:43:44,571:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:43:44,874:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:43:44,878:INFO:Creating external person for David Bowie.
+2024-02-19 12:43:44,881:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:43:46,525:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-19 12:43:46,527:INFO:Created external person: fe29f1fc-0738-46cb-b1ba-f5fbffbf8fc4
+2024-02-19 12:43:46,529:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:43:47,741:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/journals/search/ HTTP/1.1" 200 None
+2024-02-19 12:43:47,745:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:43:53,296:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/research-outputs HTTP/1.1" 201 None
+2024-02-19 12:43:53,298:INFO:Processed research output 101 successfully.
+2024-02-19 12:43:53,301:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:43:53,634:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:43:53,636:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:43:53,828:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:43:53,833:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:43:54,089:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:43:54,092:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:43:54,284:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:43:54,287:ERROR:No internal contributors found in Pure for the research output.
+2024-02-19 12:43:54,288:INFO:skipped research output 102.
+2024-02-19 12:43:54,290:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:43:54,682:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:43:54,685:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:43:54,826:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:43:54,832:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:43:55,048:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:43:55,050:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:43:55,185:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:43:55,189:ERROR:No internal contributors found in Pure for the research output.
+2024-02-19 12:43:55,190:INFO:skipped research output 103.
+2024-02-19 12:46:17,551:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:46:17,841:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:46:17,847:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:46:18,014:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:46:18,017:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:46:18,163:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:46:18,167:INFO:Creating external person for David Bowie.
+2024-02-19 12:46:18,169:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:46:18,420:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-19 12:46:18,423:INFO:Created external person: 253283f5-2dfb-49f6-ae79-b4f92e76fd6a
+2024-02-19 12:46:18,425:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:46:18,696:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/journals/search/ HTTP/1.1" 200 None
+2024-02-19 12:46:18,701:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:46:19,538:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/research-outputs HTTP/1.1" 201 None
+2024-02-19 12:46:19,541:INFO:Processed research output 101 successfully.
+2024-02-19 12:46:19,542:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:46:19,709:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:46:19,712:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:46:19,857:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:46:19,863:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:46:20,029:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:46:20,032:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:46:20,159:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:46:20,164:ERROR:No internal contributors found in Pure for the research output.
+2024-02-19 12:46:20,164:INFO:skipped research output 102.
+2024-02-19 12:46:20,167:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:46:20,328:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:46:20,331:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:46:20,467:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:46:20,473:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:46:20,701:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:46:20,704:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:46:20,846:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:46:20,850:ERROR:No internal contributors found in Pure for the research output.
+2024-02-19 12:46:20,850:INFO:skipped research output 103.
+2024-02-19 12:47:35,045:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:35,283:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:35,286:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:35,656:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:35,662:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:35,884:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:35,887:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:36,106:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:36,113:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:36,388:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:36,391:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:36,552:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:36,559:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:36,825:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:36,828:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:37,031:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:37,036:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:37,298:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:37,301:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:37,466:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:37,472:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:37,733:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:37,736:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:37,879:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:37,885:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:38,065:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:38,070:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:38,223:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:38,227:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:38,457:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:38,459:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:38,611:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:38,617:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:38,801:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:38,806:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:39,040:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:39,043:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:39,213:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:39,219:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:39,419:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:39,422:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:39,673:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:39,679:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:39,921:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:39,924:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:40,137:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:40,143:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:40,434:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:40,439:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:40,674:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:40,677:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:40,825:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:40,832:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:41,070:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:41,073:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:41,245:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:41,252:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:41,669:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:41,672:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:41,824:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:41,830:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:41,979:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:41,982:INFO:Creating external person for A. van Veelen.
+2024-02-19 12:47:41,984:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:42,196:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-19 12:47:42,198:INFO:Created external person: 0e6d21d9-5bde-459b-8885-ec750a3f162d
+2024-02-19 12:47:42,199:INFO:Creating external person for K. Cohen.
+2024-02-19 12:47:42,201:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:42,391:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-19 12:47:42,394:INFO:Created external person: dec71156-f935-4186-9bf1-aae7e8648974
+2024-02-19 12:47:42,394:INFO:Creating external person for Marjon V Verschueren.
+2024-02-19 12:47:42,396:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:42,646:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-19 12:47:42,649:INFO:Created external person: 7db689e8-9f12-44f8-9a13-c2daf47fe0e9
+2024-02-19 12:47:42,649:INFO:Creating external person for Judith L Gulikers.
+2024-02-19 12:47:42,651:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:43,034:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-19 12:47:43,036:INFO:Created external person: 8a226c39-388e-4213-a01d-9ef6c4809a86
+2024-02-19 12:47:43,037:INFO:Creating external person for Christi M.J. Steendam.
+2024-02-19 12:47:43,038:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:43,224:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-19 12:47:43,226:INFO:Created external person: c8450211-fe0b-49eb-9204-06de493ae75a
+2024-02-19 12:47:43,227:INFO:Creating external person for A. Brouns.
+2024-02-19 12:47:43,229:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:43,448:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-19 12:47:43,451:INFO:Created external person: df3e4417-28a3-4356-9549-ca93d49c023f
+2024-02-19 12:47:43,451:INFO:Creating external person for Safiye Dursun.
+2024-02-19 12:47:43,453:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:43,664:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-19 12:47:43,667:INFO:Created external person: b57acfeb-b9ba-4b66-b829-e850f19966df
+2024-02-19 12:47:43,667:INFO:Creating external person for Marthe S. Paats.
+2024-02-19 12:47:43,669:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:43,862:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-19 12:47:43,864:INFO:Created external person: c9365a5f-b847-465e-9f22-a35e692e0216
+2024-02-19 12:47:43,865:INFO:Creating external person for Vivianne C. G. Tjan‐Heijnen.
+2024-02-19 12:47:43,867:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:44,158:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-19 12:47:44,160:INFO:Created external person: 4b848f38-e211-4cef-a1d2-6c062905228b
+2024-02-19 12:47:44,161:INFO:Creating external person for Cor van der Leest.
+2024-02-19 12:47:44,162:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:44,495:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-19 12:47:44,497:INFO:Created external person: 2a986e7d-440c-496e-b3f9-9dd10732d278
+2024-02-19 12:47:44,498:INFO:Creating external person for Anne‐Marie C. Dingemans.
+2024-02-19 12:47:44,500:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:44,668:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-19 12:47:44,670:INFO:Created external person: c2ce05a1-a4d7-408b-ba3c-7f132bf8d1f1
+2024-02-19 12:47:44,671:INFO:Creating external person for Ron H.J. Mathijssen.
+2024-02-19 12:47:44,673:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:44,871:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-19 12:47:44,873:INFO:Created external person: 7476f268-0608-4461-998c-86bb581332b1
+2024-02-19 12:47:44,874:INFO:Creating external person for E.M.W. van de Garde.
+2024-02-19 12:47:44,875:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:45,038:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-19 12:47:45,040:INFO:Created external person: d85d4511-9af2-484b-82b2-95cfc5a8db0f
+2024-02-19 12:47:45,042:INFO:Creating external person for Johanna H M Driessen.
+2024-02-19 12:47:45,044:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:45,249:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-19 12:47:45,251:INFO:Created external person: 352e7cad-5cdc-42b1-a794-e3457154c8d3
+2024-02-19 12:47:45,252:INFO:Creating external person for Lizza Hendriks.
+2024-02-19 12:47:45,254:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:45,431:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-19 12:47:45,434:INFO:Created external person: 7cf5cb23-b724-4720-a990-92c32c727c0c
+2024-02-19 12:47:45,434:INFO:Creating external person for Robin M.J.M. van Geel.
+2024-02-19 12:47:45,436:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:45,639:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-19 12:47:45,642:INFO:Created external person: 6e25b67e-7946-4cc5-add9-9cf6637d7dd4
+2024-02-19 12:47:45,642:INFO:Creating external person for Sander Croes.
+2024-02-19 12:47:45,644:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:45,829:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-19 12:47:45,831:INFO:Created external person: 43afc4e0-c861-4be2-a759-36395a47129e
+2024-02-19 12:47:45,833:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:46,124:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/journals/search/ HTTP/1.1" 200 None
+2024-02-19 12:47:46,128:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-19 12:47:46,975:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/research-outputs HTTP/1.1" 201 None
+2024-02-19 12:47:46,977:INFO:Processed research output https://openalex.org/W4387661197 successfully.
+2024-02-20 14:46:19,872:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:46:20,223:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.2110/jsr.2020.020 HTTP/1.1" 200 4055
+2024-02-20 14:46:20,226:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:46:20,606:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1016/j.icarus.2020.113979 HTTP/1.1" 200 5036
+2024-02-20 14:46:20,611:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:46:20,955:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1089/ast.2020.2228 HTTP/1.1" 200 4486
+2024-02-20 14:46:20,961:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:46:21,336:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1038/s41598-020-71016-8 HTTP/1.1" 200 4476
+2024-02-20 14:46:21,341:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:46:21,695:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1016/j.coastaleng.2019.103623 HTTP/1.1" 200 4453
+2024-02-20 14:46:21,700:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:46:22,062:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.5194/tc-14-3215-2020 HTTP/1.1" 200 4166
+2024-02-20 14:46:22,067:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:46:22,407:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1029/2019ef001470 HTTP/1.1" 200 6920
+2024-02-20 14:46:22,413:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:46:22,761:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1016/j.jag.2020.102067 HTTP/1.1" 200 5025
+2024-02-20 14:46:22,766:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:46:23,165:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1029/2019jf005206 HTTP/1.1" 200 5818
+2024-02-20 14:46:23,196:ERROR:Error processing research output https://openalex.org/W3100266848: name 'headers' is not defined
+2024-02-20 14:46:23,196:ERROR:Error processing research output https://openalex.org/W3042939062: name 'headers' is not defined
+2024-02-20 14:46:23,196:ERROR:Error processing research output https://openalex.org/W3026608766: name 'headers' is not defined
+2024-02-20 14:46:23,196:ERROR:Error processing research output https://openalex.org/W3061690163: name 'headers' is not defined
+2024-02-20 14:46:23,196:ERROR:Error processing research output https://openalex.org/W2997388172: name 'headers' is not defined
+2024-02-20 14:46:23,196:ERROR:Error processing research output https://openalex.org/W3087925412: name 'headers' is not defined
+2024-02-20 14:46:23,196:ERROR:Error processing research output https://openalex.org/W3020172758: name 'headers' is not defined
+2024-02-20 14:46:23,196:ERROR:Error processing research output https://openalex.org/W3005635049: name 'headers' is not defined
+2024-02-20 14:46:23,196:ERROR:Error processing research output https://openalex.org/W2996081849: name 'headers' is not defined
+2024-02-20 14:51:21,737:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:51:22,118:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.2110/jsr.2020.020 HTTP/1.1" 200 4055
+2024-02-20 14:51:22,122:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:51:22,537:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1016/j.icarus.2020.113979 HTTP/1.1" 200 5036
+2024-02-20 14:51:22,542:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:51:22,897:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1089/ast.2020.2228 HTTP/1.1" 200 4486
+2024-02-20 14:51:22,902:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:51:23,305:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1038/s41598-020-71016-8 HTTP/1.1" 200 4476
+2024-02-20 14:51:23,309:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:51:23,713:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1016/j.coastaleng.2019.103623 HTTP/1.1" 200 4453
+2024-02-20 14:51:23,724:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:51:24,079:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.5194/tc-14-3215-2020 HTTP/1.1" 200 4166
+2024-02-20 14:51:24,084:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:51:24,629:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1029/2019ef001470 HTTP/1.1" 200 6920
+2024-02-20 14:51:24,634:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:51:25,140:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1016/j.jag.2020.102067 HTTP/1.1" 200 5025
+2024-02-20 14:51:25,145:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:51:25,497:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1029/2019jf005206 HTTP/1.1" 200 5818
+2024-02-20 14:51:25,523:ERROR:Error processing research output https://openalex.org/W3100266848: name 'headers' is not defined
+2024-02-20 14:51:25,523:ERROR:Error processing research output https://openalex.org/W3042939062: name 'headers' is not defined
+2024-02-20 14:51:25,523:ERROR:Error processing research output https://openalex.org/W3026608766: name 'headers' is not defined
+2024-02-20 14:51:25,523:ERROR:Error processing research output https://openalex.org/W3061690163: name 'headers' is not defined
+2024-02-20 14:51:25,523:ERROR:Error processing research output https://openalex.org/W2997388172: name 'headers' is not defined
+2024-02-20 14:51:25,524:ERROR:Error processing research output https://openalex.org/W3087925412: name 'headers' is not defined
+2024-02-20 14:51:25,524:ERROR:Error processing research output https://openalex.org/W3020172758: name 'headers' is not defined
+2024-02-20 14:51:25,524:ERROR:Error processing research output https://openalex.org/W3005635049: name 'headers' is not defined
+2024-02-20 14:51:25,524:ERROR:Error processing research output https://openalex.org/W2996081849: name 'headers' is not defined
+2024-02-20 14:51:54,633:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:51:54,981:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.2110/jsr.2020.020 HTTP/1.1" 200 4055
+2024-02-20 14:51:54,984:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:51:55,365:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1016/j.icarus.2020.113979 HTTP/1.1" 200 5036
+2024-02-20 14:51:55,370:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:51:55,860:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1089/ast.2020.2228 HTTP/1.1" 200 4486
+2024-02-20 14:51:55,865:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:51:56,214:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1038/s41598-020-71016-8 HTTP/1.1" 200 4476
+2024-02-20 14:51:56,219:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:51:56,618:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1016/j.coastaleng.2019.103623 HTTP/1.1" 200 4453
+2024-02-20 14:51:56,623:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:51:56,999:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.5194/tc-14-3215-2020 HTTP/1.1" 200 4166
+2024-02-20 14:51:57,005:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:51:57,372:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1029/2019ef001470 HTTP/1.1" 200 6920
+2024-02-20 14:51:57,378:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:51:57,909:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1016/j.jag.2020.102067 HTTP/1.1" 200 5025
+2024-02-20 14:51:57,914:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:51:58,330:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1029/2019jf005206 HTTP/1.1" 200 5818
+2024-02-20 14:51:58,356:ERROR:Error processing research output https://openalex.org/W3100266848: name 'headers' is not defined
+2024-02-20 14:51:58,356:ERROR:Error processing research output https://openalex.org/W3042939062: name 'headers' is not defined
+2024-02-20 14:51:58,356:ERROR:Error processing research output https://openalex.org/W3026608766: name 'headers' is not defined
+2024-02-20 14:51:58,356:ERROR:Error processing research output https://openalex.org/W3061690163: name 'headers' is not defined
+2024-02-20 14:51:58,356:ERROR:Error processing research output https://openalex.org/W2997388172: name 'headers' is not defined
+2024-02-20 14:51:58,356:ERROR:Error processing research output https://openalex.org/W3087925412: name 'headers' is not defined
+2024-02-20 14:51:58,356:ERROR:Error processing research output https://openalex.org/W3020172758: name 'headers' is not defined
+2024-02-20 14:51:58,356:ERROR:Error processing research output https://openalex.org/W3005635049: name 'headers' is not defined
+2024-02-20 14:51:58,356:ERROR:Error processing research output https://openalex.org/W2996081849: name 'headers' is not defined
+2024-02-20 14:54:18,668:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:54:19,027:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.2110/jsr.2020.020 HTTP/1.1" 200 4055
+2024-02-20 14:54:19,032:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:54:19,405:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1016/j.icarus.2020.113979 HTTP/1.1" 200 5036
+2024-02-20 14:54:19,410:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:54:19,800:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1089/ast.2020.2228 HTTP/1.1" 200 4486
+2024-02-20 14:54:19,806:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:54:20,199:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1038/s41598-020-71016-8 HTTP/1.1" 200 4476
+2024-02-20 14:54:20,204:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:54:20,615:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1016/j.coastaleng.2019.103623 HTTP/1.1" 200 4453
+2024-02-20 14:54:20,620:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:54:21,014:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.5194/tc-14-3215-2020 HTTP/1.1" 200 4166
+2024-02-20 14:54:21,019:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:54:21,368:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1029/2019ef001470 HTTP/1.1" 200 6920
+2024-02-20 14:54:21,373:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:54:21,760:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1016/j.jag.2020.102067 HTTP/1.1" 200 5025
+2024-02-20 14:54:21,765:DEBUG:Starting new HTTPS connection (1): api.openalex.org:443
+2024-02-20 14:54:22,110:DEBUG:https://api.openalex.org:443 "GET /works/doi.org/10.1029/2019jf005206 HTTP/1.1" 200 5818
+2024-02-20 14:54:22,135:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:22,601:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:22,604:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:23,011:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:23,017:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:23,171:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:23,175:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:23,420:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:23,423:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:23,576:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:23,583:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:23,932:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:23,935:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:24,082:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:24,086:ERROR:No internal contributors found in Pure for the research output.
+2024-02-20 14:54:24,086:INFO:skipped research output https://openalex.org/W3100266848.
+2024-02-20 14:54:24,089:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:24,342:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:24,344:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:24,495:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:24,501:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:24,711:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:24,714:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:24,865:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:24,871:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:25,024:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:25,026:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:25,170:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:25,176:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:25,468:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:25,471:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:25,620:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:25,623:ERROR:No internal contributors found in Pure for the research output.
+2024-02-20 14:54:25,624:INFO:skipped research output https://openalex.org/W3042939062.
+2024-02-20 14:54:25,626:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:25,854:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:25,856:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:26,006:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:26,012:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:26,260:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:26,262:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:26,418:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:26,424:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:26,626:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:26,628:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:26,861:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:26,867:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:27,094:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:27,097:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:27,264:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:27,271:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:27,477:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:27,479:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:27,622:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:27,628:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:27,782:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:27,785:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:27,930:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:27,936:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:28,085:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:28,087:ERROR:No internal contributors found in Pure for the research output.
+2024-02-20 14:54:28,088:INFO:skipped research output https://openalex.org/W3026608766.
+2024-02-20 14:54:28,090:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:28,252:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:28,254:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:28,411:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:28,417:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:29,257:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:29,261:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:29,479:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:29,482:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:29,627:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:29,633:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:29,841:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:29,844:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:29,991:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:29,995:INFO:Creating external person for Tjalling de Haas.
+2024-02-20 14:54:29,997:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:30,486:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:30,488:INFO:Created external person: 6bcf7800-c403-46b8-af7f-78ca289b1992
+2024-02-20 14:54:30,489:INFO:Creating external person for S.M. de Jong.
+2024-02-20 14:54:30,491:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:30,710:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:30,712:INFO:Created external person: 57415b63-4a96-4b30-b4f2-ef23279b27a5
+2024-02-20 14:54:30,713:INFO:Creating external person for Brian W. McArdell.
+2024-02-20 14:54:30,715:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:30,923:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:30,925:INFO:Created external person: a7b320c6-ddb2-49f6-8051-73b3f37907eb
+2024-02-20 14:54:30,927:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:31,454:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/journals/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:31,460:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:33,251:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/research-outputs HTTP/1.1" 201 None
+2024-02-20 14:54:33,253:INFO:Processed research output https://openalex.org/W3061690163 successfully.
+2024-02-20 14:54:33,256:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:33,416:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:33,418:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:33,571:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:33,577:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:33,731:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:33,736:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:33,893:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:33,896:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:34,044:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:34,046:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:34,182:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:34,183:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:34,339:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:34,346:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:34,500:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:34,503:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:34,698:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:34,701:ERROR:No internal contributors found in Pure for the research output.
+2024-02-20 14:54:34,702:INFO:skipped research output https://openalex.org/W2997388172.
+2024-02-20 14:54:34,704:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:34,867:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:34,871:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:35,095:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:35,098:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:35,248:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:35,254:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:35,606:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:35,611:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:35,763:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:35,766:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:36,119:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:36,122:INFO:Creating external person for Remco de Kok.
+2024-02-20 14:54:36,124:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:36,335:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:36,337:INFO:Created external person: f59d2a39-b2ee-4b54-a568-a4a044d94b72
+2024-02-20 14:54:36,338:INFO:Creating external person for Philip Kraaijenbrink.
+2024-02-20 14:54:36,339:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:36,524:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:36,526:INFO:Created external person: ba4212a2-2650-4332-9353-95db172f9f04
+2024-02-20 14:54:36,527:INFO:Creating external person for Pleun N. J. Bonekamp.
+2024-02-20 14:54:36,528:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:36,747:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:36,749:INFO:Created external person: bbaa0dbd-cc00-4a4d-8a28-dad74fb8173b
+2024-02-20 14:54:36,751:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:37,142:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/journals/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:37,148:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:38,064:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/research-outputs HTTP/1.1" 201 None
+2024-02-20 14:54:38,066:INFO:Processed research output https://openalex.org/W3087925412 successfully.
+2024-02-20 14:54:38,069:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:38,261:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:38,264:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:38,416:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:38,422:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:38,635:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:38,638:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:38,796:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:38,802:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:39,087:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:39,090:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:39,275:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:39,281:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:39,517:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:39,520:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:39,669:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:39,676:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:39,848:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:39,852:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:40,111:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:40,114:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:40,267:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:40,272:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:40,459:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:40,461:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:40,609:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:40,614:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:40,931:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:40,936:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:41,081:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:41,083:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:41,696:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:41,699:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:41,914:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:41,916:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:42,077:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:42,080:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:42,294:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:42,296:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:42,451:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:42,457:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:42,651:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:42,654:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:42,811:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:42,817:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:43,027:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:43,029:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:43,186:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:43,193:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:43,363:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:43,365:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:43,514:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:43,520:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:43,671:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:43,675:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:43,823:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:43,827:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:44,016:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:44,018:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:44,161:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:44,164:INFO:Creating external person for Ben Marzeion.
+2024-02-20 14:54:44,166:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:44,351:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:44,353:INFO:Created external person: 5857a82f-8945-4582-849a-38bf06d47cd8
+2024-02-20 14:54:44,353:INFO:Creating external person for Regine Hock.
+2024-02-20 14:54:44,355:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:44,531:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:44,532:INFO:Created external person: a4c043aa-27b2-4950-992c-f95b9a0d420c
+2024-02-20 14:54:44,533:INFO:Creating external person for Brian Anderson.
+2024-02-20 14:54:44,535:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:44,707:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:44,709:INFO:Created external person: 820d93f3-2ef0-4200-b9b0-ffbc2e804a96
+2024-02-20 14:54:44,709:INFO:Creating external person for Andrew Bliss.
+2024-02-20 14:54:44,711:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:44,899:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:44,901:INFO:Created external person: 41293171-c5d0-44fa-a8ae-43947fbcc6cb
+2024-02-20 14:54:44,902:INFO:Creating external person for Nicolas Champollion.
+2024-02-20 14:54:44,904:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:45,084:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:45,086:INFO:Created external person: 4308c003-c581-4ec3-af10-eaf7bebe5474
+2024-02-20 14:54:45,086:INFO:Creating external person for Koji Fujita.
+2024-02-20 14:54:45,088:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:45,264:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:45,266:INFO:Created external person: 9234fa1a-37bb-4c49-a85f-597126146295
+2024-02-20 14:54:45,267:INFO:Creating external person for Matthias Huss.
+2024-02-20 14:54:45,269:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:45,489:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:45,491:INFO:Created external person: 5b97dbbc-08de-4ac6-b829-404aa1362aa3
+2024-02-20 14:54:45,492:INFO:Creating external person for Philip Kraaijenbrink.
+2024-02-20 14:54:45,493:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:45,691:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:45,693:INFO:Created external person: 19fb3027-ba89-4b75-81f8-ab4512205a9d
+2024-02-20 14:54:45,694:INFO:Creating external person for Jan-Hendrik Malles.
+2024-02-20 14:54:45,696:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:45,863:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:45,866:INFO:Created external person: e7c7ffb1-01f7-478b-9d08-4bf5642dce5e
+2024-02-20 14:54:45,866:INFO:Creating external person for Fabien Maussion.
+2024-02-20 14:54:45,868:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:46,046:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:46,048:INFO:Created external person: cc80a5cb-7f63-4e2c-929b-9c615b0666f3
+2024-02-20 14:54:46,049:INFO:Creating external person for Valentina Radić.
+2024-02-20 14:54:46,051:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:46,214:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:46,216:INFO:Created external person: ff039498-d820-4269-8205-599487f748ad
+2024-02-20 14:54:46,216:INFO:Creating external person for David Rounce.
+2024-02-20 14:54:46,218:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:46,391:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:46,393:INFO:Created external person: baddce5b-586f-4213-9896-7407631e91b8
+2024-02-20 14:54:46,393:INFO:Creating external person for Akiko Sakai.
+2024-02-20 14:54:46,395:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:46,570:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:46,572:INFO:Created external person: d93a948d-647c-412c-9137-563cbdfce4d2
+2024-02-20 14:54:46,572:INFO:Creating external person for Sarah Shannon.
+2024-02-20 14:54:46,574:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:46,750:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:46,752:INFO:Created external person: 83494706-55f5-4db5-9d04-7701270abecf
+2024-02-20 14:54:46,753:INFO:Creating external person for Roderik van de Wal.
+2024-02-20 14:54:46,755:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:46,920:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:46,922:INFO:Created external person: d2825ad6-813a-4c53-89d6-31bd99b23ae7
+2024-02-20 14:54:46,923:INFO:Creating external person for Harry Zekollari.
+2024-02-20 14:54:46,925:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:47,100:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:47,104:INFO:Created external person: 9ee50e38-259d-4ea5-9f11-c35cc28bb7ac
+2024-02-20 14:54:47,106:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:47,383:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/journals/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:47,389:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:48,305:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/research-outputs HTTP/1.1" 201 None
+2024-02-20 14:54:48,307:INFO:Processed research output https://openalex.org/W3020172758 successfully.
+2024-02-20 14:54:48,310:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:48,460:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:48,462:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:48,620:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:48,622:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:48,777:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:48,783:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:48,980:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:48,983:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:49,166:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:49,172:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:49,324:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:49,328:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:49,635:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:49,640:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:49,834:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:49,837:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:50,000:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:50,004:ERROR:No internal contributors found in Pure for the research output.
+2024-02-20 14:54:50,004:INFO:skipped research output https://openalex.org/W3005635049.
+2024-02-20 14:54:50,006:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:50,207:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:50,209:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:50,364:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:50,370:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:50,601:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:50,606:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:50,775:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:50,777:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:50,929:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:50,935:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:51,273:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:51,278:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:51,580:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:51,585:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:51,758:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:51,760:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:51,912:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:51,917:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:52,061:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:52,065:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:52,212:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:52,216:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:52,368:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:52,372:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:52,517:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:52,520:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:52,664:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:52,668:INFO:Creating external person for Matthew Hiatt.
+2024-02-20 14:54:52,670:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:52,846:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:52,848:INFO:Created external person: a0fd9d81-9c40-4ce6-b3c4-c4fba19f040d
+2024-02-20 14:54:52,849:INFO:Creating external person for Willem Sonke.
+2024-02-20 14:54:52,850:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:53,016:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:53,018:INFO:Created external person: 52db326b-7c08-4b25-a4f4-b198f4477e09
+2024-02-20 14:54:53,019:INFO:Creating external person for E.A. Addink.
+2024-02-20 14:54:53,021:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:53,192:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:53,194:INFO:Created external person: 5bd329cf-1f55-44f6-aa19-29513864215b
+2024-02-20 14:54:53,195:INFO:Creating external person for Tim Ophelders.
+2024-02-20 14:54:53,196:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:53,362:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:53,364:INFO:Created external person: a19a786e-ac36-4aab-85a9-59f4e7fb0326
+2024-02-20 14:54:53,365:INFO:Creating external person for Kevin Verbeek.
+2024-02-20 14:54:53,366:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:53,545:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:53,547:INFO:Created external person: da4aa5ac-c43c-4807-b134-be40c09bd08f
+2024-02-20 14:54:53,547:INFO:Creating external person for Joyce Vlaming.
+2024-02-20 14:54:53,549:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:53,722:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:53,724:INFO:Created external person: 76ae0b34-f7ec-476b-919c-c8a68ae3ae1a
+2024-02-20 14:54:53,724:INFO:Creating external person for Bettina Speckmann.
+2024-02-20 14:54:53,726:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:53,895:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:53,897:INFO:Created external person: dc669d69-e7d4-4dd9-afb3-27592079cd6b
+2024-02-20 14:54:53,898:INFO:Creating external person for Maarten G. Kleinhans.
+2024-02-20 14:54:53,899:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:54,064:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-20 14:54:54,066:INFO:Created external person: 4887a7be-4233-46c1-abf4-907b3ba7108b
+2024-02-20 14:54:54,068:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:54,551:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/journals/search/ HTTP/1.1" 200 None
+2024-02-20 14:54:54,581:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-20 14:54:55,472:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/research-outputs HTTP/1.1" 201 None
+2024-02-20 14:54:55,475:INFO:Processed research output https://openalex.org/W2996081849 successfully.
+2024-02-26 09:51:34,554:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 09:51:37,737:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 09:51:37,742:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 09:51:38,350:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 09:51:38,353:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 09:51:38,562:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 09:51:38,565:INFO:Creating external person for David Bowie.
+2024-02-26 09:51:38,567:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 09:51:39,682:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-26 09:51:39,685:INFO:Created external person: 71a1bec4-7ac7-42a2-b239-110a1cf34511
+2024-02-26 09:51:39,687:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 09:51:40,706:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/journals/search/ HTTP/1.1" 200 None
+2024-02-26 09:51:40,711:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 09:51:43,778:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/research-outputs HTTP/1.1" 201 None
+2024-02-26 09:51:43,780:INFO:Processed research output 101 successfully.
+2024-02-26 09:51:43,782:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 09:51:44,187:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 09:51:44,189:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 09:51:44,375:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 09:51:44,381:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 09:51:44,699:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 09:51:44,701:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 09:51:44,871:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 09:51:44,875:ERROR:No internal contributors found in Pure for the research output.
+2024-02-26 09:51:44,875:INFO:skipped research output 102.
+2024-02-26 09:51:44,877:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 09:51:45,113:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 09:51:45,115:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 09:51:45,253:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 09:51:45,259:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 09:51:45,471:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 09:51:45,473:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 09:51:45,611:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 09:51:45,615:ERROR:No internal contributors found in Pure for the research output.
+2024-02-26 09:51:45,615:INFO:skipped research output 103.
+2024-02-26 15:01:47,658:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 15:01:48,455:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 15:01:48,459:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 15:01:48,762:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 15:01:48,764:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 15:01:48,975:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 15:01:48,979:INFO:Creating external person for David Bowie.
+2024-02-26 15:01:48,981:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 15:01:49,376:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-26 15:01:49,379:INFO:Created external person: c1c5f564-daa1-4f70-bbcc-69c1fe27247e
+2024-02-26 15:01:49,381:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 15:01:49,855:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/journals/search/ HTTP/1.1" 200 None
+2024-02-26 15:01:49,860:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 15:01:52,002:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/research-outputs HTTP/1.1" 201 None
+2024-02-26 15:01:52,023:INFO:Processed research output 101 successfully.
+2024-02-26 15:01:52,025:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 15:01:52,345:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 15:01:52,347:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 15:01:52,531:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 15:01:52,537:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 15:01:52,858:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 15:01:52,860:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 15:01:53,036:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 15:01:53,039:ERROR:No internal contributors found in Pure for the research output.
+2024-02-26 15:01:53,040:INFO:skipped research output 102.
+2024-02-26 15:01:53,042:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 15:01:53,369:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 15:01:53,372:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 15:01:53,522:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 15:01:53,528:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 15:01:53,742:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 15:01:53,745:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-26 15:01:53,881:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-26 15:01:53,887:ERROR:No internal contributors found in Pure for the research output.
+2024-02-26 15:01:53,888:INFO:skipped research output 103.
+2024-02-29 09:44:53,714:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-29 09:44:55,013:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-29 09:44:55,018:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-29 09:44:55,267:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-29 09:44:55,270:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-29 09:44:55,427:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-29 09:44:55,431:INFO:Creating external person for David Bowie.
+2024-02-29 09:44:55,433:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-29 09:44:55,871:DEBUG:https://staging.research-portal.uu.nl:443 "PUT /ws/api/external-persons HTTP/1.1" 201 None
+2024-02-29 09:44:55,874:INFO:Created external person: 8680f644-9871-48b6-88e3-5945468227f7
+2024-02-29 09:44:55,876:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-29 09:44:56,277:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/journals/search/ HTTP/1.1" 200 None
+2024-02-29 09:44:56,280:INFO:Processed research output 101 successfully.
+2024-02-29 09:44:56,283:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-29 09:44:56,486:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-29 09:44:56,488:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-29 09:44:56,641:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-29 09:44:56,647:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-29 09:44:56,867:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-29 09:44:56,870:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-29 09:44:57,030:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-29 09:44:57,033:ERROR:No internal contributors found in Pure for the research output.
+2024-02-29 09:44:57,034:INFO:skipped research output 102.
+2024-02-29 09:44:57,036:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-29 09:44:57,221:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-29 09:44:57,223:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-29 09:44:57,361:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-29 09:44:57,367:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-29 09:44:57,572:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-29 09:44:57,574:DEBUG:Starting new HTTPS connection (1): staging.research-portal.uu.nl:443
+2024-02-29 09:44:57,705:DEBUG:https://staging.research-portal.uu.nl:443 "POST /ws/api/persons/search/ HTTP/1.1" 200 None
+2024-02-29 09:44:57,708:ERROR:No internal contributors found in Pure for the research output.
+2024-02-29 09:44:57,709:INFO:skipped research output 103.

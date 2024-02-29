@@ -1,0 +1,157 @@
+{
+    "typeDiscriminator": "ContributionToJournal",
+    "pureId": 202346944,
+    "uuid": "7db6d793-7b36-4acc-b6f4-3448ac122e5a",
+    "createdBy": "BEDER001",
+    "createdDate": "2023-11-06T13:02:38.242+01:00",
+    "modifiedBy": "root",
+    "modifiedDate": "2023-11-07T04:28:24.262+01:00",
+    "portalUrl": "http://10.10.70.176:8080/experts/en/publications/7db6d793-7b36-4acc-b6f4-3448ac122e5a",
+    "version": "ce02493b8811e39b2967e5177128855e71c0af30",
+    "title": {
+        "value": "Refugees, Identity, and the Limits to Inclusion: Revisiting Landlord-Stranger Reciprocity Relations in Contemporary Liberia"
+    },
+    "type": {
+        "uri": "/dk/atira/pure/researchoutput/researchoutputtypes/contributiontojournal/article",
+        "term": {
+            "en_GB": "Article"
+        }
+    },
+    "category": {
+        "uri": "/dk/atira/pure/researchoutput/category/academic",
+        "term": {
+            "en_GB": "Academic"
+        }
+    },
+    "peerReview": true,
+    "publicationStatuses": [
+        {
+            "pureId": 202346961,
+            "current": true,
+            "publicationStatus": {
+                "uri": "/dk/atira/pure/researchoutput/status/published",
+                "term": {
+                    "en_GB": "Published"
+                }
+            },
+            "publicationDate": {
+                "year": 2020,
+                "month": 9
+            }
+        }
+    ],
+    "language": {
+        "uri": "/dk/atira/pure/core/languages/und",
+        "term": {
+            "en_GB": "Undefined/Unknown"
+        }
+    },
+    "contributors": [
+        {
+            "typeDiscriminator": "InternalContributorAssociation",
+            "pureId": 202346959,
+            "hidden": false,
+            "correspondingAuthor": false,
+            "name": {
+                "firstName": "Maarten",
+                "lastName": "Bedert"
+            },
+            "role": {
+                "uri": "/dk/atira/pure/researchoutput/roles/contributiontojournal/author",
+                "term": {
+                    "en_GB": "Author"
+                }
+            },
+            "person": {
+                "systemName": "Person",
+                "uuid": "52a7a227-f88a-4830-b05f-93e223ba550f"
+            },
+            "organizations": [
+                {
+                    "systemName": "Organization",
+                    "uuid": "360f34ba-b6ea-4bf0-8067-c85994209e8b"
+                }
+            ]
+        }
+    ],
+    "organizations": [
+        {
+            "systemName": "Organization",
+            "uuid": "360f34ba-b6ea-4bf0-8067-c85994209e8b"
+        }
+    ],
+    "totalNumberOfContributors": 1,
+    "managingOrganization": {
+        "systemName": "Organization",
+        "uuid": "360f34ba-b6ea-4bf0-8067-c85994209e8b"
+    },
+    "submissionYear": 2020,
+    "electronicVersions": [
+        {
+            "typeDiscriminator": "DoiElectronicVersion",
+            "pureId": 202346946,
+            "accessType": {
+                "uri": "/dk/atira/pure/core/openaccesspermission/unknown",
+                "term": {
+                    "en_GB": "Unknown"
+                }
+            },
+            "doi": "10.1017/asr.2020.51",
+            "versionType": {
+                "uri": "/dk/atira/pure/researchoutput/electronicversion/versiontype/publishersversion",
+                "term": {
+                    "en_GB": "Final published version"
+                }
+            }
+        }
+    ],
+    "links": [
+        {
+            "pureId": 202346947,
+            "url": "https://doi.org/10.1017/asr.2020.51"
+        }
+    ],
+    "visibility": {
+        "key": "FREE",
+        "description": {
+            "en_GB": "Public - No restriction"
+        }
+    },
+    "workflow": {
+        "step": "forApproval",
+        "description": {
+            "en_GB": "For approval"
+        }
+    },
+    "identifiers": [
+        {
+            "typeDiscriminator": "PrimaryId",
+            "idSource": "ORCID",
+            "value": "/0000-0002-5899-0663/work/81690395"
+        },
+        {
+            "typeDiscriminator": "Id",
+            "pureId": 202398234,
+            "idSource": "Scopus",
+            "value": "85092593123"
+        }
+    ],
+    "customDefinedFields": {},
+    "journalAssociation": {
+        "pureId": 202346945,
+        "title": {
+            "pureId": 80765036,
+            "title": "African Studies Review"
+        },
+        "issn": {
+            "pureId": 80764740,
+            "issn": "0002-0206"
+        },
+        "journal": {
+            "systemName": "Journal",
+            "uuid": "c5ca78d3-e6d2-449d-a958-2e9a1ef4bb11"
+        }
+    },
+    "systemName": "ResearchOutput"
+}
+
