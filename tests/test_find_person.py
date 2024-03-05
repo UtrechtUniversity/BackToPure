@@ -1,6 +1,6 @@
 import pytest
 import requests_mock
-from import_RO_pure.pure_utilities import find_person
+from import_RO_pure.pure_persons import find_person
 
 
 @pytest.fixture
@@ -43,7 +43,7 @@ def test_successful_uuid_search_mock():
         result = find_person(None, {"uuid": valid_uuid}, None)
 
         # Assert that the result matches the expected mocked response
-        assert result['uuid'] == valid_uuid
+        assert result['uuid'] == valid_uuidfind_person
         assert result['firstName'] == "John"
         assert result['lastName'] == "Doe"
         # Add more assertions as needed

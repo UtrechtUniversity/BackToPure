@@ -53,6 +53,7 @@ def main():
 
             contributors_details = get_contributors_details(contributors, headers)
 
+            print(contributors_details)
             if contributors_details:
 
                 # Fetch journal UUID

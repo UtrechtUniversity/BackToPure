@@ -160,11 +160,12 @@ def get_df_from_openalex(openalex_data):
     # file_path = 'openalex.json'
     # with open(file_path, 'r') as file:
     #     openalex_data = json.load(file)
-    try:
-        publications = openalex_data['results']
-    except:
-        publications = openalex_data
-    df, df2 = transform_openalex_to_df(publications)
+    # try:
+    #     publications = openalex_data['results']
+    # except:
+    #     publications = openalex_data
+
+    df, df2 = transform_openalex_to_df(openalex_data)
 
     return df, df2
 

@@ -16,3 +16,21 @@
 2024-02-29 12:20:27 - INFO - Person found with name: gerad
 2024-02-29 12:21:56 - INFO - Person found with name: gerad
 2024-02-29 12:22:48 - INFO - Person found with name: gerad
+2024-02-29 13:23:21 - WARNING - Multiple or no persons found for ORCID, 0000-0000-0000-0000
+2024-02-29 13:23:22 - INFO - Person found with name: Menno Straatsma
+2024-02-29 13:25:38 - WARNING - Multiple or no persons found for ORCID, 0000-0000-0000-0000
+2024-02-29 13:25:38 - INFO - Person found with name: Menno Straatsma
+2024-03-04 10:18:05 - WARNING - Multiple or no persons found for ORCID, 0000-0000-0000-0000
+2024-03-04 10:18:06 - WARNING - Multiple persons found for name: Jan Test
+2024-03-04 10:18:39 - WARNING - Multiple or no persons found for ORCID, 0000-0000-0000-0000
+2024-03-04 10:18:40 - INFO - Person found with name: menno Straatsma
+2024-03-04 10:19:39 - WARNING - Multiple or no persons found for ORCID, 0000-0000-0000-0000
+2024-03-04 10:19:39 - INFO - Person found with name: menno Straatsma
+2024-03-05 08:52:07 - WARNING - Multiple or no persons found for ORCID, 0000-0000-0000-0000
+2024-03-05 08:52:08 - WARNING - no persons found for name: menno Straataaaaasma
+2024-03-05 08:53:01 - WARNING - Multiple or no persons found for ORCID, 0000-0000-0000-0000
+2024-03-05 08:53:01 - WARNING - no persons found for name: menno Straataaaaasma
+2024-03-05 08:55:03 - WARNING - Multiple or no persons found for ORCID, 0000-0000-0000-0000
+2024-03-05 08:55:04 - WARNING - no persons found for name: menno Straataaaaasma
+2024-03-05 08:55:04 - WARNING - no person_details or date for get_active_associations
+2024-03-05 09:17:06 - WARNING - Multiple or no persons found for ORCID, 0000-0000-0000-0000

@@ -3,12 +3,16 @@ import json
 import logging
 from datetime import datetime
 import configparser
+import os
 # Load configuration settings from config.ini
+config_path = 'config.ini'
+if not os.path.exists(config_path):
+    raise FileNotFoundError(f"The configuration file {config_path} does not exist.")
+
 config = configparser.ConfigParser()
 config.read('config.ini')
 BASE_URL = config['API']['BaseURL']
 API_KEY = config['API']['APIKey']
-
 def construct_research_output_json(research_output_id, title, contributors, journal, publication_year, publication_month, language_uri, language_term,
                                    peer_review, submission_year, doi, visibility_key, workflow_step):
     """
@@ -127,7 +131,7 @@ def get_pure_person_details(contributor, headers):
     for id_type, id_value in contributor['ids'].items():
         data = {"searchString": id_value}
         json_data = json.dumps(data)
-        print(json_data)
+
         try:
             # print(json_data)
             response = requests.post(api_url, headers=headers, data=json_data)
@@ -191,14 +195,14 @@ def create_external_person(contributor, headers):
     return None
 
 
-def get_contributors_details(contributors, headers):
+def get_contributors_details(contributors, headers, ref_date):
 
     persons = {}
     found_internal_person = False
 
     # First pass: Check for internal persons and mark if any are found
     for contributor in contributors:
-        print(contributor)
+
         contributor_id = contributor['name']
         person_details = get_pure_person_details(contributor, headers)
 

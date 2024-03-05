@@ -43,6 +43,7 @@ def parse_date(date_string):
 def construct_person_detail(data, ref_date=None):
     """
        Constructs a dictionary of person details from API response data.
+       (Note that the header of the api-call contain the apikey that is loaded in the top of this script)
 
        Parameters:
        - data (dict): The JSON data returned from the API.
@@ -96,6 +97,8 @@ def find_person(name, person_ids, date):
     - person_ids (dict): A dictionary of identifiers for the person (e.g., UUID, other IDs).
     - date (str): A date string used for filtering data. if None => all association ids will be collected
     - apikey (str): API key for authentication with the API.
+      (Note that the header of the api-call contain the apikey that is loaded in the top of this script)
+
 
     Returns:
     - dict: A dictionary containing detailed information about the person if a unique match is found.
@@ -106,7 +109,7 @@ def find_person(name, person_ids, date):
         # ref_date = datetime.strptime(date, "%Y-%m-%d")
 
         ref_date = parse_date(date)
-        print(ref_date)
+
     person_detail = None
     if person_ids and 'uuid' in person_ids:
 
@@ -177,18 +180,64 @@ def find_person(name, person_ids, date):
     return (person_detail)
 
 
+from datetime import datetime
+
+def get_active_associations(person_details, ref_date_str):
+    """
+    Updates person details to include only active associations based on a reference date.
+
+    Parameters:
+    - person_details (dict): A dictionary containing person's details including associations.
+    - ref_date_str (str): The reference date in string format (e.g., 'YYYY-MM-DD').
+
+    Returns:
+    - dict: Updated person_details with only active associations for the given reference date.
+    """
+    if not person_details or not ref_date_str:
+        logging.warning(f"no person_details or date for get_active_associations")
+        return
+
+    active_associations = []
+    ref_date = None
+    if ref_date_str:
+
+        ref_date = parse_date(ref_date_str)
+
+    if 'associationsUUIDs' in person_details:
+        for association in person_details['associationsUUIDs']:
+            start_date_str = association.get('startDate')
+            end_date_str = association.get('endDate', '9999-12-31')
+
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d") if start_date_str else None
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d") if end_date_str else None
+
+            if start_date and end_date and start_date <= ref_date <= end_date:
+                active_associations.append(association)
+
+        # Update the person_details with only active associations
+    person_details['associationsUUIDs'] = active_associations
+    return person_details
+
+
+
+
+
 
 person_info = {
-    'name': 'Jon Doe',
-    'first_name': 'jon',
-    'last_name': 'Doe',
-    'ids': {'ORCID': '0000-0002-0014-825', 'ScopusID': '123456'}
+    'name': 'menno Straataaaaasma',
+    'first_name': 'Jan',
+    'last_name': 'Test',
+    'ids': {'ORCID': '0000-0000-0000-0000', 'ScopusID': '123456'}
 }
 
 # Extract the full name and IDs
 full_name = person_info['name']  # Or construct from first_name and last_name if needed
 person_ids = person_info['ids']
 
-person_details = find_person(full_name, person_ids, '01-01-2020')
+person_details = find_person(full_name, person_ids, None)
+
+print(person_details)
+
+person_details = get_active_associations(person_details, '01-01-2019')
 
 print(person_details)

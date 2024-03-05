@@ -124,8 +124,8 @@ def create_pubs_in_pure(df):
 
 config = configparser.ConfigParser()
 config.read('config.ini')
-BASE_URL = config['DEFAULT']['BaseURL']
-API_KEY = config['DEFAULT']['APIKey']
+BASE_URL = config['API']['BaseURL']
+API_KEY = config['API']['APIKey']
 # headers
 headers = CaseInsensitiveDict()
 headers["Content-Type"] = "application/json"
@@ -140,7 +140,7 @@ logging.basicConfig(filename=os.path.join(log_directory, 'output.log'),
 
 
 
-dois = get_dois_from_csv('doi.csv')
+dois = get_dois_from_csv('output.csv')
 
 responses = get_jsons_from_open_alex(dois)
 
