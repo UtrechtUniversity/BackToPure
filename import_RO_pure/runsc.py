@@ -41,7 +41,9 @@ def main():
     df, user_choice = choose_source()
 
     # Process each research output
+
     for _, row in df.iterrows():
+
         try:
             # Fetch contributors details
 
@@ -51,15 +53,17 @@ def main():
             elif user_choice == 'alex':
                 contributors = row['contributors']
 
-            contributors_details = get_contributors_details(contributors, headers)
+            contributors_details = get_contributors_details(contributors, headers, '2020-01-01')
 
-            print(contributors_details)
+
             if contributors_details:
 
                 # Fetch journal UUID
                 journal = get_journal_uuid(row['journal_issn'], headers)
-                print("journal: ", journal)
+
                 # Construct the research output JSON
+
+                print('jj', row['workflow_step'])
                 research_output_json = construct_research_output_json(
                     row['research_output_id'],
                     row['title'],
@@ -75,8 +79,8 @@ def main():
                     row['visibility_key'],
                     row['workflow_step']
                 )
-
-                # uuid_ro = create_research_output(research_output_json, headers)
+                print('jj')
+                uuid_ro = create_research_output(research_output_json, headers)
                 # Here, you can process the research_output_json as needed
                 logging.info(f"Processed research output {row['research_output_id']} successfully.")
             else:
@@ -93,7 +97,7 @@ def choose_source():
         df = pd.read_csv('ro.csv')
     elif user_choice == 'alex':
 
-        df, errors = openalex_utils.get_df_from_openalex()
+        df, errors = openalex_utils.transform_openalex_to_df()
 
         errors.to_csv('not_processed.csv', index=False)
     else:

@@ -98,9 +98,10 @@ def create_pubs_in_pure(df):
                 # Construct the research output JSON
                 research_output_json = construct_research_output_json(
                     row['research_output_id'],
-                    row['title'],
+
                     contributors_details,
                     journal,
+                    row['title'],
                     row['publication_year'],
                     row['publication_month'],
                     row['language_uri'],

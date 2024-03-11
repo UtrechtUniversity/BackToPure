@@ -33,32 +33,27 @@ def construct_research_output_json(research_output_id, title, contributors, jour
     :param workflow_step: Current step in the workflow.
     :return: A dictionary representing the research output in the defined JSON format.
     """
+
+    print('kom ik hier dan')
     parsed_contributors = format_contributors(contributors)
     parsed_organizations = format_organizations_from_contributors(contributors)
+
+    print('gg' + language_uri)
     research_output = {
         "typeDiscriminator": "ContributionToJournal",
-
-        "title": {"value": title},
-        "type": {
-            "uri": "/dk/atira/pure/researchoutput/researchoutputtypes/contributiontojournal/article",
-
-        },
-        "category": {
-            "uri": "/dk/atira/pure/researchoutput/category/academic",
-
-        },
         "peerReview": peer_review,
+        "title": {"value": title},
+        "type": {"uri": "/dk/atira/pure/researchoutput/researchoutputtypes/contributiontojournal/article"},
+        "category": {"uri": "/dk/atira/pure/researchoutput/category/academic"},
         "publicationStatuses": [{
-
             "current": True,
             "publicationStatus": {
                 "uri": "/dk/atira/pure/researchoutput/status/published",
-
             },
             "publicationDate": {"year": publication_year, "month": publication_month}
         }],
-        "language": {"uri": language_uri, "term": {"en_GB": language_term}},
-        "contributors": parsed_contributors,  # This should be formatted as per the defined structure
+        "language": {"uri": language_uri},
+        "contributors": parsed_contributors,
         "organizations": parsed_organizations,
         "totalNumberOfContributors": len(contributors),
         "managingOrganization": {
@@ -68,24 +63,17 @@ def construct_research_output_json(research_output_id, title, contributors, jour
         # "submissionYear": submission_year,
         "electronicVersions": [{
             "typeDiscriminator": "DoiElectronicVersion",
-
             "accessType": {
                 "uri": "/dk/atira/pure/core/openaccesspermission/unknown",
-
             },
             "doi": doi,
             "versionType": {
                 "uri": "/dk/atira/pure/researchoutput/electronicversion/versiontype/publishersversion",
-
             }
         }],
         "links": [{"url": f"https://doi.org/{doi}"}],  # Placeholder for links
-        "visibility": {
-            "key": visibility_key,
-        },
-        "workflow": {
-            "step": workflow_step,
-        },
+        "visibility": {"key": visibility_key},
+        "workflow": {"step": workflow_step},
         "identifiers": [
             {
                 "typeDiscriminator": "PrimaryId",
@@ -99,9 +87,8 @@ def construct_research_output_json(research_output_id, title, contributors, jour
                 "value": "85092593111"
             }
         ],
-        "customDefinedFields": {},
+        # "customDefinedFields": {},
         "journalAssociation": {
-
             "journal": {
                 "systemName": "Journal",
                 "uuid": journal
@@ -202,7 +189,7 @@ def get_contributors_details(contributors, headers, ref_date):
 
     # First pass: Check for internal persons and mark if any are found
     for contributor in contributors:
-
+        print(contributor)
         contributor_id = contributor['name']
         person_details = get_pure_person_details(contributor, headers)
 
@@ -214,6 +201,7 @@ def get_contributors_details(contributors, headers, ref_date):
             persons[contributor_id] = None
 
     # Second pass: Create external persons only if an internal person is found
+        print(found_internal_person)
     if found_internal_person:
         for contributor in contributors:
             contributor_id = contributor['name']
