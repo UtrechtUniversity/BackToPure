@@ -64,8 +64,20 @@ def extract_journal_issn(publication):
     return source.get('issn_l', 'No ISSN')
 
 # Function to extract relevant data from OpenAlex JSON and format it into a DataFrame
-def transform_openalex_to_df(openalex_data):
+def extract_keywords(publication):
+    # Extract keywords
+    extracted_keywords = [item['keyword'] for item in publication['keywords']]
 
+    return extracted_keywords
+
+
+def extract_open_access(open_access):
+
+    status = open_access.get('status', {})
+    return status
+
+
+def transform_openalex_to_df(openalex_data):
     processed_publications = []
     not_processed_publications = []
 
@@ -73,12 +85,16 @@ def transform_openalex_to_df(openalex_data):
         openalex_data = [openalex_data]
 
     for publication in openalex_data:
+
         title = publication.get('title')
         type = publication.get('type')
         doi = publication.get('doi')
+        language = publication.get('language')
         publication_date = publication.get('publication_date', '')
         year, month, day = extract_date_components(publication_date)
+        open_access =  extract_open_access(publication.get('open_access'))
         contributors = parse_contributors(publication.get('authorships', []))
+        keywords = extract_keywords(publication)
 
         if not all([title, type, doi, year, contributors]):
             reason = "Missing fields: "
@@ -93,11 +109,13 @@ def transform_openalex_to_df(openalex_data):
             'type': type,
             'peer_review': config['DEFAULTS']['peer_review'],
             'doi': doi,
+            'publication_date': publication_date,
             'submission_year': year,
             'publication_year': year,
             'publication_month': month,
             'publication_day': day,
             'contributors': contributors,
+            'keywords': keywords,
             'journal_issn': extract_journal_issn(publication),
             'language_term': 'Undefined/Unknown',
             'language_uri': config['DEFAULTS']['language_uri'],
@@ -139,7 +157,7 @@ def parse_contributors(contributors):
             'last_name': last_name,
             'ids': ids_dict
         })
-    print(parsed_contributors)
+
     return parsed_contributors
 
 def extract_date_components(date_string):
@@ -154,20 +172,6 @@ def extract_date_components(date_string):
 
 # Transform OpenAlex data to DataFrame
 
-def get_df_from_openalex(openalex_data):
-    # Load the OpenAlex JSON file
-
-    # file_path = 'openalex.json'
-    # with open(file_path, 'r') as file:
-    #     openalex_data = json.load(file)
-    # try:
-    #     publications = openalex_data['results']
-    # except:
-    #     publications = openalex_data
-
-    df, df2 = transform_openalex_to_df(openalex_data)
-
-    return df, df2
 
 def extract_orcid_id(orcid):
     # Check if the ORCID is in URL format
@@ -181,17 +185,14 @@ def extract_orcid_id(orcid):
         # Return an empty string if orcid is None
         return ''
 
-#FIELDS
-# df = get_df_from_openalex()
-# for t in df.iterrows():
-#     print(t)
-OPENALEX_HEADERS = {'Accept': 'application/json',
-                    # The following will be read in __main__
-                    'User-Agent': 'mailto:d.h.j.grotebeverborg@uu.nl'
-                    }
-OPENALEX_MAX_RECS_TO_HARVEST = 3
-doi = 'doi.org/10.1002/ijc.34742'
-url = 'https://api.openalex.org/works/' + doi
-response = requests.get(url, headers=OPENALEX_HEADERS)
 
-print (response.text)
+# OPENALEX_HEADERS = {'Accept': 'application/json',
+#                     # The following will be read in __main__
+#                     'User-Agent': 'mailto:d.h.j.grotebeverborg@uu.nl'
+#                     }
+# OPENALEX_MAX_RECS_TO_HARVEST = 3
+# doi = 'doi.org/10.1002/ijc.34742'
+# url = 'https://api.openalex.org/works/' + doi
+# response = requests.get(url, headers=OPENALEX_HEADERS)
+#
+# print (response.text)

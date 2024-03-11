@@ -223,21 +223,18 @@ def get_active_associations(person_details, ref_date_str):
 
 
 
-person_info = {
-    'name': 'menno Straataaaaasma',
-    'first_name': 'Jan',
-    'last_name': 'Test',
-    'ids': {'ORCID': '0000-0000-0000-0000', 'ScopusID': '123456'}
-}
+# person_info = {
+#     'name': 'menno Straataaaaasma',
+#     'first_name': 'Jan',
+#     'last_name': 'Test',
+#     'ids': {'ORCID': '0000-0000-0000-0000', 'ScopusID': '123456'}
+# }
+#
+# # Extract the full name and IDs
+# full_name = person_info['name']  # Or construct from first_name and last_name if needed
+# person_ids = person_info['ids']
+#
+# person_details = find_person(full_name, person_ids, None)
+#
+# person_details = get_active_associations(person_details, '01-01-2019')
 
-# Extract the full name and IDs
-full_name = person_info['name']  # Or construct from first_name and last_name if needed
-person_ids = person_info['ids']
-
-person_details = find_person(full_name, person_ids, None)
-
-print(person_details)
-
-person_details = get_active_associations(person_details, '01-01-2019')
-
-print(person_details)
