@@ -241,3 +241,6 @@ print(person_details)
 person_details = get_active_associations(person_details, '01-01-2019')
 
 print(person_details)
+
+print(person_details, full_name)
+
