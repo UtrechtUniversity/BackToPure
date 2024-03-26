@@ -56,7 +56,32 @@ DEFAULTS = {key: config.get('DEFAULTS', key) for key in config.options('DEFAULTS
 #     'report': rcg.ROTYPE_REPORT
 # }
 
+def get_jsons_from_open_alex(dois):
+    OPENALEX_HEADERS = {'Accept': 'application/json',
+                        # The following will be read in __main__
+                        'User-Agent': 'mailto:d.h.j.grotebeverborg@uu.nl'
+                        }
+    OPENALEX_MAX_RECS_TO_HARVEST = 1
+    all_responses = []
 
+
+    for item in dois:
+        doi = 'doi.org/'  +  item
+        url = 'https://api.openalex.org/works/' + doi
+        try:
+            response = requests.get(url, headers=OPENALEX_HEADERS)
+            if response.status_code == 200:
+                all_responses.append(response.json())
+            else:
+                print(f"Failed to retrieve data for DOI {item}. Status code: {response.status_code}")
+        except requests.exceptions.RequestException as e:
+            print(f"An error occurred while fetching data for DOI {item}: {e}")
+
+    # Write all responses to a JSON file
+    with open('all_responses.json', 'w', encoding='utf-8') as f:
+        json.dump(all_responses, f, ensure_ascii=False, indent=4)
+
+    return all_responses
 
 def extract_journal_issn(publication):
     primary_location = publication.get('primary_location', {})
@@ -144,6 +169,7 @@ def parse_contributors(contributors):
         first_name = human_name.first
         last_name = human_name.last
 
+
         # Create a dictionary of IDs
         ids_dict = {}
         if orcid:
@@ -157,6 +183,8 @@ def parse_contributors(contributors):
             'last_name': last_name,
             'ids': ids_dict
         })
+
+
 
     return parsed_contributors
 

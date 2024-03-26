@@ -7,13 +7,19 @@ import os
 import logging
 
 from dateutil import parser
+from pathlib import Path
 
-config_path = 'config.ini'
-if not os.path.exists(config_path):
+# Calculate the path to the config.ini file
+# Path(__file__).resolve() gets the absolute path of the current script
+# .parent gets the directory containing the script (src)
+# .parent again moves up to the project root directory
+config_path = Path(__file__).resolve().parent.parent / 'config.ini'
+# config_path = 'config.ini'
+if not config_path.exists():
     raise FileNotFoundError(f"The configuration file {config_path} does not exist.")
 
 config = configparser.ConfigParser()
-config.read('config.ini')
+config.read(config_path)
 BASE_URL = config['API']['BaseURL']
 API_KEY = config['API']['APIKey']
 
@@ -148,34 +154,34 @@ def find_person(name, person_ids, date):
                     except requests.RequestException as e:
                         logging.error(f"An error occurred while searching for {id_type}: {e}")
 
-        if not person_detail and name is not None:
-            print("search person based on name ")
-            data = {"searchString": name}
-            json_data = json.dumps(data)
-            api_url = BASE_URL + 'persons/search/'
-            try:
-                response = requests.post(api_url, headers=headers, data=json_data)
-                if response.status_code == 200:
-                    data = response.json()
-                    items = data.get('items', [])
+    if not person_detail and name is not None:
 
-                    if items:
-                        if len(items) == 1:
-                            item = items[0]
-                            person_detail = construct_person_detail(item, ref_date)
-                            logging.info(f"Person found with name: {name}")
-                            return person_detail
-                        else:
-                            logging.warning(f"Multiple persons found for name: {name}")
+        data = {"searchString": name}
+        json_data = json.dumps(data)
+        api_url = BASE_URL + 'persons/search/'
+        try:
+            response = requests.post(api_url, headers=headers, data=json_data)
+            if response.status_code == 200:
+                data = response.json()
+                items = data.get('items', [])
+
+                if items:
+                    if len(items) == 1:
+                        item = items[0]
+                        person_detail = construct_person_detail(item, ref_date)
+                        logging.info(f"Person found with name: {name}")
+                        return person_detail
                     else:
-                        logging.warning(f"no persons found for name: {name}")
-
-
-
+                        logging.warning(f"Multiple persons found for name: {name}")
                 else:
-                    logging.error(f"Error searching for {name}: {response.status_code} - {response.text}")
-            except requests.RequestException as e:
-                logging.error(f"An error occurred while searching for {name}: {e}")
+                    logging.warning(f"no persons found for name: {name}")
+
+
+
+            else:
+                logging.error(f"Error searching for {name}: {response.status_code} - {response.text}")
+        except requests.RequestException as e:
+            logging.error(f"An error occurred while searching for {name}: {e}")
 
     return (person_detail)
 
@@ -217,10 +223,6 @@ def get_active_associations(person_details, ref_date_str):
         # Update the person_details with only active associations
     person_details['associationsUUIDs'] = active_associations
     return person_details
-
-
-
-
 
 
 # person_info = {

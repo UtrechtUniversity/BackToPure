@@ -1,11 +1,6 @@
 import requests
 import json
 
-
-# 10.1002/ijc.34742
-
-
-
 import json
 import requests
 
