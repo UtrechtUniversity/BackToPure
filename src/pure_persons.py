@@ -44,6 +44,9 @@ def parse_date(date_string):
     except (ValueError, TypeError):
         return None  # or some default date
 
+def extract_orcid(orcid_full_url):
+    # Split the string by '/' and return the last part
+    return orcid_full_url.split('/')[-1]
 
 # Function to construct person_detail from API response data
 def construct_person_detail(data, ref_date=None):
@@ -132,7 +135,8 @@ def find_person(name, person_ids, date):
 
     if person_ids:
         for id_type, id_value in person_ids.items():
-
+                    if id_type.lower() == 'orcid':
+                        id_value = extract_orcid(id_value)
                     data = {"searchString": id_value}
                     json_data = json.dumps(data)
                     api_url = BASE_URL + 'persons/search/'

@@ -6,17 +6,22 @@ import configparser
 import os
 import logging
 import pure_persons
-import test
-import openalex_utils
+import yoda_utils
 import logging.handlers
-from dateutil import parser
+from pathlib import Path
 
-config_path = 'config.ini'
-if not os.path.exists(config_path):
+# Calculate the path to the config.ini file
+# Path(__file__).resolve() gets the absolute path of the current script
+# .parent gets the directory containing the script (src)
+# .parent again moves up to the project root directory
+config_path = Path(__file__).resolve().parent.parent / 'config.ini'
+# config_path = 'config.ini'
+if not config_path.exists():
     raise FileNotFoundError(f"The configuration file {config_path} does not exist.")
 
+
 config = configparser.ConfigParser()
-config.read('config.ini')
+config.read(config_path)
 BASE_URL = config['API']['BaseURL']
 API_KEY = config['API']['APIKey']
 
@@ -45,6 +50,8 @@ headers = {
     "accept": "application/json",
     "api-key": API_KEY
 }
+
+
 
 #
 def create_external_person(first_name, last_name):
@@ -76,44 +83,36 @@ def create_external_person(first_name, last_name):
 
 def get_contributors_details(contributors, param1):
     persons = {}
-    parsed_contributors = []
     found_internal_person = False
+
     for contributor in contributors:
-        ids_dict = {}
-        contributor_id = contributor
+        # Assuming contributor has 'name' and 'person_ids'
+        name = contributor['name']
+        ids_dict = {id_info['id']: id_info['value'] for id_info in contributor['person_ids']}
 
         person_details = pure_persons.find_person(contributor, ids_dict, None)
 
         if person_details:
-            persons[contributor_id] = person_details
+            persons[name] = person_details
             found_internal_person = True
         else:
-            # Mark as None for now
-            persons[contributor_id] = None
+            print(f"No internal person found for {name}")
 
-            # Second pass: Create external persons only if an internal person is found
     if found_internal_person:
-        for contributor in contributors:
-            contributor_id = contributor
-            if persons[contributor_id] is None:  # This contributor needs an external person
-                logging.info(f"Creating external person for {contributor_id}.")
-                # Splitting the name on the comma
-                parts = contributor.split(',')
-
-                # Trimming whitespace and assigning
-                last_name = parts[0].strip()
-                first_name = parts[1].strip() if len(parts) > 1 else ''
+        # Process external persons
+        for name, details in persons.items():
+            if details is None:
+                first_name, last_name = name.split(' ', 1)
                 external_person_uuid = create_external_person(first_name, last_name)
-
                 if external_person_uuid:
                     logging.info(f'Created external person: {external_person_uuid}')
-                    persons[contributor_id] = {
+                    persons[name] = {
                         "external_person_uuid": external_person_uuid,
                         "external_person_first_name": first_name,
                         "external_person_last_name": last_name
                     }
                 else:
-                    logging.error(f"Failed to create external person for {contributor_id}")
+                    logging.error(f"Failed to create external person for {name}")
     else:
         logging.error("No internal contributors found in Pure for the research output.")
         return None
@@ -232,41 +231,71 @@ def format_organizations_from_contributors(contributors):
         managing_org = None
     return formatted_organizations, managing_org
 
-response = requests.get('https://api.datacite.org/dois/10.6084/M9.FIGSHARE.21829182')
 
-single_dataset = response.json()
-data = single_dataset['data']['attributes']
-title = data['titles'][0]['title']
-persons = [creator['name'] for creator in data['creators']]
-publisher = data['publisher']
-doi = data['doi']
-publication_year = data['publicationYear']
-publication_month = 1
-publication_day = 1
-subjects = [subject['subject'] for subject in data['subjects']]
 
-# Creating a DataFrame
-df = pd.DataFrame([{
-    'title': title,
-    'persons': persons,
-    'publisher': publisher,
-    'DOI': doi,
-    'managing_org': '0bafdc8f-1117-40a4-b555-64ac03d78b05',
-    'publication_year': publication_year,
-    'publication_month': publication_month,
-    'publication_day': publication_day,
-    'publication_date': "2024-03-25",
-    'subject': subjects
-}])
 
-print(df)
+def find_publisher(publisher):
+    data = {"searchString": publisher}
+    publisher_id =  None
+    json_data = json.dumps(data)
+    api_url = BASE_URL + 'publishers/search/'
+    try:
+        response = requests.post(api_url, headers=headers, data=json_data)
+
+        if response.status_code == 200:
+            data = response.json()
+            items = data.get('items', [])
+            if items:
+                for item in items:
+                    uuid = item.get('uuid')
+                    name = item.get('name')
+                    if name == publisher:
+                        publisher_uuid = uuid
+                        return publisher_uuid
+                if not publisher_id:
+                    publisher_uuid = config['DEFAULTS']['publisher']
+            else:
+                publisher_uuid = config['DEFAULTS']['publisher']
+            return publisher_uuid
+
+        else:
+    #         default publisher
+            publisher_uuid = config['DEFAULTS']['publisher']
+            return publisher_uuid
+
+    except requests.RequestException as e:
+        logging.error(f"An error occurred while searching for publisher: {publisher}: {e}")
+
+
+def format_description(description):
+    description_object = {
+        "value": {
+            # Provide string values for each submission locale. Replace 'en', 'fr', etc. with actual locales
+            "en_GB": description
+        },
+        "type": {
+            "uri": "/dk/atira/pure/dataset/descriptions/datasetdescription",  # Replace with actual classification URI
+            "term": {
+
+                "en_GB": "Description",
+
+            }
+        }
+    }
+    return description_object
 
 
 def construct_dataset_json(row):
+    
+    publisher_uuid = find_publisher(row['publisher'])
+    description = format_description(row['description'])
+
     dataset = {
          "title": {"en_GB": row['title']},
+         "descriptions": [description],
+         "doi": {"doi": row['doi']},
          "type": {"uri": "/dk/atira/pure/dataset/datasettypes/dataset/dataset"},
-         "publisher": {"systemName": "Publisher", "uuid": 'beb3e811-1f2c-4725-ad70-7f1f38692aec'},
+         "publisher": {"systemName": "Publisher", "uuid": publisher_uuid},
          "publicationAvailableDate": {"year": row['publication_year'], "month": row['publication_month'], "day": row['publication_month']},
          "managingOrganization": {"systemName": "Organization", "uuid": row['managing_org']},
          "persons": row['parsed_contributors'],
@@ -297,6 +326,49 @@ def create_dataset(dataset_json):
             print(response.text)  # If response is not JSON, print raw text
     return 'test'
 
+
+# response = requests.get('https://api.datacite.org/dois/10.6084/M9.FIGSHARE.21829182')
+def get_df_from_datacite(datsets):
+
+    data_list = []
+
+    for doi in datasets:
+        response = requests.get(f'https://api.datacite.org/dois/{doi}')
+        if response.status_code == 200:
+            single_dataset = response.json()
+            data = single_dataset['data']['attributes']
+
+            title = data['titles'][0]['title']
+            persons = [creator['name'] for creator in data['creators']]
+            publisher = data['publisher']
+            publication_year = data['publicationYear']
+            subjects = [subject['subject'] for subject in data['subjects']]
+
+            # Append the extracted information to the list as a dictionary
+            data_list.append({
+                'title': title,
+                'persons': persons,
+                'publisher': publisher,
+                'DOI': doi,
+                'publication_year': publication_year,
+                'publication_month': 1,  # Assuming January for all
+                'publication_day': 1,    # Assuming the 1st for all
+                'subject': subjects
+            })
+        else:
+            print(f"Failed to fetch data for DOI: {doi}")
+
+    # Creating a DataFrame from the list of dictionaries
+    df = pd.DataFrame(data_list)
+    return df
+
+
+
+datasets = ['10.6084/M9.FIGSHARE.21829182', 'DOI2', 'DOI3']
+# df = get_df_from_datacite(datasets)
+file_path = 'other_files/vault_metadata_export_vu.json'
+
+df = yoda_utils.get_df_from_yoda(file_path)
 for _, row in df.iterrows():
 
     contributors_details = get_contributors_details(row['persons'], row['publication_year'])
@@ -304,9 +376,10 @@ for _, row in df.iterrows():
         row['parsed_contributors'] = format_contributors(contributors_details)
         row['parsed_organizations'], row['managing_org'] = format_organizations_from_contributors(
             contributors_details)
-        print(row['parsed_organizations'] )
+
         # Construct the dataset JSON
         dataset_json = construct_dataset_json(row)
         uuid_ds = create_dataset(dataset_json)
-        print(dataset_json)
+
+
 

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Tests for Pure Persons &#8212; B.O.S.S. Import to pure 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=12dfc556" />
+    <link rel="stylesheet" type="text/css" href="_static/custom.css?v=72c9a1b3" />
+    <script src="_static/documentation_options.js?v=01f34227"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Tests for Research Output" href="tests_researchoutput.html" />
+    <link rel="prev" title="Usage Guide" href="usage.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-tests.pure_persons.test_find_person">
+<span id="tests-for-pure-persons"></span><h1>Tests for Pure Persons<a class="headerlink" href="#module-tests.pure_persons.test_find_person" title="Link to this heading">¶</a></h1>
+<p>Tests for the find person functionality.</p>
+<p>Searches for and retrieves detailed information about a person from an API.</p>
+<p>Parameters:
+- name (str): The name of the person to be searched. if none =&gt; the module will not try to find person on name
+- person_ids (dict): A dictionary of identifiers for the person (e.g., UUID, other IDs).
+- date (str): A date string used for filtering data. if None =&gt; all association ids will be collected
+- apikey (str): API key for authentication with the API.</p>
+<blockquote>
+<div><p>(Note that the header of the api-call contain the apikey that is loaded in the top of this script)</p>
+</div></blockquote>
+<p>Returns:
+- dict: A dictionary containing detailed information about the person if a unique match is found.
+- str: A message indicating no unique person was found if no match or multiple matches are found.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="tests.pure_persons.test_find_person.test_find_person">
+<span class="sig-prename descclassname"><span class="pre">tests.pure_persons.test_find_person.</span></span><span class="sig-name descname"><span class="pre">test_find_person</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tests.pure_persons.test_find_person.test_find_person" title="Link to this definition">¶</a></dt>
+<dd><p>Test the functionality of test_successful_uuid_search().</p>
+<p>This test ensures that…</p>
+</dd></dl>
+
+<span class="target" id="module-tests.pure_persons.test_get_active_associations"><span id="module-tests.pure_persons.test_construct_person_detail"></span><span id="module-tests.pure_persons.test_parse_date"></span></span></section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/logo.webp" alt="Logo"/>
+            </a></p>
+<h1 class="logo"><a href="index.html">B.O.S.S. Import to pure</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Guide</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Tests for Pure Persons</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#tests.pure_persons.test_find_person.test_find_person"><code class="docutils literal notranslate"><span class="pre">test_find_person()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tests_researchoutput.html">Tests for Research Output</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tests_dataset.html">Tests for Datasets</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="usage.html" title="previous chapter">Usage Guide</a></li>
+      <li>Next: <a href="tests_researchoutput.html" title="next chapter">Tests for Research Output</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, David Grote Beverborg.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="_sources/tests_pure_persons.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
