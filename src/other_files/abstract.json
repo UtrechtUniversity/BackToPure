@@ -1,0 +1,300 @@
+{
+    "typeDiscriminator": "ContributionToConference",
+    "pureId": 183539348,
+    "uuid": "3ebad856-cd57-45be-8e32-6c10144b836b",
+    "createdBy": "MADHU001",
+    "createdDate": "2023-08-16T15:30:36.487+02:00",
+    "modifiedBy": "4179293",
+    "modifiedDate": "2023-10-11T17:22:29.508+02:00",
+    "portalUrl": "http://10.10.70.176:8080/experts/en/publications/3ebad856-cd57-45be-8e32-6c10144b836b",
+    "version": "afe453aed7d0e53b561202c039850c308e86faec",
+    "title": {
+        "value": "Mapping macrozoobenthic species distribution in the Dutch Wadden Sea using an object-based image analysis technique"
+    },
+    "type": {
+        "uri": "/dk/atira/pure/researchoutput/researchoutputtypes/contributiontoconference/abstract",
+        "term": {
+            "en_GB": "Abstract"
+        }
+    },
+    "category": {
+        "uri": "/dk/atira/pure/researchoutput/category/academic",
+        "term": {
+            "en_GB": "Academic"
+        }
+    },
+    "publicationStatuses": [
+        {
+            "pureId": 183539381,
+            "current": true,
+            "publicationStatus": {
+                "uri": "/dk/atira/pure/researchoutput/status/published",
+                "term": {
+                    "en_GB": "Published"
+                }
+            },
+            "publicationDate": {
+                "year": 2023,
+                "month": 3,
+                "day": 24
+            }
+        }
+    ],
+    "language": {
+        "uri": "/dk/atira/pure/core/languages/en_GB",
+        "term": {
+            "en_GB": "English"
+        }
+    },
+    "contributors": [
+        {
+            "typeDiscriminator": "InternalContributorAssociation",
+            "pureId": 183539366,
+            "hidden": false,
+            "correspondingAuthor": true,
+            "name": {
+                "firstName": "Logambal",
+                "lastName": "Madhuanand"
+            },
+            "role": {
+                "uri": "/dk/atira/pure/researchoutput/roles/contributiontoconference/author",
+                "term": {
+                    "en_GB": "Author"
+                }
+            },
+            "person": {
+                "systemName": "Person",
+                "uuid": "9afa9084-9e71-43ec-94f9-902cdb362158"
+            },
+            "organizations": [
+                {
+                    "systemName": "Organization",
+                    "uuid": "963f24a5-cadf-4d83-a5ff-02eccccb090c"
+                }
+            ]
+        },
+        {
+            "typeDiscriminator": "InternalContributorAssociation",
+            "pureId": 183539368,
+            "hidden": false,
+            "correspondingAuthor": false,
+            "name": {
+                "firstName": "Katja",
+                "lastName": "Philippart"
+            },
+            "role": {
+                "uri": "/dk/atira/pure/researchoutput/roles/contributiontoconference/author",
+                "term": {
+                    "en_GB": "Author"
+                }
+            },
+            "person": {
+                "systemName": "Person",
+                "uuid": "88d2d102-4311-4029-87b4-f4ac58e5f4ed"
+            },
+            "organizations": [
+                {
+                    "systemName": "Organization",
+                    "uuid": "180b20b3-3537-4aaa-9985-e2d287b79598"
+                },
+                {
+                    "systemName": "Organization",
+                    "uuid": "65ae8c6a-3319-420e-a81f-7efccccf0990"
+                }
+            ]
+        },
+        {
+            "typeDiscriminator": "InternalContributorAssociation",
+            "pureId": 183539371,
+            "hidden": false,
+            "correspondingAuthor": false,
+            "name": {
+                "firstName": "Wiebe",
+                "lastName": "Nijland"
+            },
+            "role": {
+                "uri": "/dk/atira/pure/researchoutput/roles/contributiontoconference/author",
+                "term": {
+                    "en_GB": "Author"
+                }
+            },
+            "person": {
+                "systemName": "Person",
+                "uuid": "b475e3be-b43b-4dc1-a1b0-cbd65f7bf580"
+            },
+            "organizations": [
+                {
+                    "systemName": "Organization",
+                    "uuid": "314173f7-1f34-41cb-9ef6-c73f4a1e2e35"
+                },
+                {
+                    "systemName": "Organization",
+                    "uuid": "963f24a5-cadf-4d83-a5ff-02eccccb090c"
+                }
+            ]
+        },
+        {
+            "typeDiscriminator": "InternalContributorAssociation",
+            "pureId": 183539374,
+            "hidden": false,
+            "correspondingAuthor": false,
+            "name": {
+                "firstName": "Steven",
+                "lastName": "de Jong"
+            },
+            "role": {
+                "uri": "/dk/atira/pure/researchoutput/roles/contributiontoconference/author",
+                "term": {
+                    "en_GB": "Author"
+                }
+            },
+            "person": {
+                "systemName": "Person",
+                "uuid": "1a254f5f-e2cd-45d0-8cd9-b22a37b1557e"
+            },
+            "organizations": [
+                {
+                    "systemName": "Organization",
+                    "uuid": "314173f7-1f34-41cb-9ef6-c73f4a1e2e35"
+                },
+                {
+                    "systemName": "Organization",
+                    "uuid": "963f24a5-cadf-4d83-a5ff-02eccccb090c"
+                }
+            ]
+        },
+        {
+            "typeDiscriminator": "ExternalContributorAssociation",
+            "pureId": 183539377,
+            "externalOrganizations": [
+                {
+                    "systemName": "ExternalOrganization",
+                    "uuid": "d9acbe27-2977-4153-8f93-c0be8ac426f6"
+                }
+            ],
+            "hidden": false,
+            "country": {
+                "uri": "/dk/atira/pure/core/countries/nl",
+                "term": {
+                    "en_GB": "Netherlands"
+                }
+            },
+            "correspondingAuthor": false,
+            "name": {
+                "firstName": "Allert I",
+                "lastName": "Bijleveld"
+            },
+            "role": {
+                "uri": "/dk/atira/pure/researchoutput/roles/contributiontoconference/author",
+                "term": {
+                    "en_GB": "Author"
+                }
+            },
+            "externalPerson": {
+                "systemName": "ExternalPerson",
+                "uuid": "f65f066e-7cb6-487d-a64c-3594727fad26"
+            }
+        },
+        {
+            "typeDiscriminator": "InternalContributorAssociation",
+            "pureId": 183539378,
+            "hidden": false,
+            "correspondingAuthor": false,
+            "name": {
+                "firstName": "Elisabeth",
+                "lastName": "Addink"
+            },
+            "role": {
+                "uri": "/dk/atira/pure/researchoutput/roles/contributiontoconference/author",
+                "term": {
+                    "en_GB": "Author"
+                }
+            },
+            "person": {
+                "systemName": "Person",
+                "uuid": "c6c1dd98-a2ec-4ec7-991e-02a8d7c996a1"
+            },
+            "organizations": [
+                {
+                    "systemName": "Organization",
+                    "uuid": "314173f7-1f34-41cb-9ef6-c73f4a1e2e35"
+                },
+                {
+                    "systemName": "Organization",
+                    "uuid": "963f24a5-cadf-4d83-a5ff-02eccccb090c"
+                }
+            ]
+        }
+    ],
+    "organizations": [
+        {
+            "systemName": "Organization",
+            "uuid": "963f24a5-cadf-4d83-a5ff-02eccccb090c"
+        },
+        {
+            "systemName": "Organization",
+            "uuid": "180b20b3-3537-4aaa-9985-e2d287b79598"
+        },
+        {
+            "systemName": "Organization",
+            "uuid": "65ae8c6a-3319-420e-a81f-7efccccf0990"
+        },
+        {
+            "systemName": "Organization",
+            "uuid": "314173f7-1f34-41cb-9ef6-c73f4a1e2e35"
+        }
+    ],
+    "totalNumberOfContributors": 6,
+    "managingOrganization": {
+        "systemName": "Organization",
+        "uuid": "963f24a5-cadf-4d83-a5ff-02eccccb090c"
+    },
+    "keywordGroups": [
+        {
+            "typeDiscriminator": "FreeKeywordsKeywordGroup",
+            "pureId": 183539349,
+            "logicalName": "keywordContainers",
+            "name": {
+                "en_GB": "Keywords"
+            },
+            "keywords": [
+                {
+                    "pureId": 183539351,
+                    "locale": "en_GB",
+                    "freeKeywords": [
+                        "OBIA",
+                        "Macrozoobenthos",
+                        "Sentinel-2"
+                    ]
+                }
+            ]
+        }
+    ],
+    "visibility": {
+        "key": "FREE",
+        "description": {
+            "en_GB": "Public - No restriction"
+        }
+    },
+    "workflow": {
+        "step": "validated",
+        "description": {
+            "en_GB": "Validated"
+        }
+    },
+    "customDefinedFields": {},
+    "event": {
+        "systemName": "Event",
+        "uuid": "c8ff459d-9189-4acb-b1d1-dc94f83c1295"
+    },
+    "systemName": "ResearchOutput",
+    "externalOrganizations": [
+        {
+            "systemName": "ExternalOrganization",
+            "uuid": "d9acbe27-2977-4153-8f93-c0be8ac426f6"
+        }
+    ],
+    "abstract": {
+        "en_GB": "The Dutch Wadden Sea is high biodiversity zones that provide ecosystem services such as a habitat for shorebirds and commercial grounds for fishing. Macrozoobenthos are tiny organisms living on tidal flats, ensuring food security for higher tropic levels. Sea level rise poses a real threat that the intertidal flats drown causing land subsidence. These changes are expected to influence the distribution of benthos and shorebirds. Synoptic monitoring program (SIBES) has been monitoring the Dutch tidal flats with annual surveys at 500m grid intervals to measure the ecological variables. However, due to constraints on field accessibility and extensive field and lab analyses, remote sensing would be a viable option. Pixel-based spectral bands fail to capture the spatial patterns and the geometric details of the tidal flats that have low spectral contrast. Here, we explore the value of Object-Based Image Analysis (OBIA) for preparing species distribution maps based on the field data between 2018 and 2020 along with the features extracted from a deep learning model and Sentinel-2 images. A bottom-up approach is applied to segment the tidal flat sentinel-2 images along with corresponding features that were extracted from a variational auto encoder model (VAE). The pixels were clustered into homogeneous objects that vary based on scale, shape and compactness. These segments incorporate the spatial context, textural and geometrical information of neighbouring pixels. These objects are then used for determining the presence/absence of species that are abundant in the tidal basins of Pinkegat and Zoutkamperlaag in the Dutch Wadden Sea. Optimal segmentation parameters are selected for each of the species based on the prediction results. The overall accuracy of the predictions (using random forest regressor for all three years) for Arenicola, scolopolus, cerestoderma and was 51% and 49%, respectively. There was an improvement of 18-20% points in prediction results compared to pixel-based methods that use spectral bands alone, and of 10-15% points compared to pixel-based methods that use deep learning features along with spectral bands. These results show that the prediction methods based on the OBIA approach for these predicting the species distribution produced better accuracy than the pixel-based prediction technique. Mapping these four ecological variables provides us with more detailed prognoses in time and space about the macrozoobenthic habitat at tidal flats, which can then be used to support decision-making for sustainable and adaptive conservation of coastal ecosystems."
+    }
+}
