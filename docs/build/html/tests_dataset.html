@@ -34,8 +34,50 @@
             
   <section id="module-tests.pure_datasets.test_create_external_person">
 <span id="tests-for-datasets"></span><h1>Tests for Datasets<a class="headerlink" href="#module-tests.pure_datasets.test_create_external_person" title="Link to this heading">¶</a></h1>
+<p id="module-tests.pure_datasets.test_get_contributors_details">Test Suite for the get_contributors_details Function</p>
+<p>This script contains tests for the get_contributors_details function, which is
+responsible for processing a list of contributors, identifying whether they are
+internal or external to the system, and creating records for external contributors.</p>
+<p>Each test function is designed to cover a specific scenario, ensuring that the
+get_contributors_details function handles various cases correctly, including:
+- Processing internal contributors
+- Handling external contributors
+- Dealing with empty or invalid input data</p>
+<p>Requirements:
+- pytest
+- Mocking capabilities for external dependencies like pure_persons.find_person</p>
+<p>Usage:
+Run the tests using the pytest command in the root directory of the project:
+$ pytest path/to/test_script.py</p>
+<p>Author: David Grote Beverborg
+Date: 04-04-2024
+Version: 0.1</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="tests.pure_datasets.test_get_contributors_details.test_with_external_contributors">
+<span class="sig-prename descclassname"><span class="pre">tests.pure_datasets.test_get_contributors_details.</span></span><span class="sig-name descname"><span class="pre">test_with_external_contributors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">external_contributor</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tests.pure_datasets.test_get_contributors_details.test_with_external_contributors" title="Link to this definition">¶</a></dt>
+<dd><p>Test get_contributors_details with external contributors.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tests.pure_datasets.test_get_contributors_details.test_with_internal_contributors">
+<span class="sig-prename descclassname"><span class="pre">tests.pure_datasets.test_get_contributors_details.</span></span><span class="sig-name descname"><span class="pre">test_with_internal_contributors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">internal_contributor</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tests.pure_datasets.test_get_contributors_details.test_with_internal_contributors" title="Link to this definition">¶</a></dt>
+<dd><p>Test get_contributors_details with internal contributors.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tests.pure_datasets.test_get_contributors_details.test_with_invalid_contributor_format">
+<span class="sig-prename descclassname"><span class="pre">tests.pure_datasets.test_get_contributors_details.</span></span><span class="sig-name descname"><span class="pre">test_with_invalid_contributor_format</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tests.pure_datasets.test_get_contributors_details.test_with_invalid_contributor_format" title="Link to this definition">¶</a></dt>
+<dd><p>Test get_contributors_details with invalid contributor format.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tests.pure_datasets.test_get_contributors_details.test_with_no_contributors">
+<span class="sig-prename descclassname"><span class="pre">tests.pure_datasets.test_get_contributors_details.</span></span><span class="sig-name descname"><span class="pre">test_with_no_contributors</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tests.pure_datasets.test_get_contributors_details.test_with_no_contributors" title="Link to this definition">¶</a></dt>
+<dd><p>Test get_contributors_details with no contributors.</p>
+</dd></dl>
+
 <dl class="py function" id="module-tests.pure_datasets.test_format_contributors">
-<span id="module-tests.pure_datasets.test_get_contributors_details"></span><dt class="sig sig-object py" id="tests.pure_datasets.test_format_contributors.test_functionality">
+<dt class="sig sig-object py" id="tests.pure_datasets.test_format_contributors.test_functionality">
 <span class="sig-prename descclassname"><span class="pre">tests.pure_datasets.test_format_contributors.</span></span><span class="sig-name descname"><span class="pre">test_functionality</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tests.pure_datasets.test_format_contributors.test_functionality" title="Link to this definition">¶</a></dt>
 <dd><p>Test the basic functionality of &lt;function/module being tested&gt;.</p>
 <p>This test ensures that &lt;describe what is being tested and expected outcomes&gt;.</p>
@@ -70,6 +112,10 @@
 <li class="toctree-l1"><a class="reference internal" href="tests_pure_persons.html">Tests for Pure Persons</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tests_researchoutput.html">Tests for Research Output</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Tests for Datasets</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#tests.pure_datasets.test_get_contributors_details.test_with_external_contributors"><code class="docutils literal notranslate"><span class="pre">test_with_external_contributors()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tests.pure_datasets.test_get_contributors_details.test_with_internal_contributors"><code class="docutils literal notranslate"><span class="pre">test_with_internal_contributors()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tests.pure_datasets.test_get_contributors_details.test_with_invalid_contributor_format"><code class="docutils literal notranslate"><span class="pre">test_with_invalid_contributor_format()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tests.pure_datasets.test_get_contributors_details.test_with_no_contributors"><code class="docutils literal notranslate"><span class="pre">test_with_no_contributors()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#tests.pure_datasets.test_format_contributors.test_functionality"><code class="docutils literal notranslate"><span class="pre">test_functionality()</span></code></a></li>
 </ul>
 </li>

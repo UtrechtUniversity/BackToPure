@@ -1,7 +1,18 @@
+# ########################################################################
+#
+# Pure Persons - function modules for the CRUD api persons of pure
+#
+# ########################################################################
+#
+# MIT License
+#
+# Copyright (c) 2024 David Grote Beverborg
+# ########################################################################
+
 import pandas as pd
 import json
 import requests
-from datetime import datetime
+from datetime import datetime, time
 import configparser
 import os
 import logging
@@ -36,17 +47,20 @@ headers = {
     "api-key": API_KEY
 }
 
-
-
 def parse_date(date_string):
+
     try:
         return parser.parse(date_string)
     except (ValueError, TypeError):
-        return None  # or some default date
+
+        today_date = datetime.now().date()
+        today_date = datetime.combine(today_date, time())
+        return today_date
 
 def extract_orcid(orcid_full_url):
     # Split the string by '/' and return the last part
     return orcid_full_url.split('/')[-1]
+
 
 # Function to construct person_detail from API response data
 def construct_person_detail(data, ref_date=None):
@@ -63,10 +77,12 @@ def construct_person_detail(data, ref_date=None):
        - dict: A dictionary containing the person's UUID, first name, last name,
                and a list of associations with their UUIDs and active dates.
        """
+
     associations = data.get('staffOrganizationAssociations', [])
 
     associationsUUIDs = []
     for assoc in associations:
+
         assoc_start_date = assoc.get('period', {}).get('startDate')
         assoc_end_date = assoc.get('period', {}).get('endDate', '9999-12-31')
 
@@ -96,7 +112,6 @@ def construct_person_detail(data, ref_date=None):
         "associationsUUIDs": associationsUUIDs,
     }
 
-
 def find_person(name, person_ids, date):
     """
     Searches for and retrieves detailed information about a person from an API.
@@ -116,8 +131,8 @@ def find_person(name, person_ids, date):
     ref_date = None
     if date:
         # ref_date = datetime.strptime(date, "%Y-%m-%d")
-
         ref_date = parse_date(date)
+
 
     person_detail = None
     if person_ids and 'uuid' in person_ids:
@@ -145,9 +160,12 @@ def find_person(name, person_ids, date):
                         if response.status_code == 200:
                             data = response.json()
                             items = data.get('items', [])
+
                             if items:
                                 if len(items) == 1:
+
                                     item = items[0]
+
                                     person_detail = construct_person_detail(item, ref_date)
                                     logging.info(f"Person found with {id_type}: {id_value}")
                                     return person_detail
@@ -172,8 +190,10 @@ def find_person(name, person_ids, date):
                 if items:
                     if len(items) == 1:
                         item = items[0]
+
                         person_detail = construct_person_detail(item, ref_date)
-                        logging.info(f"Person found with name: {name}")
+                        logging.info(f"Person {person_detail['firstName']} {person_detail['lastName']} found for name: {name}")
+
                         return person_detail
                     else:
                         logging.warning(f"Multiple persons found for name: {name}")
@@ -184,6 +204,7 @@ def find_person(name, person_ids, date):
 
             else:
                 logging.error(f"Error searching for {name}: {response.status_code} - {response.text}")
+
         except requests.RequestException as e:
             logging.error(f"An error occurred while searching for {name}: {e}")
 
@@ -215,6 +236,7 @@ def get_active_associations(person_details, ref_date_str):
 
     if 'associationsUUIDs' in person_details:
         for association in person_details['associationsUUIDs']:
+
             start_date_str = association.get('startDate')
             end_date_str = association.get('endDate', '9999-12-31')
 
@@ -227,20 +249,3 @@ def get_active_associations(person_details, ref_date_str):
         # Update the person_details with only active associations
     person_details['associationsUUIDs'] = active_associations
     return person_details
-
-
-# person_info = {
-#     'name': 'menno Straataaaaasma',
-#     'first_name': 'Jan',
-#     'last_name': 'Test',
-#     'ids': {'ORCID': '0000-0000-0000-0000', 'ScopusID': '123456'}
-# }
-#
-# # Extract the full name and IDs
-# full_name = person_info['name']  # Or construct from first_name and last_name if needed
-# person_ids = person_info['ids']
-#
-# person_details = find_person(full_name, person_ids, None)
-#
-# person_details = get_active_associations(person_details, '01-01-2019')
-

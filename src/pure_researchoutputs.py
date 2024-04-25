@@ -1,3 +1,33 @@
+# ########################################################################
+#
+# pure research outputs - import module that uses a an export of dois of
+# Ricgraph to import research outputs in Pure. The metadata is imported
+# from open alex
+# ########################################################################
+#
+# MIT License
+#
+# Copyright (c) 2024 David Grote Beverborg
+# ########################################################################
+#
+# This file contains example code for Ricgraph.
+#
+# With this code, you can harvest persons and research outputs from OpenAlex.
+# You have to set some parameters in ricgraph.ini.
+# Also, you can set a number of parameters in the code following the "import" statements below.
+#
+# Original version David Grote Beverborg, april 2024
+#
+# ########################################################################
+#
+# Usage
+#
+# Options:
+#   --source options <Yoda|Ricgraph>
+#
+#
+# ########################################################################
+
 import pandas as pd
 import json
 import requests
@@ -374,28 +404,34 @@ def df_to_pure(df):
         else:
             logging.warning(f"skipped research output {row['research_output_id']}.")
 #
-OPENALEX_HEADERS = {'Accept': 'application/json',
-                    # The following will be read in __main__
-                    'User-Agent': 'mailto:d.h.j.grotebeverborg@uu.nl'
-                    }
-OPENALEX_MAX_RECS_TO_HARVEST = 3
+def main():
+    OPENALEX_HEADERS = {'Accept': 'application/json',
+                       # The following will be read in __main__
+                       'User-Agent': 'mailto:d.h.j.grotebeverborg@uu.nl'
+                       }
+    OPENALEX_MAX_RECS_TO_HARVEST = 3
 
- # List of DOIs
-dois = ['doi.org/10.1002/ijc.34742', 'doi.org/10.1038/s41598-024-51595-6', 'doi.org/10.1002/yet-another-doi']
+    # List of DOIs
+    dois = ['doi.org/10.1002/ijc.34742', 'doi.org/10.1038/s41598-024-51595-6', 'doi.org/10.1002/yet-another-doi']
 
-# List to hold all responses
-all_openalex_data = []
+    # List to hold all responses
+    all_openalex_data = []
 
-# Loop through each DOI and make a request
-for doi in dois:
-    url = 'https://api.openalex.org/works/' + doi
-    response = requests.get(url, headers=OPENALEX_HEADERS)
+    # Loop through each DOI and make a request
+    for doi in dois:
+        url = 'https://api.openalex.org/works/' + doi
+        response = requests.get(url, headers=OPENALEX_HEADERS)
 
-    if response.status_code == 200:
-        openalex_data = response.json()
-        all_openalex_data.append(openalex_data)
-    else:
-        print(f"Failed to retrieve data for DOI: {doi}")
+        if response.status_code == 200:
+            openalex_data = response.json()
+            all_openalex_data.append(openalex_data)
+        else:
+            print(f"Failed to retrieve data for DOI: {doi}")
 
-df, errors = openalex_utils.transform_openalex_to_df(all_openalex_data)
-df_to_pure(df)
+    df, errors = openalex_utils.transform_openalex_to_df(all_openalex_data)
+    df_to_pure(df)
+
+if __name__ == '__main__':
+    main()
+
+

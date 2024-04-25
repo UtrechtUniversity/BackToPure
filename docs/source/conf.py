@@ -3,8 +3,9 @@ import sys
 
 
 sys.path.insert(0, os.path.abspath('../../'))
-
-
+sys.path.insert(0, os.path.abspath('../../tests'))
+sys.path.insert(0, os.path.abspath('../../src'))
+sys.path.insert(0, os.path.abspath('../../other_files'))
 
 # Configuration file for the Sphinx documentation builder.
 #
@@ -21,6 +22,8 @@ release = '0.1.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
+from unittest.mock import MagicMock
+sys.modules['open'] = MagicMock()
 
 extensions = [
     'sphinx.ext.autodoc',
