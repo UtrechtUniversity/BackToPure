@@ -408,8 +408,8 @@ def create_dataset(dataset_json):
     url = BASE_URL + 'data-sets'
     json_data = json.dumps(dataset_json)
     # Write to a new file
-    with open('datasssa.json', 'w') as file:
-        file.write(json_data)
+    # with open('datasssa.json', 'w') as file:
+    #     file.write(json_data)
     # Make the put request
     response = requests.put(url, headers=headers, data=json_data)
     if response.status_code in [200, 201]:
