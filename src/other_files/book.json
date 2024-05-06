@@ -1,0 +1,158 @@
+{
+    "typeDiscriminator": "BookAnthology",
+    "pureId": 190527455,
+    "uuid": "5edff0bc-8fdb-4a38-ae07-82c6cfe11614",
+    "createdBy": "WILLI038",
+    "createdDate": "2023-10-19T16:25:17.758+02:00",
+    "modifiedBy": "ALBER101",
+    "modifiedDate": "2023-10-27T12:17:53.3+02:00",
+    "portalUrl": "http://10.10.70.176:8080/experts/en/publications/5edff0bc-8fdb-4a38-ae07-82c6cfe11614",
+    "version": "61a05742c15cc7c1addbd1010971db2ef664ad57",
+    "title": {
+        "value": "Friendship in the Merovingian Kingdoms"
+    },
+    "subTitle": {
+        "value": "Venantius Fortunatus and His Contemporaries"
+    },
+    "type": {
+        "uri": "/dk/atira/pure/researchoutput/researchoutputtypes/bookanthology/book",
+        "term": {
+            "en_GB": "Book"
+        }
+    },
+    "category": {
+        "uri": "/dk/atira/pure/researchoutput/category/academic",
+        "term": {
+            "en_GB": "Academic"
+        }
+    },
+    "publicationStatuses": [
+        {
+            "pureId": 190527471,
+            "current": true,
+            "publicationStatus": {
+                "uri": "/dk/atira/pure/researchoutput/status/published",
+                "term": {
+                    "en_GB": "Published"
+                }
+            },
+            "publicationDate": {
+                "year": 2022,
+                "month": 11,
+                "day": 15
+            }
+        }
+    ],
+    "language": {
+        "uri": "/dk/atira/pure/core/languages/en_GB",
+        "term": {
+            "en_GB": "English"
+        }
+    },
+    "contributors": [
+        {
+            "typeDiscriminator": "InternalContributorAssociation",
+            "pureId": 190527469,
+            "hidden": false,
+            "correspondingAuthor": false,
+            "name": {
+                "firstName": "Hope",
+                "lastName": "Williard"
+            },
+            "role": {
+                "uri": "/dk/atira/pure/researchoutput/roles/bookanthology/author",
+                "term": {
+                    "en_GB": "Author"
+                }
+            },
+            "person": {
+                "systemName": "Person",
+                "uuid": "572781e3-b1ef-4b3f-a150-1aca954d654a"
+            },
+            "organizations": [
+                {
+                    "systemName": "Organization",
+                    "uuid": "72885fcb-db9b-42f2-98df-dd078c9e7d35"
+                }
+            ]
+        }
+    ],
+    "organizations": [
+        {
+            "systemName": "Organization",
+            "uuid": "72885fcb-db9b-42f2-98df-dd078c9e7d35"
+        }
+    ],
+    "totalNumberOfContributors": 1,
+    "managingOrganization": {
+        "systemName": "Organization",
+        "uuid": "72885fcb-db9b-42f2-98df-dd078c9e7d35"
+    },
+    "submissionYear": 2022,
+    "electronicVersions": [
+        {
+            "typeDiscriminator": "DoiElectronicVersion",
+            "pureId": 190527456,
+            "accessType": {
+                "uri": "/dk/atira/pure/core/openaccesspermission/closed",
+                "term": {
+                    "en_GB": "Closed"
+                }
+            },
+            "doi": "10.1515/9781802700343",
+            "versionType": {
+                "uri": "/dk/atira/pure/researchoutput/electronicversion/versiontype/publishersversion",
+                "term": {
+                    "en_GB": "Final published version"
+                }
+            }
+        }
+    ],
+    "links": [
+        {
+            "pureId": 190527457,
+            "url": "https://www.arc-humanities.org/9781641890465/friendship-in-the-merovingian-kingdoms/"
+        }
+    ],
+    "visibility": {
+        "key": "FREE",
+        "description": {
+            "en_GB": "Public - No restriction"
+        }
+    },
+    "workflow": {
+        "step": "validated",
+        "description": {
+            "en_GB": "Validated"
+        }
+    },
+    "identifiers": [
+        {
+            "typeDiscriminator": "PrimaryId",
+            "idSource": "ORCID",
+            "value": "/0000-0001-6249-7591/work/144831024"
+        }
+    ],
+    "customDefinedFields": {},
+    "publicationSeries": [
+        {
+            "pureId": 190527472,
+            "name": {
+                "value": "CARMEN Monographs and Studies"
+            },
+            "publisherName": "ARC Humanities Press"
+        }
+    ],
+    "placeOfPublication": "Leeds",
+    "printISBNs": [
+        "9781802700343"
+    ],
+    "electronicISBNs": [
+        "9781641890465"
+    ],
+    "publisher": {
+        "systemName": "Publisher",
+        "uuid": "80f8f322-fc69-4c9a-b531-0dc36cbb2194"
+    },
+    "systemName": "ResearchOutput"
+}
