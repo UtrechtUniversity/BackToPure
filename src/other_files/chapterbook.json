@@ -1,0 +1,124 @@
+{
+    "typeDiscriminator": "ContributionToBookAnthology",
+    "pureId": 202428030,
+    "uuid": "00948ae2-f499-428c-a24f-d5e3ec937796",
+    "createdBy": "AWUH0001",
+    "createdDate": "2023-11-07T11:09:36.606+01:00",
+    "modifiedBy": "AWUH0001",
+    "modifiedDate": "2023-11-07T11:09:36.606+01:00",
+    "portalUrl": "http://10.10.70.176:8080/experts/en/publications/00948ae2-f499-428c-a24f-d5e3ec937796",
+    "version": "21540b2588d3f00e00d109a9db71e070ced85bfa",
+    "title": {
+        "value": "INITIATING CRITICAL REFLECTION TO COUNTER SOCIAL PROBLEMS: Applying photovoice in the Baka community of the Dja Reserve, Cameroon"
+    },
+    "type": {
+        "uri": "/dk/atira/pure/researchoutput/researchoutputtypes/contributiontobookanthology/chapter",
+        "term": {
+            "en_GB": "Chapter"
+        }
+    },
+    "category": {
+        "uri": "/dk/atira/pure/researchoutput/category/academic",
+        "term": {
+            "en_GB": "Academic"
+        }
+    },
+    "peerReview": true,
+    "publicationStatuses": [
+        {
+            "pureId": 202428045,
+            "current": true,
+            "publicationStatus": {
+                "uri": "/dk/atira/pure/researchoutput/status/published",
+                "term": {
+                    "en_GB": "Published"
+                }
+            },
+            "publicationDate": {
+                "year": 2017
+            }
+        }
+    ],
+    "language": {
+        "uri": "/dk/atira/pure/core/languages/en_GB",
+        "term": {
+            "en_GB": "English"
+        }
+    },
+    "contributors": [
+        {
+            "typeDiscriminator": "InternalContributorAssociation",
+            "pureId": 202428042,
+            "hidden": false,
+            "correspondingAuthor": false,
+            "name": {
+                "firstName": "Harrison",
+                "lastName": "Awuh"
+            },
+            "role": {
+                "uri": "/dk/atira/pure/researchoutput/roles/contributiontobookanthology/author",
+                "term": {
+                    "en_GB": "Author"
+                }
+            },
+            "person": {
+                "systemName": "Person",
+                "uuid": "282ec84e-2d22-409b-b777-cb67fd12e4fa"
+            },
+            "organizations": [
+                {
+                    "systemName": "Organization",
+                    "uuid": "69cfbaad-5498-4088-bda6-77ff94a6c22c"
+                }
+            ]
+        },
+        {
+            "typeDiscriminator": "ExternalContributorAssociation",
+            "pureId": 202428044,
+            "hidden": false,
+            "correspondingAuthor": false,
+            "name": {
+                "firstName": "M",
+                "lastName": "Loopmans"
+            },
+            "role": {
+                "uri": "/dk/atira/pure/researchoutput/roles/contributiontobookanthology/author",
+                "term": {
+                    "en_GB": "Author"
+                }
+            },
+            "externalPerson": {
+                "systemName": "ExternalPerson",
+                "uuid": "ea790f36-fbb8-4231-adb0-a63a25d563cf"
+            }
+        }
+    ],
+    "organizations": [
+        {
+            "systemName": "Organization",
+            "uuid": "69cfbaad-5498-4088-bda6-77ff94a6c22c"
+        }
+    ],
+    "totalNumberOfContributors": 2,
+    "managingOrganization": {
+        "systemName": "Organization",
+        "uuid": "69cfbaad-5498-4088-bda6-77ff94a6c22c"
+    },
+    "visibility": {
+        "key": "FREE",
+        "description": {
+            "en_GB": "Public - No restriction"
+        }
+    },
+    "workflow": {
+        "step": "forApproval",
+        "description": {
+            "en_GB": "For approval"
+        }
+    },
+    "customDefinedFields": {},
+    "hostPublicationTitle": {
+        "value": "Culture in Sustainability"
+    },
+    "systemName": "ResearchOutput"
+}
