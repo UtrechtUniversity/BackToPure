@@ -1,0 +1,46 @@
+name: Build and Deploy Sphinx Documentation
+
+on:
+  push:
+    branches:
+      - main  # Adjust this to your branch name if different
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check Out Code
+      uses: actions/checkout@v2
+
+    - name: Set Up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'  # Specify the version if necessary
+
+    - name: Install Sphinx and Dependencies
+      run: |
+        pip install sphinx  # Install Sphinx
+        pip install -r requirements.txt  # Install other dependencies if needed
+
+    - name: Build Sphinx Documentation
+      run: |
+        cd docs  # Adjust to your source documentation directory
+        make html  # This generates the HTML files in _build/html
+
+    - name: Move HTML to /docs Folder
+      run: |
+        # Ensure the docs directory exists
+        mkdir -p docs
+        # Remove any existing documentation files to prevent duplicates
+        rm -rf docs/*
+        # Move the HTML files from the Sphinx build to /docs
+        cp -r docs/_build/html/* docs/
+
+    - name: Commit and Push Changes
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add docs
+        git commit -m "Update Sphinx documentation"
+        git push origin main  # Adjust to the appropriate branch name if needed
