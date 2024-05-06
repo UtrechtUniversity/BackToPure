@@ -1,0 +1,14 @@
+# Core documentation generator
+sphinx
+
+# Optional Sphinx extensions
+sphinx_rtd_theme
+sphinxcontrib-napoleon
+
+# Project dependencies for documentation
+requests
+numpy
+matplotlib
+
+# Project dependencies for rest
+pandas
