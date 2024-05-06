@@ -35,7 +35,7 @@ jobs:
         # Remove any existing documentation files to prevent duplicates
         rm -rf docs/*
         # Move the HTML files from the Sphinx build to /docs
-        cp -r docs/_build/html/* docs/
+        cp -r docs/build/html/* docs/
 
     - name: Commit and Push Changes
       run: |
