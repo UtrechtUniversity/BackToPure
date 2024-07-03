@@ -49,6 +49,7 @@ def parse_date(date_str):
     Handles both date-only and datetime strings.
     """
     date_formats = ["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S"]
+
     for format in date_formats:
         try:
             parsed_date = datetime.strptime(date_str, format)
@@ -64,24 +65,31 @@ def parse_date(date_str):
 
 def parse_person_data(contributor):
     """ Extract and format person-related data from contributor info. """
-    name = contributor.get('Name', 'Unknown')
+    name = contributor.get('Name', {})
+    full_name = f"{name.get('Given_Name', 'Unknown')} {name.get('Family_Name', 'Unknown')}"
+
     affiliations = contributor.get('Affiliation', [])
-    first_affiliation_name = affiliations[0].get('Affiliation_Name', 'None') if affiliations else 'None'
+    first_affiliation_name = affiliations[0] if affiliations else 'None'
 
     person_ids = [
-        {'id': identifier.get('Name_Identifier_Scheme', 'N/A'),
-         'value': identifier.get('Name_Identifier', 'N/A')}
+        {
+            'id': identifier.get('Name_Identifier_Scheme', 'N/A'),
+            'value': identifier.get('Name_Identifier', 'N/A')
+        }
         for identifier in contributor.get('Person_Identifier', [])
         if identifier
     ]
 
+    print(f"Parsing contributor: {full_name}")
+    print(f"Affiliation: {first_affiliation_name}")
+    print(f"Person IDs: {person_ids}")
+
     return {
-        'name': name,
+        'name': full_name,
         'person_ids': person_ids,
         'affiliation': first_affiliation_name,
         'type': 'contributor'
     }
-
 
 def get_df_from_yoda(filename):
     """
@@ -107,7 +115,10 @@ def get_df_from_yoda(filename):
             mod_date = dataset_info.get('modified', None)
             date_info = parse_date(mod_date) or {}
 
+        # Parsing contributors and creators
         persons = [parse_person_data(contributor) for contributor in dataset_info.get('contributors', [])]
+        persons += [parse_person_data(creator) for creator in
+                    metadata.get('Creator', [])]  # Adjusted to use 'metadata'
 
         all_datasets_aggregated.append({
             'doi': doi,
@@ -115,13 +126,15 @@ def get_df_from_yoda(filename):
             'description': description,
             'publisher': 'default',
             'date': date_info,
-            'access': access,
+            'publication_year': date_info['publication_year'],
+            'publication_month': date_info['publication_month'],
+            'publication_day': date_info['publication_day'],
             'persons': persons
         })
 
     return pd.DataFrame(all_datasets_aggregated)
 
-config = load_config()
+# config = load_config()
 if __name__ == "__main__":
 
     df = get_df_from_yoda(file_path)
