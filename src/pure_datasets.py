@@ -39,15 +39,8 @@ import datacite_utils
 import logging.handlers
 from pathlib import Path
 from datetime import datetime
+from config import PURE_BASE_URL, DEFAULTS, PURE_API_KEY, PURE_HEADERS, RIC_BASE_URL, OPENALEX_HEADERS, OPENALEX_BASE_URL, PURE_HEADERS, TYPE_URI
 
-def load_config():
-    """Loads the configuration from the config.ini file."""
-    config_path = Path(__file__).resolve().parent.parent / 'config.ini'
-    if not config_path.exists():
-        raise FileNotFoundError(f"The configuration file {config_path} does not exist.")
-    config = configparser.ConfigParser()
-    config.read(config_path)
-    return config
 def setup_logging():
     """Sets up the logging configuration."""
     log_directory = "logs"
@@ -105,8 +98,8 @@ def format_doi(doi):
 
 def request_dataset_by_uuid(uuid):
     """Request dataset details by UUID."""
-    api_url = f"{BASE_URL}data-sets/{uuid}"
-    response = requests.get(api_url, headers=headers)
+    api_url = f"{PURE_BASE_URL}data-sets/{uuid}"
+    response = requests.get(api_url, headers=PURE_HEADERS)
     if response.status_code == 200:
         return response.json()
     else:
@@ -117,8 +110,8 @@ def search_dataset_by_string(search_string):
     search_string = format_doi(search_string)
     data = {"searchString": search_string}
     json_data = json.dumps(data)
-    api_url = f"{BASE_URL}data-sets/search/"
-    response = requests.post(api_url, headers=headers, data=json_data)
+    api_url = f"{PURE_BASE_URL}data-sets/search/"
+    response = requests.post(api_url, headers=PURE_HEADERS, data=json_data)
     if response.status_code == 200:
         return response.json().get('items', [])
     else:
@@ -141,12 +134,12 @@ def create_external_person(first_name, last_name):
     :param first_name, last_name:  first and last names.
     :return: UUID of the newly created external person.
     """
-    api_url = BASE_URL + 'external-persons/'
+    api_url = PURE_BASE_URL + 'external-persons/'
     data = {"name": {"firstName": first_name, "lastName": last_name}}
     json_data = json.dumps(data)
 
     try:
-        response = requests.put(api_url, headers=headers, data=json_data)
+        response = requests.put(api_url, headers=PURE_HEADERS, data=json_data)
         if response.status_code in [200, 201]:
             external_person = response.json()
             return external_person.get('uuid')
@@ -156,7 +149,7 @@ def create_external_person(first_name, last_name):
         logging.error(f"An error occurred while creating external person: {e}")
 
     return None
-def get_contributors_details(contributors, date, title):
+def get_contributors_details(contributors, date, title, test):
     """
        Processes a list of contributors to find detailed information about each.
        For each contributor, the function attempts to find them as internal persons
@@ -191,6 +184,7 @@ def get_contributors_details(contributors, date, title):
 
         # Assuming contributor has 'name' and 'person_ids'
         name = contributor['name']
+        print(contributor)
         ids_dict = {id_info['id']: id_info['value'] for id_info in contributor['person_ids']}
 
         person_details = pure_persons.find_person(name, ids_dict, date)
@@ -212,16 +206,17 @@ def get_contributors_details(contributors, date, title):
             if persons.get(contributor_id) is None:# This contributor needs an external person
                 logging.info(f"Creating external person for {contributor_id}.")
                 first_name, last_name = split_name(contributor['name'])
-                external_person_uuid = external_person_uuid = create_external_person(first_name, last_name)
+                if test =='no':
+                    external_person_uuid = external_person_uuid = create_external_person(first_name, last_name)
 
-                if external_person_uuid:
-                    logging.info(f'Created external person: {external_person_uuid}')
-                    persons[contributor_id] = {
-                        "external_person_uuid": external_person_uuid,
-                        "external_person_first_name": first_name,
-                        "external_person_last_name": last_name,
-                        "type": contributor['type']
-                    }
+                    if external_person_uuid:
+                        logging.info(f'Created external person: {external_person_uuid}')
+                        persons[contributor_id] = {
+                            "external_person_uuid": external_person_uuid,
+                            "external_person_first_name": first_name,
+                            "external_person_last_name": last_name,
+                            "type": contributor['type']
+                        }
 
     else:
         logging.error("No internal contributors found in Pure for the dataset.")
@@ -235,7 +230,7 @@ def format_contributors(contributors_data):
     for name, details in contributors_data.items():
 
         logging.info(f"Processing {name}")
-        type_uri = config['URI'][details['type']]
+        type_uri = TYPE_URI[details['type']]
 
         if 'associationsUUIDs' in details and isinstance(details['associationsUUIDs'], list):
             unique_uuids = set()
@@ -301,7 +296,7 @@ def format_organizations_from_contributors(contributors):
        :return: A list of dictionaries, each representing an organization.
        """
     organization_uuids = set()
-    default_uuid = BASE_ORG
+    default_uuid = DEFAULTS['university']
     managing_org = None
     for name, details in contributors.items():
         logging.info(f"Processing {name}")
@@ -339,9 +334,9 @@ def find_publisher(publisher):
     data = {"searchString": publisher}
     publisher_id =  None
     json_data = json.dumps(data)
-    api_url = BASE_URL + 'publishers/search/'
+    api_url = PURE_BASE_URL + 'publishers/search/'
     try:
-        response = requests.post(api_url, headers=headers, data=json_data)
+        response = requests.post(api_url, headers=PURE_HEADERS, data=json_data)
 
         if response.status_code == 200:
             data = response.json()
@@ -354,14 +349,14 @@ def find_publisher(publisher):
                         publisher_uuid = uuid
                         return publisher_uuid
                 if not publisher_id:
-                    publisher_uuid = config['DEFAULTS']['publisher']
+                    publisher_uuid = DEFAULTS['publisher']
             else:
-                publisher_uuid = config['DEFAULTS']['publisher']
+                publisher_uuid = DEFAULTS['publisher']
             return publisher_uuid
 
         else:
     #         default publisher
-            publisher_uuid = config['DEFAULTS']['publisher']
+            publisher_uuid = DEFAULTS['publisher']
             return publisher_uuid
 
     except requests.RequestException as e:
@@ -395,23 +390,23 @@ def construct_dataset_json(row):
          "title": {"en_GB": row['title']},
          "descriptions": [description],
          "doi": {"doi": row['doi']},
-         "type": {"uri": config['URI']['type_dataset']},
+         "type": {"uri": TYPE_URI['type_dataset']},
          "publisher": {"systemName": "Publisher", "uuid": publisher_uuid},
          "publicationAvailableDate": {"year": row['publication_year'], "month": row['publication_month'], "day": row['publication_month']},
          "managingOrganization": {"systemName": "Organization", "uuid": row['managing_org']},
          "persons": row['parsed_contributors'],
          "organizations": row['parsed_organizations'],
-         "visibility": {"key": config['DEFAULTS']['visibility_key']}
+         "visibility": {"key": DEFAULTS['visibility_key']}
         }
     return dataset
 def create_dataset(dataset_json):
-    url = BASE_URL + 'data-sets'
+    url = PURE_BASE_URL + 'data-sets'
     json_data = json.dumps(dataset_json)
     # Write to a new file
     # with open('datasssa.json', 'w') as file:
     #     file.write(json_data)
     # Make the put request
-    response = requests.put(url, headers=headers, data=json_data)
+    response = requests.put(url, headers=PURE_HEADERS, data=json_data)
     if response.status_code in [200, 201]:
         data = response.json()
         logging.info(f"created dataset: {response.status_code} - {data['uuid']}")
@@ -438,7 +433,7 @@ def user_choice():
             df = datacite_utils.get_df_from_datacite(datasets)
             break  # Exit loop after successful operation
         elif choice.strip() == '2':
-            file_path = 'other_files/test2.json'
+            file_path = 'source_files/export.json'
             df = yoda_utils.get_df_from_yoda(file_path)
             break  # Exit loop after successful operation
         else:
@@ -446,51 +441,58 @@ def user_choice():
 
     return df
 def main():
-
     df = user_choice()
-    created = 0
-    ignored = 0
-    for _, row in df.iterrows():
-
-        already_in_pure = find_dataset(None, row['doi'])
-
-        if already_in_pure:
-            logging.info(f"dataset with doi: {row['doi']}, already in pure")
-            print("skipped ", row['doi'], ' , is already in pure')
-            ignored += 1
-        else:
-           contributors_details = get_contributors_details(row['persons'], row['publication_year'], row['title'])
-           if contributors_details and not already_in_pure:
-                row['parsed_contributors'] = format_contributors(contributors_details)
-                row['parsed_organizations'], row['managing_org'] = format_organizations_from_contributors(
-                    contributors_details)
-
-                # Construct the dataset JSON
-                dataset_json = construct_dataset_json(row)
-                uuid_ds = create_dataset(dataset_json)
-                if not uuid_ds == 'error':
-                    print ('created dataset: ', uuid_ds)
-                    created += 1
-                else:
-                    ignored += 1
-                    print('error creating dataset: ', row['title'])
-           else:
-                ignored += 1
-
-    # summary
-    logging.info(f"Process completed. created datasets: {created}, ignored: {ignored}")
-    print (f"Process completed. created datasets: {created}, skipped: {ignored}")
-
-
-# Load configuration from file
-config = load_config()
-BASE_URL = config['API']['BaseURL']
-API_KEY = config['API']['APIKey']
-BASE_ORG = config['DEFAULTS']['university']
-# Setup logging
-logger = setup_logging()
-# Headers for API requests
-headers = get_headers(API_KEY)
+#     df = user_choice()
+#     created = 0
+#     ignored = 0
+#     for _, row in df.iterrows():
+#
+#         already_in_pure = find_dataset(None, row['doi'])
+#
+#         if already_in_pure:
+#             logging.info(f"dataset with doi: {row['doi']}, already in pure")
+#             print("skipped ", row['doi'], ' , is already in pure')
+#             ignored += 1
+#         else:
+#            print(row['persons'])
+#            contributors_details = get_contributors_details(row['persons'], row['publication_year'], row['title'])
+#            if contributors_details and not already_in_pure:
+#                 row['parsed_contributors'] = format_contributors(contributors_details)
+#                 row['parsed_organizations'], row['managing_org'] = format_organizations_from_contributors(
+#                     contributors_details)
+#
+#                 # Construct the dataset JSON
+#                 dataset_json = construct_dataset_json(row)
+#                 uuid_ds = create_dataset(dataset_json)
+#                 if not uuid_ds == 'error':
+#                     print ('created dataset: ', uuid_ds)
+#                     created += 1
+#                 else:
+#                     ignored += 1
+#                     print('error creating dataset: ', row['title'])
+#            else:
+#                 ignored += 1
+#
+#     # summary
+#     logging.info(f"Process completed. created datasets: {created}, ignored: {ignored}")
+#     print (f"Process completed. created datasets: {created}, skipped: {ignored}")
+#
+#
+# # Load configuration from file
+# config_path = 'config.ini'
+# if not os.path.exists(config_path):
+#     raise FileNotFoundError(f"The configuration file {config_path} does not exist.")
+#
+# config = configparser.ConfigParser()
+# config.read('config.ini')
+#
+# BASE_URL = config['API']['BaseURL']
+# API_KEY = config['API']['APIKey']
+# BASE_ORG = config['DEFAULTS']['university']
+# # Setup logging
+# logger = setup_logging()
+# # Headers for API requests
+# headers = get_headers(API_KEY)
 
 if __name__ == '__main__':
     main()

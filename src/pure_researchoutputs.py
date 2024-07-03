@@ -39,45 +39,11 @@ import pure_persons
 import openalex_utils
 import logging.handlers
 from dateutil import parser
-
-config_path = 'config.ini'
-if not os.path.exists(config_path):
-    raise FileNotFoundError(f"The configuration file {config_path} does not exist.")
-
-config = configparser.ConfigParser()
-config.read('config.ini')
-BASE_URL = config['API']['BaseURL']
-API_KEY = config['API']['APIKey']
-
-# Ensure the logs directory exists
-log_directory = "logs"
-os.makedirs(log_directory, exist_ok=True)
-
-# Configure logging
-log_file_path = os.path.join(log_directory, "pure_utilities.log")
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
-# Create a handler that writes log messages to a file, rotating the log file at midnight every day
-handler = logging.handlers.TimedRotatingFileHandler(
-    log_file_path, when="midnight", interval=1, backupCount=7
-)
-handler.setFormatter(logging.Formatter(
-    '%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-))
-
-logger.addHandler(handler)
-
-headers = {
-    "Content-Type": "application/json",
-    "accept": "application/json",
-    "api-key": API_KEY
-}
+from config import PURE_BASE_URL, PURE_API_KEY, PURE_HEADERS, RIC_BASE_URL, OPENALEX_HEADERS, OPENALEX_BASE_URL, PURE_HEADERS
 
 def get_researchoutput(uuid):
-
-    api_url = BASE_URL + 'research-outputs/' + uuid
+    headers = PURE_HEADERS
+    api_url = PURE_BASE_URL + 'research-outputs/' + uuid
     response = requests.get(api_url, headers=headers)
     if response.status_code == 200:
         data = response.json()
@@ -92,14 +58,14 @@ def create_external_person(first_name, last_name):
     :param first_name, last_name:  first and last names.
     :return: UUID of the newly created external person.
     """
-    api_url = BASE_URL + 'external-persons/'
+    api_url = PURE_BASE_URL + 'external-persons/'
     url = "https://staging.research-portal.uu.nl/ws/api/external-persons"
 
     data = {"name": {"firstName": first_name, "lastName": last_name}}
     json_data = json.dumps(data)
 
     try:
-        response = requests.put(api_url, headers=headers, data=json_data)
+        response = requests.put(api_url, headers=PURE_HEADERS, data=json_data)
 
         if response.status_code in [200, 201]:
             external_person = response.json()
@@ -112,9 +78,10 @@ def create_external_person(first_name, last_name):
     return None
 
 
-def get_contributors_details(contributors, ref_date):
+def get_contributors_details(contributors, ref_date, test):
     persons = {}
     found_internal_person = False
+
     # First pass: Check for internal persons and mark if any are found
     for contributor in contributors:
 
@@ -134,18 +101,19 @@ def get_contributors_details(contributors, ref_date):
         for contributor in contributors:
             contributor_id = contributor['name']
             if persons[contributor_id] is None:  # This contributor needs an external person
-                logging.info(f"Creating external person for {contributor_id}.")
-                external_person_uuid = create_external_person(contributor['first_name'],contributor['last_name'])
+                logging.debug(f"Creating external person for {contributor_id}.")
+                if test == 'no':
+                    external_person_uuid = create_external_person(contributor['first_name'],contributor['last_name'])
 
-                if external_person_uuid:
-                    logging.info(f'Created external person: {external_person_uuid}')
-                    persons[contributor_id] = {
-                        "external_person_uuid": external_person_uuid,
-                        "external_person_first_name": contributor['first_name'],
-                        "external_person_last_name": contributor['last_name']
-                    }
-                else:
-                    logging.error(f"Failed to create external person for {contributor_id}")
+                    if external_person_uuid:
+                        logging.debug(f'Created external person: {external_person_uuid}')
+                        persons[contributor_id] = {
+                            "external_person_uuid": external_person_uuid,
+                            "external_person_first_name": contributor['first_name'],
+                            "external_person_last_name": contributor['last_name']
+                        }
+                    else:
+                        logging.error(f"Failed to create external person for {contributor_id}")
     else:
         logging.error("No internal contributors found in Pure for the research output.")
         return None
@@ -153,41 +121,47 @@ def get_contributors_details(contributors, ref_date):
     return persons
 
 def parse_keywords(keywords):
-    if keywords:
-        transformed_data = {
-            "keywordGroups": [
-                {
-                    "typeDiscriminator": "FreeKeywordsKeywordGroup",
-                    "logicalName": "keywordContainers",
-                    "name": {
-                        "en_GB": "Keywords"
-                    },
-                    "keywords": [
-                        {
-                            "locale": "en_GB",
-                            "freeKeywords": keywords
-                        }
-                    ]
-                }
-            ]
-        }
-    else:
-        transformed_data = None
-    return transformed_data
+    data = [
+            {
+                "typeDiscriminator": "FreeKeywordsKeywordGroup",
+                "pureId": 191008212,
+                "logicalName": "keywordContainers",
+                "name": {
+                    "en_GB": "Keywords"
+                },
+                "keywords": [
+
+                    {
+                        "pureId": 191008215,
+                        "locale": "en_GB",
+                        "freeKeywords": keywords
+                    }
+                ]
+            }
+        ]
+
+    return data
 
 def get_journal_uuid(issn):
     url = "https://staging.research-portal.uu.nl/ws/api/journals/search/"
     # url = BASE_URL + '/journals/search/'
     data = {"searchString": issn}
     json_data = json.dumps(data)
+    headers = PURE_HEADERS
     response = requests.post(url, headers=headers, data=json_data)
     data = response.json()
     items = data.get('items', [])
-    for item in items:
-        journal_uuid = item['uuid']
 
-    if not journal_uuid:
+    if items:
+        for item in items:
+
+            journal_uuid = item['uuid']
+
+        if not journal_uuid:
+            journal_uuid = None
+    else:
         journal_uuid = None
+
 
     return journal_uuid
 
@@ -198,6 +172,7 @@ def construct_research_output_json(row):
     :param row: A dictionary containing all the necessary data fields.
     :return: A dictionary representing the research output in the defined JSON format.
     """
+
     research_output = {
         "typeDiscriminator": "ContributionToJournal",
         "peerReview": row['peer_review'],
@@ -221,6 +196,7 @@ def construct_research_output_json(row):
             "doi": row['doi'],
             "versionType": {"uri": "/dk/atira/pure/researchoutput/electronicversion/versiontype/publishersversion"}
         }],
+        "keywordGroups":  row['keywords'],
         "links": [{"url": f"https://doi.org/{row['doi']}"}],
         "visibility": {"key": row['visibility_key']},
         "workflow": {"step": row['workflow_step']},
@@ -232,7 +208,7 @@ def construct_research_output_json(row):
         },
         "systemName": "ResearchOutput"
     }
-    print(json.dumps(research_output, indent=4))
+
     return research_output
 
 
@@ -252,24 +228,24 @@ def format_organizations_from_contributors(contributors):
         logging.info(f"Processing {name}")
 
         # Set managing_org only for the first contributor
+        if details:
+            if managing_org is None and 'associationsUUIDs' in details and isinstance(details['associationsUUIDs'],
+                                                                                      list) and details['associationsUUIDs']:
+                managing_org = details['associationsUUIDs'][0]['uuid']
 
-        if managing_org is None and 'associationsUUIDs' in details and isinstance(details['associationsUUIDs'],
-                                                                                  list) and details['associationsUUIDs']:
-            managing_org = details['associationsUUIDs'][0]['uuid']
+                logging.info(f"Managing organization for {name}: {managing_org}")
 
-            logging.info(f"Managing organization for {name}: {managing_org}")
+            # Check if 'associationsUUIDs' is in details and is a list
+            if 'associationsUUIDs' in details and isinstance(details['associationsUUIDs'], list):
+                # Extract the uuids from the list of dictionaries
+                association_uuids = [assoc['uuid'] for assoc in details['associationsUUIDs']]
 
-        # Check if 'associationsUUIDs' is in details and is a list
-        if 'associationsUUIDs' in details and isinstance(details['associationsUUIDs'], list):
-            # Extract the uuids from the list of dictionaries
-            association_uuids = [assoc['uuid'] for assoc in details['associationsUUIDs']]
+                organization_uuids.update(association_uuids)
 
-            organization_uuids.update(association_uuids)
+                logging.info(f"Found associations for {name}: {association_uuids}")
 
-            logging.info(f"Found associations for {name}: {association_uuids}")
-
-        else:
-            logging.info(f"No associations found for {name}")  # Debugging
+            else:
+                logging.info(f"No associations found for {name}")  # Debugging
 
 
     # if not organization_uuids:
@@ -287,7 +263,7 @@ def format_contributors(contributors_data):
     for name, details in contributors_data.items():
         logging.info(f"Processing {name}")
 
-        if 'associationsUUIDs' in details and isinstance(details['associationsUUIDs'], list):
+        if details is not None and 'associationsUUIDs' in details and isinstance(details['associationsUUIDs'], list):
             unique_uuids = set()
             unique_association_dicts = []
 
@@ -302,52 +278,54 @@ def format_contributors(contributors_data):
             logging.info(f"No associations found for {name}")
 
     for name, details in contributors_data.items():
-        if 'uuid' in details:  # Internal Contributor
-            contributor = {
-                "typeDiscriminator": "InternalContributorAssociation",
-                "hidden": False,
-                "correspondingAuthor": False,  # Set appropriately if information available
-                "name": {
-                    "firstName": details['firstName'],
-                    "lastName": details['lastName']
-                },
-                "role": {
-                    "uri": "/dk/atira/pure/researchoutput/roles/contributiontojournal/author",
-                    "term": {"en_GB": "Author"}
-                },
-                "person": {
-                    "systemName": "Person",
-                    "uuid": details['uuid']
-                },
-                "organizations": [
-                    {"systemName": "Organization", "uuid": org['uuid']} for org in details['associationsUUIDs']
-                ]
 
-            }
-        else:  # External Contributor
-            contributor = {
-                "typeDiscriminator": "ExternalContributorAssociation",
-                # Assuming pureId and country details are available, or else set default or fetch
-                # "externalOrganizations": [],  # Placeholder: Populate if organization data available
-                # "country": {
-                #     "uri": "/dk/atira/pure/core/countries/de",  # Placeholder: Replace with actual country URI
-                #     "term": {"en_GB": "Germany"}  # Placeholder: Replace with actual country
+        if details is not None:
+            if 'uuid' in details:  # Internal Contributor
+                contributor = {
+                    "typeDiscriminator": "InternalContributorAssociation",
+                    "hidden": False,
+                    "correspondingAuthor": False,  # Set appropriately if information available
+                    "name": {
+                        "firstName": details['firstName'],
+                        "lastName": details['lastName']
+                    },
+                    "role": {
+                        "uri": "/dk/atira/pure/researchoutput/roles/contributiontojournal/author",
+                        "term": {"en_GB": "Author"}
+                    },
+                    "person": {
+                        "systemName": "Person",
+                        "uuid": details['uuid']
+                    },
+                    "organizations": [
+                        {"systemName": "Organization", "uuid": org['uuid']} for org in details['associationsUUIDs']
+                    ]
 
-                "name": {
-                    "firstName": details['external_person_first_name'],
-                    "lastName": details['external_person_last_name']
-                },
-                "role": {
-                    "uri": "/dk/atira/pure/researchoutput/roles/contributiontojournal/author",
-                    "term": {"en_GB": "Author"}
-                },
-                "externalPerson": {
-                    "systemName": "ExternalPerson",
-                    "uuid": details['external_person_uuid']
                 }
-            }
+            else:  # External Contributor
+                contributor = {
+                    "typeDiscriminator": "ExternalContributorAssociation",
+                    # Assuming pureId and country details are available, or else set default or fetch
+                    # "externalOrganizations": [],  # Placeholder: Populate if organization data available
+                    # "country": {
+                    #     "uri": "/dk/atira/pure/core/countries/de",  # Placeholder: Replace with actual country URI
+                    #     "term": {"en_GB": "Germany"}  # Placeholder: Replace with actual country
 
-        formatted_contributors.append(contributor)
+                    "name": {
+                        "firstName": details['external_person_first_name'],
+                        "lastName": details['external_person_last_name']
+                    },
+                    "role": {
+                        "uri": "/dk/atira/pure/researchoutput/roles/contributiontojournal/author",
+                        "term": {"en_GB": "Author"}
+                    },
+                    "externalPerson": {
+                        "systemName": "ExternalPerson",
+                        "uuid": details['external_person_uuid']
+                    }
+                }
+
+            formatted_contributors.append(contributor)
 
     return formatted_contributors
 
@@ -355,23 +333,89 @@ def format_contributors(contributors_data):
 def create_research_output(research_output_json):
     url = " https://staging.research-portal.uu.nl/ws/api/research-outputs"
     json_data = json.dumps(research_output_json)
+    # Open a file for writing
+    with open('test123.json', 'w') as file:
+        json.dump(json_data, file, indent=4)
     # Make the put request
+    headers = PURE_HEADERS
     response = requests.put(url, headers=headers, data=json_data)
     if response.status_code in [200, 201]:
         logging.info(f"created researchoutput: {response.status_code} - {response.text}")
     else:
         logging.error(f"Error creating research output: {response.status_code} - {response.text}")
 
+
     return 'test'
 
 
+def get_supervisors(supervisors, ref_date):
+    persons = {}
+    found_internal_person = False
+    # First pass: Check for internal persons and mark if any are found
+    for supervisor in supervisors:
+
+        supervisor_id = supervisor['name']
+        person_details = pure_persons.find_person(supervisor['name'], supervisor['ids'], ref_date)
+
+        if person_details:
+            persons[supervisor_id] = person_details
+            person_details['role'] = supervisor['role']
+            found_internal_person = True
+        else:
+            # Mark as None for now
+            persons[supervisor_id] = None
+
+            # Second pass: Create external persons only if an internal person is found
+    if found_internal_person:
+        for supervisor in supervisors:
+            supervisor_id = supervisor['name']
+            if persons[supervisor_id] is None:  # This contributor needs an external person
+                logging.info(f"Creating external person for {supervisor_id}.")
+                external_person_uuid = create_external_person(supervisor['first_name'], supervisor['last_name'])
+
+                if external_person_uuid:
+                    logging.info(f'Created external person: {external_person_uuid}')
+                    persons[supervisor_id] = {
+                        "external_person_uuid": external_person_uuid,
+                        "external_person_first_name": supervisor['first_name'],
+                        "external_person_last_name": supervisor['last_name'],
+                        "external_person_role": supervisor['role']
+                    }
+                else:
+                    logging.error(f"Failed to create external person for {supervisor_id}")
+    else:
+        logging.error("No internal contributors found in Pure for the research output.")
+        return None
+
+    return persons
+
+    pass
+
+
+def format_supervisors(param):
+    pass
+
+
 def unique_fields_per_type(row):
+    error = False
     if row['type'] == 'article':
-        # Process article type
-        row['journal'] = get_journal_uuid(row['journal_issn'])
+
+        if row['journal_issn'] == 'No ISSN':
+            error = True
+            logging.error(f"No ISSN for {row['title']}")
+        else:
+            # Process article type
+
+            row['journal'] = get_journal_uuid(row['journal_issn'])
+            if row['journal'] == None:
+                error = True
+                logging.error(f"No ISSN for {row['title']}")
 
     elif row['type'] == 'dissertation':
         # Process dissertation type
+        row['award_data'] == '2'
+        row['supervisors'] == get_supervisors(row['supervisors'], row['publication_date'])
+        row['parsed_supervisors'] == format_supervisors(row['supervisors'])
         pass
     elif row['type'] == 'book':
         # Process book type
@@ -383,27 +427,49 @@ def unique_fields_per_type(row):
         # Handle other types or unexpected values
         pass
 
+    return row, error
+
+
+def format_rest(row):
+
+
+    row['keywords'] = parse_keywords(row['keywords'])
+
+
     return row
 
 
-def df_to_pure(df):
-
+def df_to_pure(df, test):
+    error = 0
+    succes = 0
     for _, row in df.iterrows():
-        contributors_details = get_contributors_details(row['contributors'], row['publication_date'])
+        print('processing', row['title'])
+        contributors_details = get_contributors_details(row['contributors'], row['publication_date'], test)
 
         if contributors_details:
             row['parsed_contributors'] = format_contributors(contributors_details)
             row['parsed_organizations'], row['managing_org'] = format_organizations_from_contributors(
                 contributors_details)
-            row = unique_fields_per_type(row)
+            row = format_rest(row)
+            row, error = unique_fields_per_type(row)
+            if error == False:
+                # Construct the research output JSON
+                research_output_json = construct_research_output_json(row)
+                succes = succes +1
+                if test == 'no':
+                    uuid_ro = create_research_output(research_output_json)
+                else:
+                    error = error + 1
 
-            # Construct the research output JSON
-            research_output_json = construct_research_output_json(row)
-            uuid_ro = create_research_output(research_output_json)
+
 
         else:
             logging.warning(f"skipped research output {row['research_output_id']}.")
-#
+            error = error + 1
+    print(error, ' errors, see log for more info')
+    print(succes, ' successes')
+
+
 def main():
     OPENALEX_HEADERS = {'Accept': 'application/json',
                        # The following will be read in __main__
@@ -412,8 +478,8 @@ def main():
     OPENALEX_MAX_RECS_TO_HARVEST = 3
 
     # List of DOIs
-    dois = ['doi.org/10.1002/ijc.34742', 'doi.org/10.1038/s41598-024-51595-6', 'doi.org/10.1002/yet-another-doi']
-
+    # dois = ['doi.org/10.1002/ijc.34742', 'doi.org/10.1038/s41598-024-51595-6', 'doi.org/10.1002/yet-another-doi']
+    dois = ['doi.org/10.1038/s41598-024-51595-6']
     # List to hold all responses
     all_openalex_data = []
 

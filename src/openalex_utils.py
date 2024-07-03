@@ -6,14 +6,10 @@ import pathlib
 # import ricgraph as rcg
 import requests
 import configparser
+import os
+import logging
+from config import DEFAULTS
 
-# Load the configuration file
-config = configparser.ConfigParser()
-config.read('config.ini')
-
-# Get the minimal fields and defaults from the config file
-FIELDS = config.get('FIELDS', 'article').split(', ')
-DEFAULTS = {key: config.get('DEFAULTS', key) for key in config.options('DEFAULTS')}
 
 
 # # ######################################################
@@ -86,12 +82,15 @@ def get_jsons_from_open_alex(dois):
 def extract_journal_issn(publication):
     primary_location = publication.get('primary_location', {})
     source = primary_location.get('source', {})
-    return source.get('issn_l', 'No ISSN')
+    if source:
+        return source.get('issn_l', 'No ISSN')
+    else:
+        return 'No ISSN'
 
 # Function to extract relevant data from OpenAlex JSON and format it into a DataFrame
 def extract_keywords(publication):
     # Extract keywords
-    extracted_keywords = [item['keyword'] for item in publication['keywords']]
+    extracted_keywords = [item['display_name'] for item in publication['keywords']]
 
     return extracted_keywords
 
@@ -112,6 +111,7 @@ def transform_openalex_to_df(openalex_data):
     for publication in openalex_data:
 
         title = publication.get('title')
+        print(title)
         type = publication.get('type')
         doi = publication.get('doi')
         language = publication.get('language')
@@ -120,7 +120,7 @@ def transform_openalex_to_df(openalex_data):
         open_access =  extract_open_access(publication.get('open_access'))
         contributors = parse_contributors(publication.get('authorships', []))
         keywords = extract_keywords(publication)
-
+        issn = extract_journal_issn(publication)
         if not all([title, type, doi, year, contributors]):
             reason = "Missing fields: "
             missing_fields = [field for field in ["title", "type", "doi", "year", "contributors"] if not locals()[field]]
@@ -132,7 +132,7 @@ def transform_openalex_to_df(openalex_data):
             'research_output_id': publication.get('id', 'No id'),
             'title': title,
             'type': type,
-            'peer_review': config['DEFAULTS']['peer_review'],
+            'peer_review': DEFAULTS['peer_review'],
             'doi': doi,
             'publication_date': publication_date,
             'submission_year': year,
@@ -141,11 +141,11 @@ def transform_openalex_to_df(openalex_data):
             'publication_day': day,
             'contributors': contributors,
             'keywords': keywords,
-            'journal_issn': extract_journal_issn(publication),
+            'journal_issn': issn,
             'language_term': 'Undefined/Unknown',
-            'language_uri': config['DEFAULTS']['language_uri'],
-            'visibility_key': config['DEFAULTS']['visibility_key'],
-            'workflow_step': config['DEFAULTS']['workflow_step']
+            'language_uri': DEFAULTS['language_uri'],
+            'visibility_key': DEFAULTS['visibility_key'],
+            'workflow_step': DEFAULTS['workflow_step']
         })
 
     df_processed = pd.DataFrame(processed_publications)
@@ -157,12 +157,10 @@ def parse_contributors(contributors):
     parsed_contributors = []
 
     for author in contributors:
-
         author_details = author.get('author', {})
         name = author_details.get('display_name', 'Unknown Author')
         orcid = extract_orcid_id(author_details.get('orcid', ''))
         openalex_id = author_details.get('id', 'No OpenAlex ID')
-
 
         # Parse the name using nameparser
         human_name = HumanName(name)
@@ -213,7 +211,22 @@ def extract_orcid_id(orcid):
         # Return an empty string if orcid is None
         return ''
 
+if __name__ == '__main__':
+    # Get the directory of the current script
+    script_directory = os.path.dirname(os.path.abspath(__file__))
 
+    # Print the directory
+    print(f"The script is located in: {script_directory}")
+    # Load the configuration file
+    config_path = 'config.ini'
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"The configuration file {config_path} does not exist.")
+    config = configparser.ConfigParser()
+    config.read(config_path)
+
+    # Get the minimal fields and defaults from the config file
+    FIELDS = config.get('FIELDS', 'article').split(', ')
+    DEFAULTS = {key: config.get('DEFAULTS', key) for key in config.options('DEFAULTS')}
 # OPENALEX_HEADERS = {'Accept': 'application/json',
 #                     # The following will be read in __main__
 #                     'User-Agent': 'mailto:d.h.j.grotebeverborg@uu.nl'
