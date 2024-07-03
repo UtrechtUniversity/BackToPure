@@ -1,0 +1,93 @@
+# Project Documentation
+
+## Overview
+
+This project consists of several Python scripts designed to handle and process data from various research information management systems and datasets, including Pure, YODA, OpenAlex, and DataCite. The scripts facilitate tasks such as fetching, parsing, and formatting data, making it easier to integrate and utilize information from these diverse sources.
+
+## Prerequisites
+
+- **Pure**: You need access to the Pure research information management system.
+- **CRUD API**: Ensure you have access to the CRUD API provided by Pure.
+- **API User Rights**: The API user must have all the necessary rights to access and modify data in Pure.
+
+
+
+
+## Usage
+
+For Datasets there are 2 options for a source:
+- **export from Yoda**: This is a JSON formatted metadata from YODA, see <link> for how to make this export in YODA
+- **list of DOI's**: a simple csv file with only DOI's. With this DOI the dataset srcript will get the metadata from Datacite,
+parse the the data to a format that PURE can use and import the metadata of the datasets into pure
+
+
+
+## Scripts
+
+### pure_datasets.py
+
+This script contains functions to handle datasets from the Pure research information management system.
+
+#### Features:
+- **parse_dataset()**: Parses a dataset record from Pure.
+- **extract_dataset_info()**: Extracts relevant information from a dataset record.
+- **format_dataset()**: Formats dataset information into a standardized structure.
+- **get_pure_datasets()**: Fetches datasets from Pure and returns them in a structured format.
+
+### yoda_utils.py
+
+This script provides utility functions for working with the YODA (Your Data) system.
+
+#### Features:
+- **fetch_yoda_data()**: Fetches data from the YODA API.
+- **parse_yoda_response()**: Parses the response from YODA API and extracts useful information.
+- **format_yoda_data()**: Formats YODA data into a structured format for further processing.
+
+### pure_persons.py
+
+This script is responsible for handling person records from the Pure system.
+
+#### Features:
+- **parse_person()**: Parses a person record from Pure.
+- **extract_person_info()**: Extracts relevant information from a person record.
+- **format_person()**: Formats person information into a standardized structure.
+- **get_pure_persons()**: Fetches person records from Pure and returns them in a structured format.
+
+### pure_researchoutputs.py
+
+This script deals with research outputs from the Pure system.
+
+#### Features:
+- **parse_research_output()**: Parses a research output record from Pure.
+- **extract_research_output_info()**: Extracts relevant information from a research output record.
+- **format_research_output()**: Formats research output information into a standardized structure.
+- **get_pure_research_outputs()**: Fetches research outputs from Pure and returns them in a structured format.
+
+### openalex_utils.py
+
+This script provides utility functions for working with the OpenAlex dataset.
+
+#### Features:
+- **fetch_openalex_data()**: Fetches data from the OpenAlex API.
+- **parse_openalex_response()**: Parses the response from OpenAlex API and extracts useful information.
+- **format_openalex_data()**: Formats OpenAlex data into a structured format for further processing.
+
+### datacite_utils.py
+
+This script handles data from the DataCite system, focusing on datasets identified by DOIs (Digital Object Identifiers).
+
+#### Features:
+- **fetch_data_for_doi()**: Fetches data for a given DOI from the DataCite API.
+- **parse_datacite_response()**: Parses the response from DataCite API and returns structured data.
+- **get_df_from_datacite()**: Fetches data for multiple DOIs and returns a DataFrame.
+- **get_first_affiliation_name()**: Retrieves the first affiliation name from a list of affiliations.
+
+
+### Example: Fetching and Formatting Pure Datasets
+
+```python
+from pure_datasets import get_pure_datasets
+
+datasets = get_pure_datasets()
+for dataset in datasets:
+    print(dataset)

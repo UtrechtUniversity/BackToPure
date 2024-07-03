@@ -24,22 +24,17 @@ from pathlib import Path
 # Path(__file__).resolve() gets the absolute path of the current script
 # .parent gets the directory containing the script (src)
 # .parent again moves up to the project root directory
-config_path = Path(__file__).resolve().parent.parent / 'config.ini'
-# config_path = 'config.ini'
-if not config_path.exists():
+# config_path = Path(__file__).resolve().parent.parent / 'config.ini'
+config_path = 'config.ini'
+
+if not os.path.exists(config_path):
     raise FileNotFoundError(f"The configuration file {config_path} does not exist.")
 
 config = configparser.ConfigParser()
 config.read(config_path)
-BASE_URL = config['API']['BaseURL']
-API_KEY = config['API']['APIKey']
+BASE_URL = config['PURE-API']['BaseURL']
+API_KEY = config['PURE-API']['APIKey']
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    filename='pure_utilities.log',
-)
 
 headers = {
     "Content-Type": "application/json",
@@ -92,6 +87,7 @@ def construct_person_detail(data, ref_date=None):
 
         # Check if the association falls within the ref_date, if provided
         if ref_date:
+
             if assoc_start_datetime <= ref_date <= assoc_end_datetime:
                 associationsUUIDs.append({
                     "uuid": assoc.get('organization', {}).get('uuid'),
@@ -129,6 +125,7 @@ def find_person(name, person_ids, date):
     - str: A message indicating no unique person was found if no match or multiple matches are found.
     """
     ref_date = None
+
     if date:
         # ref_date = datetime.strptime(date, "%Y-%m-%d")
         ref_date = parse_date(date)
