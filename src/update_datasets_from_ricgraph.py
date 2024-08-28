@@ -1,14 +1,15 @@
 import configparser
 import logging
-from logging_config import setup_logging
-import math
-import os
-import pandas as pd
+
 import requests
 import datacite_utils
 import pure_datasets as puda
+import sys
+import argparse
 from config import PURE_BASE_URL, PURE_API_KEY, PURE_HEADERS, RIC_BASE_URL, OPENALEX_HEADERS, OPENALEX_BASE_URL
+from logging_config import setup_logging
 
+logger = setup_logging('update datasets', level=logging.INFO)
 import json
 # steps:
 # - get list of faculties
@@ -35,7 +36,7 @@ def fetch_personroots(faculty_key):
         logging.error(f"Error fetching person-roots for faculty {faculty_key}: {e}")
         return []
 
-def select_faculties():
+def select_faculties(faculty_choice):
     params = {
         'value': 'uu faculty',
     }
@@ -43,32 +44,22 @@ def select_faculties():
     response = requests.get('http://127.0.0.1:3030/api/organization/search', params=params)
     data = response.json()
 
-    faculties = []
-    faculty_person_data = {}
-    print(
-        "This script will export all ids's of all persons of a given faculty. Please choose one of the following faculties (or choose all):")
-    print_faculty_list(data["results"])
 
-    # Get user input
-    choice = input("Enter the number of your choice, or 'all' to select all faculties: ")
-
-    if choice.lower() == 'all':
-        selected_faculties = data["results"]
+    if faculty_choice.lower() == 'all':
+        selected_faculties = [item['_key'] for item in data["results"]]
     else:
-        selected_faculties = [data["results"][int(choice) - 1]]
+        selected_faculties = [faculty_choice]
 
     return selected_faculties
 
-def select_persons_datasets(selected_faculties):
+def select_persons_datasets(faculties):
     persons = []
-    print("You have selected:")
 
-    for faculty in selected_faculties:
-        print(faculty['_key'])
-        faculty_key = faculty['_key']
-        logging.info(f"Processing faculty: {faculty_key}")
 
-        personroots = fetch_personroots(faculty_key)
+    for faculty in faculties:
+        logging.info(f"Processing faculty: {faculty}")
+
+        personroots = fetch_personroots(faculty)
         data = []
         for persoonroot in personroots:
             if not persoonroot['_key'] == None:
@@ -81,12 +72,7 @@ def select_persons_datasets(selected_faculties):
                     doi = set["_key"].split("|")[0]
                     data.append(doi)
 
-        return data
-
-            # persons.extend([
-            #     [persoonroot_key, personid['name'], personid['value']]
-            #     for personid in personids
-            # ])
+    return data
 
 
 def select_datasets(persoonroot_key):
@@ -112,15 +98,16 @@ def test_or_not(datasets):
     return choice
 
 
-def main():
+def main(faculty_choice, test_choice):
     # Set logging level to INFO for this script
     logger = setup_logging('update_datasets_from_ricgraph', level=logging.INFO)
     logger.info("Script to update datasets in pure from ricgraph has started")
-    faculties = select_faculties()
+    faculties = select_faculties(faculty_choice)
+
     datasets = select_persons_datasets(faculties)
     # datasets = select_datasets(persons)
-    print(datasets)
-    test = test_or_not(datasets)
+
+    # test = test_or_not(datasets)
     df = datacite_utils.get_df_from_datacite(datasets)
 
     # Define the file path
@@ -141,7 +128,7 @@ def main():
             ignored += 1
         else:
             print(row['persons'])
-            contributors_details = puda.get_contributors_details(row['persons'], row['publication_year'], row['title'], test)
+            contributors_details = puda.get_contributors_details(row['persons'], row['publication_year'], row['title'], test_choice)
             if contributors_details and not already_in_pure:
                 row['parsed_contributors'] = puda.format_contributors(contributors_details)
                 row['parsed_organizations'], row['managing_org'] = puda.format_organizations_from_contributors(
@@ -149,7 +136,7 @@ def main():
 
                 # Construct the dataset JSON
                 dataset_json = puda.construct_dataset_json(row)
-                if test == 'no':
+                if test_choice == 'no':
                     uuid_ds = puda.create_dataset(dataset_json)
                     if not uuid_ds == 'error':
                         print('created dataset: ', uuid_ds)
@@ -166,4 +153,12 @@ def main():
 # ########################################################################
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Import Datasets from Ricgraph')
+    parser.add_argument('faculty_choice', type=str, nargs='?',
+                        default='uu faculty: information & technology services|organization_name',
+                        help='Faculty choice or "all"')
+    parser.add_argument('test_choice', type=str, nargs='?', default='yes', help='Run in test mode ("yes" or "no")')
+
+    args = parser.parse_args()
+    print('test:', args.test_choice)
+    main(args.faculty_choice, args.test_choice)

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Back to Pure - Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            overflow: hidden;
+            padding: 20px;
+        }
+
+        .main-header {
+            color: #fff;
+            padding-top: 30px;
+            min-height: 70px;
+            border-bottom: #FFC917 3px solid;
+        }
+
+        .main-header h1 {
+            text-align: center;
+            text-transform: uppercase;
+            margin: 0;
+            font-size: 36px;
+            color: #FFC917;
+        }
+
+        .showcase {
+            background: url('{{ url_for('static', filename='images/showcase.jpg') }}') no-repeat center center/cover;
+            color: #fff;
+            height: 300px;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0 20px;
+            margin-bottom: 20px;
+        }
+
+        .showcase h1 {
+            font-size: 40px;
+            line-height: 1.3;
+            margin: 0;
+            color: #FFC917;
+            background-color: #000; /* Black background */
+            padding: 10px 20px; /* Add padding for better readability */
+            width: 100%; /* Ensure it takes the full width */
+            box-sizing: border-box; /* Include padding in width calculation */
+        }
+
+        .content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        .script-section {
+            margin-bottom: 30px;
+        }
+
+        .script-section h3 {
+            background: #FFC917;
+            color: #333;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .script-section p {
+            padding: 10px;
+            background: #f9f9f9;
+            border-left: 5px solid #FFC917;
+            border-radius: 5px;
+        }
+
+        .button-group {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .button-group a {
+            background: #333;
+            color: #fff;
+            padding: 10px 20px;
+            text-decoration: none;
+            margin: 10px;
+            border-radius: 5px;
+            display: inline-block;
+            transition: background 0.3s;
+        }
+
+        .button-group a:hover {
+            background: #555;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="left-bar">
+        <h3>Useful Links:</h3>
+        <ul>
+            <li><a href="https://github.com/UtrechtUniversity/BackToPure/blob/main/read.me" target="_blank">Read me first!</a></li>
+            <li><a href="https://github.com/UtrechtUniversity/BackToPure" target="_blank">BackToPure GitHub Page</a></li>
+            <li><a href="https://github.com/UtrechtUniversity/ricgraph" target="_blank">RicGraph GitHub Page</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <div class="top-bar">
+            <a href="{{ url_for('home') }}">
+                <img src="{{ url_for('static', filename='images/BACK-TO-Pure-7-1-2024.gif') }}" alt="BackToPure Logo" class="logo">
+            </a>
+            <div class="top-bar-buttons">
+                <a href="{{ url_for('enrich_internal_persons') }}">Enrich Internal Persons with IDs</a>
+                <a href="{{ url_for('enrich_external_persons') }}">Enrich External Persons with IDs</a>
+                <a href="{{ url_for('import_research_outputs') }}">Import Research Outputs</a>
+                <a href="{{ url_for('import_datasets') }}">Import Datasets</a>
+
+                <a href="{{ url_for('enrich_external_orgs') }}">Enrich External Organisations (coming soon)</a>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="showcase">
+                <h1>Automate Your Research Data Management</h1>
+            </div>
+
+            <div class="content">
+                <h2>Welcome to the BackToPure Script Runner</h2>
+                    <div class="script-section">
+                    <h3>To be added!</h3>
+                    <p><strong>Prerequisites:</strong> What needs to be done before running the scripts!!.</p>
+                    </div>
+
+
+                    <div class="script-section">
+                    <h3>Introduction</h3>
+
+                    </div>
+
+                <p>The BackToPure Script Runner is a web-based interface designed to streamline and automate the management of research data within the PURE system. This platform provides a simple and intuitive way to execute a series of predefined scripts that handle various aspects of data enrichment and importation from external sources like RicGraph. The goal is to ensure that the data in PURE is comprehensive, up-to-date, and accurately reflects the academic contributions and research outputs of the institution.</p>
+
+                <p>On this site, you can run different scripts tailored to specific tasks, ranging from enriching internal and external person data to importing datasets and research outputs. Each script is designed to handle complex tasks behind the scenes, presenting you with only the necessary options and output information.</p>
+
+                <h2>Available Scripts</h2>
+
+                <div class="script-section">
+                    <h3>Enrich Internal Persons with IDs</h3>
+                    <p><strong>Purpose:</strong> This script is designed to enrich internal person records in PURE with their respective IDs obtained from RicGraph. IDs are critical for linking individuals to their research outputs, affiliations, and other academic activities.</p>
+                    <p><strong>Process:</strong> The script first fetches a list of faculties from RicGraph. You can select a specific faculty or choose to process all faculties. It retrieves person records from RicGraph and checks if corresponding IDs are present in PURE. If an ID is missing in PURE, the script attempts to enrich the record by adding the missing ID. The script can be run in a test mode where it performs all checks without making actual changes, allowing you to review the output before committing changes.</p>
+                    <p><strong>Output:</strong> The script generates a log of all actions taken, including IDs added and any records skipped due to errors or existing data.</p>
+                </div>
+
+                <div class="script-section">
+                    <h3>Enrich External Persons with IDs</h3>
+                    <p><strong>Purpose:</strong> This script focuses on enriching external persons' records in PURE with IDs sourced from RicGraph, similar to the internal persons enrichment process.</p>
+                    <p><strong>Process:</strong> The process is similar to the enrichment of internal persons, except it targets external persons associated with the institution. You can choose the faculty or scope, and the script will fetch, check, and update the records as needed.</p>
+                    <p><strong>Output:</strong> The script provides a detailed log, outlining the IDs added and any issues encountered during the process.</p>
+                </div>
+
+                <div class="script-section">
+                    <h3>Import Research Outputs</h3>
+                    <p><strong>Purpose:</strong> This script automates the import of research outputs into PURE from external sources like RicGraph.</p>
+                    <p><strong>Process:</strong> The script retrieves research output data from RicGraph based on selected faculties. It checks whether these outputs already exist in PURE, preventing duplicates. New research outputs that are not already present in PURE are then imported. You can run the script in a test mode to preview the changes before committing them.</p>
+                    <p><strong>Output:</strong> A log is generated that details the outputs imported, those skipped, and any errors encountered during the process.</p>
+                </div>
+
+                <div class="script-section">
+                    <h3>Import Datasets</h3>
+                    <p><strong>Purpose:</strong> This script is designed to import datasets into PURE from RicGraph, ensuring that the institution's research datasets are accurately recorded and linked to the appropriate contributors.</p>
+                    <p><strong>Process:</strong> Similar to the research outputs script, it starts by fetching datasets linked to the selected faculty. The script checks if the datasets already exist in PURE. If a dataset does not exist, it is imported and linked to the correct contributors based on the information available from RicGraph. The script supports a test mode, allowing you to review potential changes before they are applied.</p>
+                    <p><strong>Output:</strong> The log will show the datasets that were imported, any that were skipped due to existing records, and any errors that occurred.</p>
+                </div>
+
+                <h2>Coming Soon</h2>
+
+                <div class="script-section">
+                    <h3>Enrich External Persons (Coming Soon)</h3>
+                    <p><strong>Overview:</strong> This upcoming feature will expand the enrichment capabilities by focusing on external persons. It will automate the process of adding or updating external persons' records in PURE, ensuring they are comprehensive and up-to-date.</p>
+                </div>
+
+                <div class="script-section">
+                    <h3>Enrich External Organisations (Coming Soon)</h3>
+                    <p><strong>Overview:</strong> This feature will allow for the enrichment of external organizations in PURE. It will automatically fetch and update organizational data from RicGraph, ensuring that all linked institutions are correctly represented in PURE.</p>
+                </div>
+
+                <div class="button-group">
+                    <a href="{{ url_for('enrich_internal_persons') }}">Get Started with Enrich Internal Persons</a>
+                    <a href="{{ url_for('enrich_external_persons') }}">Explore Enrich External Persons</a>
+                    <a href="{{ url_for('import_research_outputs') }}">Start Importing Research Outputs</a>
+                    <a href="{{ url_for('import_datasets') }}">Import Datasets Now</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

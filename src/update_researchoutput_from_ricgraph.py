@@ -1,14 +1,8 @@
-import configparser
 import logging
-import math
-import os
+import argparse
 import openalex_utils
-import pandas as pd
 import requests
-import datacite_utils
 import pure_researchoutputs as pure
-import json
-import datetime
 from logging_config import setup_logging
 from config import PURE_BASE_URL, PURE_API_KEY, PURE_HEADERS, RIC_BASE_URL, OPENALEX_HEADERS, OPENALEX_BASE_URL
 
@@ -29,7 +23,7 @@ def print_faculty_list(faculty_list):
 def fetch_personroots(faculty_key):
     """Fetch person-root nodes for a given faculty."""
     try:
-        params = {'key': faculty_key, 'max_nr_items': '100'}
+        params = {'key': faculty_key, 'max_nr_items': '0'}
         url = RIC_BASE_URL + 'get_all_personroot_nodes'
         response = requests.get(url, params=params)
         response.raise_for_status()
@@ -38,42 +32,36 @@ def fetch_personroots(faculty_key):
         logging.error(f"Error fetching person-roots for faculty {faculty_key}: {e}")
         return []
 
-def select_faculties():
+def select_faculties(faculty_choice):
     params = {
         'value': 'uu faculty',
     }
-    url = RIC_BASE_URL + 'organization/search'
 
-    response = requests.get(url, params=params)
+    response = requests.get('http://127.0.0.1:3030/api/organization/search', params=params)
     data = response.json()
 
-    faculties = []
-    faculty_person_data = {}
-    print(
-        "Please choose one of the following faculties (or choose all):")
-    print_faculty_list(data["results"])
-
-    # Get user input
-    choice = input("Enter the number of your choice, or 'all' to select all faculties: ")
-
-    if choice.lower() == 'all':
-        selected_faculties = data["results"]
+    if faculty_choice.lower() == 'all':
+        selected_faculties = [item['_key'] for item in data["results"]]
     else:
-        selected_faculties = [data["results"][int(choice) - 1]]
+        selected_faculties = [faculty_choice]
 
     return selected_faculties
+
+
 
 def select_persons_researchoutput(selected_faculties):
     persons = []
     print("You have selected:")
-
+    new_data = []
+    duplicates = []
+    all_data = []
     for faculty in selected_faculties:
-        print(faculty['_key'])
-        faculty_key = faculty['_key']
-        logging.info(f"Processing faculty: {faculty_key}")
+        print(faculty)
 
-        personroots = fetch_personroots(faculty_key)
-        new_data = []
+        logging.info(f"Processing faculty: {faculty}")
+
+        personroots = fetch_personroots(faculty)
+
 
         for personroot in personroots:
             logging.info(f"RICgraph - Processing person: {personroot}")
@@ -84,13 +72,16 @@ def select_persons_researchoutput(selected_faculties):
                 outputs = select_researchoutputs(personroot_key)
                 for output in outputs:
                     doi = 'doi.org/' + output["_key"].split("|")[0]
+                    all_data.append(doi)
                     logging.info(f"RICgraph - Processing publication: {doi}")
                     if 'Pure-uu' not in output["_source"]:
                         new_data.append(doi)
                         print(output["_key"], output["_source"])
+
                     else:
+                        duplicates.append(doi)
                         print(output["_key"], ' already in pure')
-        return new_data
+    return new_data, duplicates, all_data
 
 
 def select_researchoutputs(persoonroot_key):
@@ -106,21 +97,24 @@ def select_researchoutputs(persoonroot_key):
         return []
 
 
-def test_or_not(researchoutputs):
+def test_or_not(researchoutputs, duplicates, all_data):
     number_of_researchoutput = len(researchoutputs)
+    print(f"{len(all_data)} are in ricgraph")
     print(f"{number_of_researchoutput} are not in pure but are in ricgraph")
+    print(f"{len(duplicates)} are in pure AND are in ricgraph")
     print("Would you like to do a test run? (publications will not be inserted in pure, but the script will check if all needed info is there")
     choice = input("enter yes or no ")
     return choice
 
-def main():
+def main(faculty_choice, test_choice):
     # Set logging level to INFO for this script
     logger = setup_logging('update_researchoutput_from_ricgraph', level=logging.INFO)
     logger.info("Script to update researchoutput in pure from ricgraph has started")
 
-    faculties = select_faculties()
-    researchoutputs = select_persons_researchoutput(faculties)
-    test = test_or_not(researchoutputs)
+    faculties = select_faculties(faculty_choice)
+
+    researchoutputs, duplicates, all_data = select_persons_researchoutput(faculties)
+    # test = test_or_not(researchoutputs, duplicates, all_data)
 
     all_openalex_data = []
 
@@ -142,8 +136,8 @@ def main():
     file_path = "ro.xlsx"
     # Save the dataframe to an Excel file
     df.to_excel(file_path, index=False)
-
-    pure.df_to_pure(df, test)
+    df = df.dropna(subset=['journal_issn'])
+    pure.df_to_pure(df, test_choice)
     logger.info("Script to update researchoutput in pure from ricgraph has ended")
 
 # ########################################################################
@@ -151,4 +145,11 @@ def main():
 # ########################################################################
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Import Datasets from Ricgraph')
+    parser.add_argument('faculty_choice', type=str, nargs='?',
+                        default='uu faculty: information & technology services|organization_name',
+                        help='Faculty choice or "all"')
+    parser.add_argument('test_choice', type=str, nargs='?', default='yes', help='Run in test mode ("yes" or "no")')
+
+    args = parser.parse_args()
+    main(args.faculty_choice, args.test_choice)

@@ -400,16 +400,20 @@ def unique_fields_per_type(row):
     error = False
     if row['type'] == 'article':
 
-        if row['journal_issn'] == 'No ISSN':
-            error = True
-            logging.error(f"No ISSN for {row['title']}")
-        else:
-            # Process article type
-
-            row['journal'] = get_journal_uuid(row['journal_issn'])
-            if row['journal'] == None:
+        if row['journal_issn'] or row['journal_issn'] == None:
+            if row['journal_issn'] == 'No ISSN' or  row['journal_issn'] == '':
                 error = True
                 logging.error(f"No ISSN for {row['title']}")
+            else:
+                # Process article type
+
+                row['journal'] = get_journal_uuid(row['journal_issn'])
+                if row['journal'] == None:
+                    error = True
+                    logging.error(f"No ISSN for {row['title']}")
+        else:
+            error = True
+            logging.error(f"No ISSN for {row['title']}")
 
     elif row['type'] == 'dissertation':
         # Process dissertation type

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Back to Pure - Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="left-bar">
+        <h3>Useful Links:</h3>
+        <ul>
+            <li><a href="https://github.com/BackToPure" target="_blank">BackToPure GitHub Page</a></li>
+            <li><a href="https://github.com/RicGraph" target="_blank">RicGraph GitHub Page</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <div class="top-bar">
+            <a href="{{ url_for('home') }}">
+                <img src="{{ url_for('static', filename='images/BACK-TO-Pure-7-1-2024.gif') }}" alt="BackToPure Logo" class="logo">
+            </a>
+            <div class="top-bar-buttons">
+                <a href="{{ url_for('enrich_internal_persons') }}">Enrich Internal Persons with IDs</a>
+                <a href="{{ url_for('enrich_external_persons') }}">Enrich External Persons with IDs</a>
+                <a href="{{ url_for('import_research_outputs') }}">Import Research Outputs</a>
+                <a href="{{ url_for('import_datasets') }}">Import Datasets</a>
+                <a href="{{ url_for('enrich_external_orgs') }}">Enrich External Organisations</a>
+            </div>
+        </div>
+        <div class="content">
+            <h1>Welcome to Back to Pure</h1>
+            <p>This site allows you to manage various data import and enrichment processes.</p>
+        </div>
+    </div>
+</body>
+</html>

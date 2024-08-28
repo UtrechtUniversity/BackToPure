@@ -1,0 +1,21 @@
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        console.log("Page loaded, starting fetch...");
+        fetch('/faculties')
+            .then(response => response.json())
+            .then(faculties => {
+                const select = document.getElementById('faculty_choice');
+                faculties.forEach(faculty => {
+                    const option = document.createElement('option');
+                    option.value = faculty.value;  // Use 'value' as the option's value
+                    option.textContent = faculty.label;  // Use 'label' as the option's displayed text
+                    select.appendChild(option);
+                });
+                const allOption = document.createElement('option');
+                allOption.value = 'all';
+                allOption.textContent = 'All Faculties';
+                select.appendChild(allOption);
+            })
+            .catch(error => console.error('Error fetching faculties:', error));
+    });
+</script>

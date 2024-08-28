@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Import Research Outputs</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="left-bar"></div>
+    <div class="main-content">
+        <div class="top-bar">
+            <a href="{{ url_for('home') }}">
+                <img src="{{ url_for('static', filename='images/BACK-TO-Pure-7-1-2024.gif') }}" alt="BackToPure Logo" class="logo">
+            </a>
+            <div class="top-bar-buttons">
+                <a href="{{ url_for('enrich_internal_persons') }}">Enrich Internal Persons with IDs</a>
+                <a href="{{ url_for('enrich_external_persons') }}">Enrich External Persons with IDs</a>
+                <a href="{{ url_for('import_research_outputs') }}">Import Research Outputs</a>
+                <a href="{{ url_for('import_datasets') }}">Import Datasets</a>
+
+                <a href="{{ url_for('enrich_external_orgs') }}">Enrich External Organisations</a>
+            </div>
+        </div>
+        <div class="content">
+            <h1>Import Research Outputs</h1>
+            <form id="script-form" action="{{ url_for('run_import_research_outputs') }}" method="post">
+                <label for="faculty_choice">Faculty Choice:</label>
+                <select id="faculty_choice" name="faculty_choice"></select><br><br>
+
+                <label for="test_choice">Test Choice:</label>
+                <input type="text" id="test_choice" name="test_choice" placeholder="Enter 'yes' or 'no'"><br><br>
+
+                <button type="submit">Run Import Research Outputs</button>
+            </form>
+
+            <!-- Ensure this div is present for displaying script output -->
+            <div class="output" style="margin-top: 20px;">
+                <h2>Output</h2>
+                <div id="script-output" style="border: 1px solid #ddd; padding: 10px; background-color: #f9f9f9; height: 400px; overflow-y: scroll;">
+                    <!-- The output of the script will be streamed here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fetch faculties and populate the dropdown
+        document.addEventListener("DOMContentLoaded", function() {
+            fetch('/faculties')
+                .then(response => response.json())
+                .then(faculties => {
+                    const select = document.getElementById('faculty_choice');
+                    faculties.forEach(faculty => {
+                        const option = document.createElement('option');
+                        option.value = faculty.value;
+                        option.textContent = faculty.label;
+                        select.appendChild(option);
+                    });
+                    const allOption = document.createElement('option');
+                    allOption.value = 'all';
+                    allOption.textContent = 'All Faculties';
+                    select.appendChild(allOption);
+                })
+                .catch(error => console.error('Error fetching faculties:', error));
+        });
+
+        // Handle form submission and stream output
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent the default form submission
+            const outputDiv = document.getElementById('script-output');
+            outputDiv.innerHTML = ''; // Clear previous output
+
+            const formData = new FormData(form); // Capture form data
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', form.action, true);
+
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 3) { // Loading the response
+                    outputDiv.innerHTML += xhr.responseText.replace(/\n/g, '<br>');
+                }
+                if (xhr.readyState === 4 && xhr.status === 200) { // Finished successfully
+                    outputDiv.innerHTML += '<br><button onclick="copyToClipboard()">Copy to Clipboard</button>';
+                } else if (xhr.readyState === 4) { // Error occurred
+                    outputDiv.innerHTML += `<br>Error: ${xhr.statusText}`;
+                }
+            };
+
+            xhr.send(formData); // Send the form data to the server
+        });
+
+        function copyToClipboard() {
+            const outputDiv = document.getElementById('script-output');
+            const range = document.createRange();
+            range.selectNode(outputDiv);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            document.execCommand("copy");
+            window.getSelection().removeAllRanges();
+        }
+    </script>
+</body>
+</html>

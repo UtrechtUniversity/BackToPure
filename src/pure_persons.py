@@ -16,30 +16,17 @@ from datetime import datetime, time
 import configparser
 import os
 import logging
-
+from config import PURE_BASE_URL, PURE_API_KEY, PURE_HEADERS, RIC_BASE_URL, OPENALEX_HEADERS, OPENALEX_BASE_URL
+from logging_config import setup_logging
 from dateutil import parser
 from pathlib import Path
 
-# Calculate the path to the config.ini file
-# Path(__file__).resolve() gets the absolute path of the current script
-# .parent gets the directory containing the script (src)
-# .parent again moves up to the project root directory
-# config_path = Path(__file__).resolve().parent.parent / 'config.ini'
-config_path = 'config.ini'
-
-if not os.path.exists(config_path):
-    raise FileNotFoundError(f"The configuration file {config_path} does not exist.")
-
-config = configparser.ConfigParser()
-config.read(config_path)
-BASE_URL = config['PURE-API']['BaseURL']
-API_KEY = config['PURE-API']['APIKey']
-
+logger = setup_logging('update datasets', level=logging.INFO)
 
 headers = {
     "Content-Type": "application/json",
     "accept": "application/json",
-    "api-key": API_KEY
+    "api-key": PURE_API_KEY
 }
 
 def parse_date(date_string):
@@ -135,7 +122,7 @@ def find_person(name, person_ids, date):
     if person_ids and 'uuid' in person_ids:
 
         uuid = person_ids['uuid']
-        api_url = BASE_URL + 'persons/' + uuid
+        api_url = PURE_BASE_URL + 'persons/' + uuid
 
         response = requests.get(api_url, headers=headers)
         if response.status_code == 200:
@@ -151,7 +138,7 @@ def find_person(name, person_ids, date):
                         id_value = extract_orcid(id_value)
                     data = {"searchString": id_value}
                     json_data = json.dumps(data)
-                    api_url = BASE_URL + 'persons/search/'
+                    api_url = PURE_BASE_URL + 'persons/search/'
                     try:
                         response = requests.post(api_url, headers=headers, data=json_data)
                         if response.status_code == 200:
@@ -177,7 +164,7 @@ def find_person(name, person_ids, date):
 
         data = {"searchString": name}
         json_data = json.dumps(data)
-        api_url = BASE_URL + 'persons/search/'
+        api_url = PURE_BASE_URL + 'persons/search/'
         try:
             response = requests.post(api_url, headers=headers, data=json_data)
             if response.status_code == 200:

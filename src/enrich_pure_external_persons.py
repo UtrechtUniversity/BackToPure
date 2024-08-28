@@ -4,12 +4,13 @@ import logging
 from logging_config import setup_logging
 import requests
 import json
+import argparse
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import urllib3
-from config import PURE_BASE_URL, PURE_API_KEY, PURE_HEADERS, RIC_BASE_URL, ID_URI, OPENALEX_HEADERS
+from config import PURE_BASE_URL, PURE_API_KEY, PURE_HEADERS, RIC_BASE_URL, OPENALEX_ID_URI, ORCID_ID_URI, OPENALEX_HEADERS
 logger = setup_logging('test', level=logging.INFO)
-logger.info("Script to update researchoutput in pure from ricgraph has started")
+logger.info("Script to update external persons in pure from ricgraph has started")
 
 headers = {
     'Accept': 'application/json',
@@ -18,8 +19,6 @@ headers = {
 
 # Disable only the single InsecureRequestWarning from urllib3 needed to use the InsecureRequestWarning
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-
 
 def extract_orcid_id(orcid):
     # Check if the ORCID is in URL format
@@ -64,7 +63,9 @@ def get_ro_from_pure(item):
     )
 
     adapter = HTTPAdapter(max_retries=retry_strategy)
-    url = "https://staging.research-portal.uu.nl/ws/api/research-outputs/search/"
+
+    url = PURE_BASE_URL +"research-outputs/search/"
+    # url = "https://staging.research-portal.uu.nl/ws/api/research-outputs/search/"
     session = requests.Session()
     session.mount("https://", adapter)
     # url = BASE_URL + '/journals/search/'
@@ -77,7 +78,7 @@ def get_ro_from_pure(item):
     # Close the session
     session.close()
     data = response.json()
-    print(response.status_code)
+
     return data
 
 
@@ -149,7 +150,7 @@ def identifier_exists(identifiers, new_id, id_type_uri):
         if 'type' in identifier and identifier['type']['uri'] == id_type_uri and identifier['id'] == new_id:
             return True
     return False
-def update_externalpersons_pure(persons):
+def update_externalpersons_pure(persons, test_choice):
     # Set up retry strategy
     retry_strategy = Retry(
         total=5,
@@ -167,12 +168,13 @@ def update_externalpersons_pure(persons):
         uuid = row['Pure_UUID']
         headers = {
             'Accept': 'application/json',
-            'api-key': '0dac149f-5630-4044-8276-c1ed2e5cd0f0',
+            'api-key': PURE_API_KEY,
         }
 
-        api_url = 'https://staging.research-portal.uu.nl/ws/api/' + 'external-persons/' + uuid
+        url = PURE_BASE_URL + "research-outputs/search/" + 'external-persons/' + uuid
 
-        response = session.get(api_url, headers=headers, verify=False)
+
+        response = session.get(url, headers=headers, verify=False)
         data = response.json()  # Directly parse JSON response
 
         new_openalexid = None
@@ -183,7 +185,7 @@ def update_externalpersons_pure(persons):
                 "typeDiscriminator": "ClassifiedId",
                 "id": row['Alex_ID'],
                 "type": {
-                    "uri": "/dk/atira/pure/externalperson/externalpersonsources/open_alex_id",
+                    "uri": OPENALEX_ID_URI,
                     "term": {
                         "en_GB": "Open Alex id"
                     }
@@ -195,7 +197,7 @@ def update_externalpersons_pure(persons):
                 "typeDiscriminator": "ClassifiedId",
                 "id": row['ORCID'],
                 "type": {
-                    "uri": "/dk/atira/pure/externalperson/externalpersonsources/orcid",
+                    "uri": ORCID_ID_URI,
                     "term": {
                         "en_GB": "ORCID"
                     }
@@ -224,47 +226,36 @@ def update_externalpersons_pure(persons):
 
         if (new_orcid and not orcid_exists) or (new_openalexid and not openalexid_exists):
             if data['identifiers']:  # Ensure identifiers array is not empty
-                api_url = 'https://staging.research-portal.uu.nl/ws/api/' + 'external-persons/' + uuid
+                logging.info(f"update of uuid {uuid}, orcid, {new_orcid}, alex, {new_openalexid}")
+                if test_choice == 'no':
+                    url = PURE_BASE_URL + "research-outputs/search/" + 'external-persons/' + uuid
 
-                response = session.put(api_url, headers=headers, json=data, verify=False)
-                if response.status_code != 200:
-                    print(f"Failed to update data for UUID {uuid}: {response.text}")
-                else:
-                    print(f"Successfully updated data for UUID {uuid}")
+                    response = session.put(url, headers=headers, json=data, verify=False)
+                    if response.status_code != 200:
+                        logging.info(f"Failed to update data for UUID {uuid}: {response.text}")
+                    else:
+                        print()
+                        logging.info(f"Successfully updated data for UUID {uuid}, orcid, {new_orcid}, alex, {new_openalexid}")
             else:
-                print(f"No valid identifiers to update for UUID {uuid}")            # Respect rate limits
+                logging.info(f"No valid identifiers to update for UUID {uuid}")            # Respect rate limits
                 time.sleep(1)  # Adjust the sleep time based on rate limits
                 # Close the session
                 session.close()
 
                     # response = requests.put(api_url, headers=headers, json=data)
 
-def print_faculty_list(faculty_list):
-    for idx, faculty in enumerate(faculty_list, start=1):
-        print(f"{idx}. {faculty['value']}")
-    print("all. All Faculties")
-def select_faculties():
+
+def select_faculties(faculty_choice):
     params = {
         'value': 'uu faculty',
     }
     url = RIC_BASE_URL + 'organization/search'
-
     response = requests.get(url, params=params)
     data = response.json()
-
-    faculties = []
-    faculty_person_data = {}
-    print(
-        "Please choose one of the following faculties (or choose all):")
-    print_faculty_list(data["results"])
-
-    # Get user input
-    choice = input("Enter the number of your choice, or 'all' to select all faculties: ")
-
-    if choice.lower() == 'all':
-        selected_faculties = data["results"]
+    if faculty_choice.lower() == 'all':
+        selected_faculties = [item['_key'] for item in data["results"]]
     else:
-        selected_faculties = [data["results"][int(choice) - 1]]
+        selected_faculties = [faculty_choice]
 
     return selected_faculties
 
@@ -284,7 +275,8 @@ def select_researchoutputs(persoonroot_key):
     """Fetch person IDs for a given person-ro    ot."""
     try:
         params = {'key': persoonroot_key, 'category_want': 'journal article'}
-        response = requests.get('http://127.0.0.1:3030/api/get_all_neighbor_nodes', params=params)
+        url = RIC_BASE_URL + 'get_all_neighbor_nodes'
+        response = requests.get(url, params=params)
         # response.raise_for_status()
         return response.json().get("results", [])
 
@@ -295,18 +287,15 @@ def select_researchoutputs(persoonroot_key):
 
 def select_persons_researchoutput(selected_faculties):
     persons = []
-    print("You have selected:")
+
 
     for faculty in selected_faculties:
-        print(faculty['_key'])
-        faculty_key = faculty['_key']
-        logging.info(f"Processing faculty: {faculty_key}")
-
-        personroots = fetch_personroots(faculty_key)
+        logging.info(f"Processing faculty: {faculty}")
+        personroots = fetch_personroots(faculty)
         new_data = []
 
         for personroot in personroots:
-            logging.info(f"RICgraph - Processing person: {personroot}")
+
 
             if not personroot['_key'] == None:
                 personroot_key = personroot['_key']
@@ -314,46 +303,51 @@ def select_persons_researchoutput(selected_faculties):
                 outputs = select_researchoutputs(personroot_key)
                 for output in outputs:
                     doi = 'doi.org/' + output["_key"].split("|")[0]
-                    logging.info(f"RICgraph - Processing publication: {doi}")
+
                     if 'Pure-uu' in output["_source"] and 'OpenAlex-uu' in output["_source"]:
                         new_data.append(doi)
-                        print(output["_key"], output["_source"])
+
                     else:
                         print(output["_key"], 'not in both systems')
         return new_data
 
 
-def mainproces(doi):
+def mainproces(doi, test_choice):
     oa_article = get_ro_from_openalex(doi)
     pure_article = get_ro_from_pure(doi)
-
     persons = match_persons_oa_pure(oa_article, pure_article)
-    update_externalpersons_pure(persons)
+    update_externalpersons_pure(persons, test_choice)
 
 
 
-def main():
-    # Set logging level to INFO for this script
-    logger = setup_logging('update_externalpersonids_from_ricgraph', level=logging.INFO)
-    logger.info("Script to update ids from externalpersons in pure from ricgraph has started")
-    faculties = select_faculties()
+def main(faculty_choice, test_choice):
+
+    logging.info(f"start fetching person-roots for {faculty_choice}")
+    logging.info(f"Test run =  {test_choice}")
+    faculties = select_faculties(faculty_choice)
     researchoutputs = select_persons_researchoutput(faculties)
-    # test = test_or_not(researchoutputs)
 
 
-    # Loop through each DOI and make a check if persons can be updated
+    # Loop through each DOI and check if persons can be updated
     # Get the number of entries
     # Get the number of elements in the list
     num_elements = len(researchoutputs)
-    print(f"Number of researchoutput: {num_elements}")
+    logging.info(f"total research output with external persons selected:  {len(researchoutputs)}")
     number  = 0
     for doi in researchoutputs:
         number = number + 1
-        print(number, doi)
-        mainproces(doi)
+        mainproces(doi, test_choice)
 
-main()
-#
-# file = 'pure1.json'
-# with open(file, "w") as f:
-#     json.dump(pure_article, f, indent=4)
+# ########################################################################
+# MAIN
+# ########################################################################
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Update external persons from Ricgraph')
+    parser.add_argument('faculty_choice', type=str, nargs='?',
+                        default='uu faculty: information & technology services|organization_name',
+                        help='Faculty choice or "all"')
+    parser.add_argument('test_choice', type=str, nargs='?', default='yes', help='Run in test mode ("yes" or "no")')
+
+    args = parser.parse_args()
+
+    main(args.faculty_choice, args.test_choice)
