@@ -28,7 +28,7 @@
 # Copyright (c) 2024 David Grote Beverborg
 # ########################################################################
 
-
+from itertools import chain
 import time
 import csv
 import pandas as pd
@@ -64,50 +64,53 @@ session.mount("https://", adapter)
 # Disable only the single InsecureRequestWarning from urllib3 needed to use the InsecureRequestWarning
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-def match_organizations(pure_orgs, openalex_orgs, ):
-    # Initialize the new list to store the organizations to update
+def match_organizations(pure_orgs, openalex_orgs):
     orgs_to_update = []
     orgs_with_ror_in_pure = []
+    orgs_with_no_name_match = []
 
-    # Loop over each organization in pure_orgs
     for pure_org in pure_orgs:
-        pure_org_name = pure_org['name']  # Extract the name of the Pure organization
+        pure_org_name = pure_org['name'].strip().lower()
+        matched = False
 
-        # Loop over each organization in openalex_orgs
         for openalex_org in openalex_orgs:
-            # Extract the display name and alternatives from the OpenAlex organization
-            openalex_display_name = openalex_org['display_name']
-            openalex_alternatives = openalex_org.get('display_name_alternatives', [])
+            openalex_display_name = openalex_org['display_name'].strip().lower()
+            openalex_alternatives = [alt.strip().lower() for alt in openalex_org.get('display_name_alternatives', [])]
 
-            # Check if the Pure organization name matches the OpenAlex display name or any of its alternatives
             if pure_org_name == openalex_display_name or pure_org_name in openalex_alternatives:
-                # If a match is found, create a dictionary with the required details
+                matched = True
+                logger.debug(f"Name match found: Pure '{pure_org['name']}' <-> OpenAlex '{openalex_org['display_name']}'")
 
-                # Extract ROR IDs from pure_org
-                pure_ror_ids = {identifier['id'] for identifier in pure_org['identifiers'] if
-                                identifier['name'] == 'ROR ID'}
+                pure_ror_ids = {identifier['id'] for identifier in pure_org['identifiers'] if identifier.get('name') == 'ROR ID'}
 
-                # Check if OpenAlex ROR is in the Pure ROR IDs
                 if openalex_org['ror'] not in pure_ror_ids:
-                    # Create the matched organization dictionary
                     matched_org = {
-                        'uuid': pure_org['uuid'],  # Pure organization UUID
-                        'openalex_id': openalex_org['openalex_id'],  # OpenAlex organization ID
-                        "ror": openalex_org['ror'],  # ROR ID from OpenAlex
-                        'geo': openalex_org['geo']  # Geographic information from OpenAlex
+                        'uuid': pure_org['uuid'],
+                        'openalex_id': openalex_org['openalex_id'],
+                        'ror': openalex_org['ror'],
+                        'geo': openalex_org['geo']
                     }
-                    # Append the matched organization to the list
                     orgs_to_update.append(matched_org)
-                    break  # Exit the inner loop since a match is found for this Pure organization
+                    logger.info(f"Will update ROR for Pure org '{pure_org['name']}' with ROR {openalex_org['ror']}")
                 else:
                     orgs_with_ror_in_pure.append(pure_org)
+                    logger.info(f"Pure org '{pure_org['name']}' already has ROR {openalex_org['ror']}, no update needed.")
 
+                break
 
-    return orgs_to_update, orgs_with_ror_in_pure
+        if not matched:
+            orgs_with_no_name_match.append(pure_org)
+            logger.info(f"No match found for Pure org '{pure_org['name']}' in OpenAlex organizations.")
 
-def match_orgs_oa_pure(oa_article, pure_article, article_orgs, uuids, oa_ids):
+    orgs_with_ror_in_pure = list({org['uuid']: org for org in orgs_with_ror_in_pure}.values())
+
+    return orgs_to_update, orgs_with_ror_in_pure, orgs_with_no_name_match
+
+def match_orgs_oa_pure(oa_article, pure_article, article_orgs):
     # Initialize a dictionary to store unique institutions
     oa_unique_institutions = {}
+    oa_ids = []
+    uuids =[]
     # Iterate over the authorships to extract institutions
     if oa_article['authorships'] is not None:
         for authorship in oa_article['authorships']:
@@ -117,7 +120,7 @@ def match_orgs_oa_pure(oa_article, pure_article, article_orgs, uuids, oa_ids):
                 display_name = institution.get('display_name')
                 ror = institution.get('ror')
 
-                oa_ids.add(ror)
+                oa_ids.append(ror)
 
                 # Check if the institution is already added using its OpenAlex ID
                 if inst_id and inst_id not in oa_unique_institutions:
@@ -160,7 +163,7 @@ def match_orgs_oa_pure(oa_article, pure_article, article_orgs, uuids, oa_ids):
         'unique_institutions': oa_unique_institutions
     }
     article_orgs.append(data_entry)
-    uuids.update(external_organization_uuids)
+    uuids.append(external_organization_uuids)
 
     return article_orgs, uuids, oa_ids
 
@@ -356,12 +359,14 @@ def select_persons_researchoutput(selected_faculties):
     return new_data
 
 
-def mainproces(doi, pure, open_alex, article_orgs, uuids, oa_ids):
+def mainproces(doi, pure, open_alex, article_orgs):
     logging.debug(f"start fetching organizations for {doi}")
+    uuids = []
+    oa_ids = []
     oa_article = enrich.get_ro_from_openalex(doi, open_alex)
     pure_article = enrich.get_ro_from_pure(doi, pure)
     if oa_article and pure_article:
-        article_orgs, uuids, oa_ids = match_orgs_oa_pure(oa_article, pure_article, article_orgs, uuids, oa_ids)
+        article_orgs, uuids, oa_ids = match_orgs_oa_pure(oa_article, pure_article, article_orgs)
 
     return article_orgs, uuids, oa_ids
 
@@ -372,10 +377,14 @@ def chunk_list(data, chunk_size):
 
 # Function to get institution data from OpenAlex API using a session
 def fetch_openalex_rors(rors, chunk_size=20):
-    rors = list(rors)
-    ror_chunks = list(chunk_list(rors, chunk_size))
+
+    flat_rors = [ror for sublist in rors for ror in sublist]
+
+    flat_rors = list(set(flat_rors))
+
+    ror_chunks = list(chunk_list(flat_rors, chunk_size))
     all_results = []
-    logger.info(f"start fetching organizations in open alex")
+    logger.debug(f"start fetching organizations in open alex")
     with requests.Session() as session:
         for chunk in ror_chunks:
             ror_filter = "|".join(chunk)
@@ -386,8 +395,19 @@ def fetch_openalex_rors(rors, chunk_size=20):
                 all_results.extend(response.json().get('results', []))
             else:
                 print(f"Error: {response.status_code}")
+
+    # Deduplicate by 'id'
+    unique_by_id = {}
+    for inst in all_results:
+        unique_by_id[inst['id']] = inst
+
+    all_results = list(unique_by_id.values())
+
+    count = len(all_results)
     all_results = {"results": all_results}
-    logger.info(f"end fetching organizations in open alex")
+
+    logger.debug(f"Fetched {count} unique institutions from OpenAlex")
+    logger.debug(f"end fetching organizations in open alex")
     return all_results
 
 
@@ -403,10 +423,11 @@ def fetch_pure_extorgs(uuids):
     # Define batch size for testing
     batch_size = 10
 
-    # Split the uuids into batches
-    # logger.info(f"Total deduplicated items =  {str(len(deduplicated_dois))}")
-    uuids =  list(uuids)
-    batches = list(split_into_batches(uuids, batch_size))
+    # Fully flatten list of lists of UUIDs
+    uuids = list(chain.from_iterable(u for u in uuids if isinstance(u, list)))
+    # Flatten the list
+    flat_uuids = [uuid for sublist in uuids for uuid in sublist]
+    batches = list(split_into_batches(flat_uuids, batch_size))
 
     # Initialize an empty list to hold all the research outputs
     all_orgs = []
@@ -452,7 +473,7 @@ def fetch_pure_extorgs(uuids):
 
     # Combine all works into one JSON object
     orgs = {"results": all_orgs}
-    logger.info(f"Total matching external orgs found: {str(total_items)}")
+    # logger.info(f"Total external orgs found in pure: {str(total_items)}")
 
     return orgs
 
@@ -543,39 +564,53 @@ def main(faculty_choice, test_choice):
     logger.info("Script to update external organisations in pure from ricgraph has started")
 
     faculties = select_faculties(faculty_choice, test_choice)
-    researchoutputs = select_persons_researchoutput(faculties)
+
+    researchoutputs = enrich.select_persons_researchoutput(faculties)
+
     purejsons = enrich.fetch_pure_researchoutputs(researchoutputs)
-    openalexjsons = enrich.fetch_openalex_works(researchoutputs)
+    dois = [entry["doi"] for entry in researchoutputs if entry.get("doi")]
+    openalexjsons = enrich.fetch_openalex_works(dois)
     rorsuiids =[]
     update = 0
     article_orgs = []
     # Initialize sets for unique UUIDs and unique institutions
-    uuids = set()
-    oa_ids = set()
-    for doi in researchoutputs:
+    uuids = []
+    oa_ids = []
+    orgs = []
 
-        article_orgs, uuids, oa_ids = mainproces(doi, purejsons, openalexjsons, article_orgs, uuids, oa_ids)
+    for doi in dois:
+        orgs_out, new_uuids, new_oa_ids = mainproces(doi, purejsons, openalexjsons, article_orgs)
+        for org in orgs_out:
+            if org not in orgs:
+                orgs.append(org)
+
+        uuids.append(new_uuids)
+        oa_ids.append(new_oa_ids)
 
     pure_orgsjsons = fetch_pure_extorgs(uuids)
     notupdate = 0
+
     openalex_orgjsons = fetch_openalex_rors(oa_ids)
     all_rows_toupdate = []
     all_jsons_update =[]
 
     all_orgs_to_update = []
-    orgs_with_ror_in_pure = []
+    all_orgs_with_ror = []
+    all_no_name_match = []
+
     count = 0
     for article in article_orgs:
-
          count += 1
          if count % 25 == 0:
             logger.info(f"Processed {str(count)} batch")
          pure_org_details = get_ext_orgdata_pure(article['external_organization_uuids'], pure_orgsjsons)
          oa_org_details = get_ext_orgdata_openalex(article['unique_institutions'], openalex_orgjsons)
-         orgs_to_update , orgs_with_ror_in_pure = match_organizations(pure_org_details, oa_org_details, )
-         all_orgs_to_update.extend(orgs_to_update)
 
-         orgs_with_ror_in_pure.extend(orgs_with_ror_in_pure)
+         orgs_to_update, orgs_with_ror_in_pure, orgs_with_no_name_match = match_organizations(pure_org_details,
+                                                                                              oa_org_details)
+         all_orgs_to_update.extend(orgs_to_update)
+         all_orgs_with_ror.extend(orgs_with_ror_in_pure)
+         all_no_name_match.extend(orgs_with_no_name_match)
 
          update, inpure, rows_to_update, json_updates  = update_externalorg_pure(orgs_to_update, test_choice, update)
          all_rows_toupdate.extend(rows_to_update)
@@ -595,8 +630,14 @@ def main(faculty_choice, test_choice):
     # Save the big JSON file
     with open(os.path.join(output_dir, "external_orgs_updates.json"), 'w') as json_file:
         json.dump(all_jsons_update, json_file, indent=4)
-    logger.info(f"nr of ext orgs that can be  updated: {len(all_orgs_to_update)}")
-    logger.info(f"nr of ext orgs that already have a ror in pure: {len(orgs_with_ror_in_pure)}")
+
+    logger.info(
+        f"Total external orgs processed: {sum(len(article['external_organization_uuids']) for article in article_orgs)}")
+
+    logger.info(f"nr of ext orgs that can be updated: {len(all_orgs_to_update)}")
+    logger.info(f"nr of ext orgs that already have a ROR in Pure: {len(all_orgs_with_ror)}")
+    logger.info(f"nr of ext orgs with no name match in OpenAlex: {len(all_no_name_match)}")
+
     unique_rorsuiids = list(set(rorsuiids))
     with open('output.csv', mode='w', newline='') as file:
         writer = csv.writer(file)

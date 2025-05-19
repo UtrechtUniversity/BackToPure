@@ -161,7 +161,7 @@
             if (event.target && event.target.id === 'apply-update-button') {
                 if (confirm('Are you really, really sure you want to apply updates to Pure?')) {
                     const outputDiv = document.getElementById('script-output');
-                    outputDiv.innerHTML += "<br>Starting update to Pure...<br>";
+<!--                    outputDiv.innerHTML += "<br>Starting update to Pure...<br>";-->
 
                     // Make a new request to run_apply_updates_to_pure and stream the output
                     fetch('/run_apply_updates_to_pure', { method: 'POST' })

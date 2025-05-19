@@ -64,7 +64,7 @@ def parse_datacite_response(data, doi):
 
     title = data['titles'][0]['title']
     persons = []
-
+    description = ''
     for creator in data['creators']:
 
         if not 'givenName' in creator and not 'familyName' in creator:
@@ -97,8 +97,12 @@ def parse_datacite_response(data, doi):
             persons.append(creator_info)
 
     subjects = [subject['subject'] for subject in data.get('subjects', [])]
-    descriptions = data.get('descriptions', [])
-    description = descriptions[0]['description'] if descriptions else 'No description available'
+
+    if 'descriptions' in data and isinstance(data['descriptions'], list):
+        for desc in data['descriptions']:
+            if desc.get('descriptionType', '').lower() == 'abstract':
+                description = desc.get('description', '') or ''
+                break
 
     return {
         'title': title,

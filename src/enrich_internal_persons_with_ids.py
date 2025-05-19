@@ -204,6 +204,10 @@ def fetch_person_data(person_df, batch_size):
 
     for offset in range(0, total_records, batch_size):
         batch = id_list[offset:offset + batch_size]
+        # Clean the batch by removing NaN values
+        batch = [uuid for uuid in id_list[offset:offset + batch_size] if
+                 isinstance(uuid, str) and uuid.lower() != 'nan' and not (isinstance(uuid, float) and math.isnan(uuid))]
+
         json_data = {'uuids': batch, 'size': len(batch), 'offset': 0}
         url = PURE_BASE_URL + 'persons/search/'
 

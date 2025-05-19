@@ -90,8 +90,8 @@ def init_app(app):
             for line in iter(process.stdout.readline, ''):
                 yield line
 
-            for line in iter(process.stderr.readline, ''):
-                yield f"Error: {line}"
+            # for line in iter(process.stderr.readline, ''):
+            #     yield f"Error: {line}"
 
             process.stdout.close()
             process.stderr.close()
@@ -257,7 +257,7 @@ def init_app(app):
             return jsonify({'status': 'error', 'message': f'Script path does not exist: {script_path}'}), 404
 
         def generate():
-            yield "Script has started running...\n"
+            logging.debug("Script has started running...\n")
             logging.debug("Script execution has started...")
 
             try:
@@ -291,9 +291,9 @@ def init_app(app):
                 logging.debug(f"Process finished with return code: {return_code}")
 
                 if return_code != 0:
-                    yield f"Script finished with errors. Return code: {return_code}\n"
+                    logging.debug(f"Script finished with errors. Return code: {return_code}\n")
                 else:
-                    yield "Script finished successfully.\n"
+                    logging.debug("Script finished successfully.\n")
 
             except FileNotFoundError as fnf_error:
                 logging.error(f"FileNotFoundError: {fnf_error}")

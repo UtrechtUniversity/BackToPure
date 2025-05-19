@@ -87,55 +87,37 @@ def select_faculties(faculty_choice):
 
 
 def select_persons_researchoutput(selected_faculties):
-    persons = []
-
     new_data = []
     duplicates = []
     all_data = []
-    for faculty in selected_faculties:
 
+    for faculty in selected_faculties:
         logger.info(f"Processing faculty: {faculty}")
 
-        import requests
-
-        params = {
-            'key': faculty,
-            'category_want': 'journal article',
-            'source_system': 'uu pure',
-            'max_nr_items': '0',
-        }
-
-        response = requests.get('http://127.0.0.1:3030/api/organization/enrich', params=params)
-
-        outputs =  response.json().get("results", [])
-        for output in outputs:
-            doi = output["value"]
-            all_data.append(doi)
-            new_data.append(doi)
-            # if 'Pure-uu' not in output["_source"]:
-            #     new_data.append(doi)
-            # else:
-            #     duplicates.append(doi)
-
-
+        # Get all research outputs linked to people in the faculty
         personroots = fetch_personroots(faculty)
-
         for personroot in personroots:
-            if not personroot['_key'] == None:
-                personroot_key = personroot['_key']
-                outputs = select_researchoutputs(personroot_key)
-                for output in outputs:
-                    doi = output["_key"].split("|")[0]
-                    all_data.append(doi)
-                    if 'Pure-uu' not in output["_source"]:
-                        new_data.append(doi)
-                    else:
-                        duplicates.append(doi)
+            personroot_key = personroot.get('_key')
+            if not personroot_key:
+                continue
+
+            outputs = select_researchoutputs(personroot_key)
+            for output in outputs:
+
+                doi = output["_key"].split("|")[0]
+                all_data.append(doi)
+
+                sources = [s.lower() for s in output.get('_source', [])]
+                if 'pure-uu' not in sources:
+                    new_data.append(doi)
+                else:
+                    duplicates.append(doi)
 
     all_data = list(set(all_data))
+    logger.info(f"Research outputs linked in Ricgraph but not in Pure: {len(new_data)}")
 
-    logger.info(f"research output selected in ricgraph, not in pure:  {len(new_data)}")
     return new_data, duplicates, all_data
+
 
 def select_researchoutputs(persoonroot_key):
     """Fetch person IDs for a given person-ro    ot."""
@@ -164,22 +146,36 @@ def test_or_not(researchoutputs, duplicates, all_data):
 def back_to_pure(all_openalex_data):
     if all_openalex_data:
         df, errors = openalex_utils.transform_openalex_to_df(all_openalex_data)
-
+        before = df.shape[0]
         if 'journal_issn' in df.columns:
             df = df.dropna(subset=['journal_issn'])
-        num_rows = df.shape[0]
+        after = df.shape[0]
+        if before > after:
+            logger.info(f"{before-after} articles removed, because no journal present, processing {after} publications")
 
         pure.df_to_pure(df)
 
 
 
 def main(faculty_choice):
+    logger.info(
+        "Process overview:\n"
+        "1. Start from internal persons in the selected faculty (via Ricgraph).\n"
+        "2. Find their connected research outputs (DOIs).\n"
+        "3. Match these to known Pure UUIDs (from Ricgraph).\n"
+        "4. Retrieve full metadata for each research output from Pure.\n"
+        "5. Enrich each output with OpenAlex data (if available).\n"
+        "6. Export results to a file for review and possible update.\n\n"
+        "Note: For large faculties, it may take some time before log messages appear."
+    )
 
     faculties = select_faculties(faculty_choice)
     researchoutputs, duplicates, all_data = select_persons_researchoutput(faculties)
 
     if researchoutputs:
+
         all_openalex_data = oa.fetch_openalex_works(researchoutputs)
+
         back_to_pure(all_openalex_data)
     logger.info("Script part 1 to import research output in pure from ricgraph has ended")
     logger.info("Please look at the update file and uncheck items you do not want to be imported, then proceed to import them in pure via *Apply Update to Pure*")
@@ -189,6 +185,7 @@ def main(faculty_choice):
 # ########################################################################
 
 if __name__ == '__main__':
+
     parser = argparse.ArgumentParser(description='Import Datasets from Ricgraph')
     parser.add_argument('faculty_choice', type=str, nargs='?',
                         default='uu faculty: information & technology services|organization_name',

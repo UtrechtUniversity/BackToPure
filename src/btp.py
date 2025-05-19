@@ -10,7 +10,7 @@ logger = setup_logging('btp', level=logging.INFO)
 def checks_before_start(faculty):
 
     if not PURE_BASE_URL or not PURE_API_KEY or not PURE_HEADERS or not RIC_BASE_URL:
-        logging.error(
+        logger.error(
             "One or more required variables are empty: PURE_BASE_URL, PURE_API_KEY, PURE_HEADERS, RIC_BASE_URL")
         sys.exit("Program terminated due to missing configuration.")
 

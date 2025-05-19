@@ -58,14 +58,14 @@ def get_csv_files(directory):
             try:
                 df = pd.read_csv(file_path)
                 if df.empty:
-                    logging.warning(f"File {filename} is empty. Skipping...")
+                    logger.warning(f"File {filename} is empty. Skipping...")
                     continue
                 csv_files[filename] = df
-                logging.info(f"Successfully loaded file {filename}.")
+                logger.info(f"Successfully loaded file {filename}.")
             except pd.errors.EmptyDataError:
-                logging.warning(f"File {filename} is empty or malformed. Skipping...")
+                logger.warning(f"File {filename} is empty or malformed. Skipping...")
             except Exception as e:
-                logging.error(f"Error reading {filename}: {e}")
+                logger.error(f"Error reading {filename}: {e}")
     return csv_files
 
 
@@ -120,6 +120,9 @@ def process_internal_persons(filename, csv_file, json_data):
 
     # Grouping the DataFrame by 'PURE_UUID_PERS' to collect updates for the same person
     grouped = filtered_csv.groupby('PURE_UUID_PERS')
+    logger.info(f"{len(grouped)} persons will be updated")
+    success = 0
+    errors = 0
     for person_uuid, group in grouped:
         # Retrieve the corresponding entry from the JSON data
         entry = next((item for item in json_data if item['uuid'] == person_uuid), None)
@@ -130,6 +133,7 @@ def process_internal_persons(filename, csv_file, json_data):
                 if row['new_id'] == 'orcid':
                     entry['orcid'] = row['new_value']
                 else:
+
                     new_identifier = {
                         'typeDiscriminator': 'ClassifiedId',
                         'id': row['new_value'],
@@ -143,15 +147,22 @@ def process_internal_persons(filename, csv_file, json_data):
             # After processing all updates for the person, call the API once
             api_url = PURE_BASE_URL + 'persons/' + person_uuid
             response = requests.put(api_url, headers=PURE_HEADERS, json=entry)
-
+            # response = type('MockResponse', (), {'status_code': 200})()
             # If the API call is successful, mark all rows for the person as updated and clear 'to_be_updated'
-            if response.status_code == 200:  # Assuming 200 indicates a successful update
+            if response.status_code == 200:
+                success = success + 1
+                csv_file['updated'] = csv_file['updated'].astype(str)
                 csv_file.loc[group.index, 'updated'] = 'X'
                 csv_file.loc[group.index, 'to_be_updated'] = ''  # Clear 'to_be_updated' for successfully updated rows
             else:
-                print(f'Failed to update person UUID: {person_uuid}, Response: {response.text}')
+                errors = errors + 1
+                logger.error(f'Failed to update person UUID: {person_uuid}, Response: {response.text}')
         else:
-            print(f'Not found for person UUID: {person_uuid}')
+            logger.info(f'Not found for person UUID: {person_uuid}')
+
+    logger.info(f"{success} persons have been updated")
+    if errors > 0:
+        logger.info(f"{errors} updates have resulted in an error , check te log for more info")
 
     # Reorder the columns to make 'updated' the second column
     cols = list(csv_file.columns)
@@ -163,7 +174,7 @@ def process_internal_persons(filename, csv_file, json_data):
     os.makedirs('output', exist_ok=True)  # Ensure the 'output' directory exists
     csv_file.to_csv(file, index=False)
 
-    print("Updated DataFrame saved to 'output/updated.csv'.")
+    logger.info(f"Updated DataFrame saved to {file}.")
 
 
 # Define a function to match and extract the JSON object
@@ -178,25 +189,30 @@ def find_json_by_uuid(pure_uuid, json_data):
 def process_external_persons(filename, csv_file, big_json_data):
     # Filter the DataFrame to only consider rows where 'to_be_updated' is 'X'
     filtered_csv = csv_file[csv_file['to_be_updated'] == 'X']
+    logger.info(f"{len(filtered_csv)} persons will be updated")
+    success = 0
     for index, row in filtered_csv.iterrows():
+        if index % 250 == 0 and index != 0:
+            logger.info(f"processing {index} items")
         uuid = row['Pure_UUID']
         matched_record = find_json_by_uuid(uuid, big_json_data)
         if matched_record:
-
             url = PURE_BASE_URL + 'external-persons/' + row['Pure_UUID']
             try:
                 response = session.put(url, headers=headers, json=matched_record, verify=False)
                 if response.status_code != 200:
-                    logger.debug(f"Failed to update data for UUID {uuid}: {response.text}")
+                    logger.warning(f"Failed to update data for UUID {uuid}: {response.text}")
                 else:
                     csv_file.loc[index, 'updated'] = 'X'
                     csv_file.loc[index, 'to_be_updated'] = ''  # Clear 'to_be_updated' for successfully updated rows
+                    success = success + 1
                     logger.debug(f"Successfully updated data for UUID {uuid}")
             except Exception as e:
                 logger.error(f"Error updating UUID {uuid}: {e}")
             time.sleep(0.1)  # Adjust the sleep time based on rate limits
 
     # Reorder the columns to make 'updated' the second column
+    logger.info(f"{success} persons have been updated")
     cols = list(csv_file.columns)
     cols.insert(1, cols.pop(cols.index('updated')))
     csv_file = csv_file[cols]
@@ -222,7 +238,7 @@ def process_research_output(filename, csv_file, big_json_data):
             csv_file.loc[index, 'updated'] = 'x'
             csv_file.loc[index, 'to_be_updated'] = ''  # Clear 'to_be_updated' for successfully updated rows
         else:
-            print(f"No item found with DOI: {row['doi']}")
+            logger.debug(f"No item found with DOI: {row['doi']}")
             time.sleep(0.1)  # Adjust the sleep time based on rate limits
 
         # Reorder the columns to make 'updated' the second column
@@ -253,7 +269,7 @@ def process_datasets(filename, csv_file, big_json_data):
             csv_file.loc[index, 'updated'] = 'x'
             csv_file.loc[index, 'to_be_updated'] = ''  # Clear 'to_be_updated' for successfully updated rows
         else:
-            print(f"No item found with DOI: {row['doi']}")
+            logger.debug(f"No item found with DOI: {row['doi']}")
             time.sleep(0.1)  # Adjust the sleep time based on rate limits
 
         # Reorder the columns to make 'updated' the second column
@@ -272,8 +288,8 @@ def process_datasets(filename, csv_file, big_json_data):
 def process_external_orgs(filename, csv_file, big_json_data):
     # Filter the DataFrame to only consider rows where 'to_be_updated' is 'X'
     filtered_csv = csv_file[csv_file['to_be_updated'] == 'X']
-
-
+    logger.info(f" {len(filtered_csv)} are selected to be updated")
+    succes = 0
     for index, row in filtered_csv.iterrows():
         uuid = row['uuid']
 
@@ -289,10 +305,12 @@ def process_external_orgs(filename, csv_file, big_json_data):
 
                 if response.status_code != 200:
                     logger.info(f"Failed to update data for UUID {uuid}: {response.text}")
+
                 else:
                     csv_file.loc[index, 'updated'] = 'X'
                     csv_file.loc[index, 'to_be_updated'] = ''  # Clear 'to_be_updated' for successfully updated rows
                     logger.debug(f"Successfully updated data for UUID {uuid}")
+                    succes +=1
             except Exception as e:
                 logger.error(f"Error updating UUID {uuid}: {e}")
             time.sleep(0.1)  # Adjust the sleep time based on rate limits
@@ -302,11 +320,11 @@ def process_external_orgs(filename, csv_file, big_json_data):
     cols.insert(1, cols.pop(cols.index('updated')))
     csv_file = csv_file[cols]
 
-    # Save the updated DataFrame to 'output/updated.csv'
+    # Save the updated DataFrame to 'output/updated.csv'uccessfully updated data for UUID
     file = 'output/external_orgs/' + filename
     os.makedirs('output', exist_ok=True)  # Ensure the 'output' directory exists
     csv_file.to_csv(file, index=False)
-
+    logger.info(f" {succes} external persons are updated.. check pure for the results")
 
 
 if __name__ == "__main__":
@@ -315,7 +333,7 @@ if __name__ == "__main__":
     referer_page = os.environ.get('REFERER_PAGE', 'unknown')
 
   
-    logging.info(f"Script called from page: {referer_page}")
+    logger.debug(f"Script called from page: {referer_page}")
 
     # Step 2: Execute specific logic based on the Referer
     if 'enrich_external_persons' in referer_page:

@@ -9,7 +9,9 @@ import configparser
 import os
 import logging
 from config import DEFAULTS
-
+from typing import Dict, Tuple, List
+import html
+import unicodedata
 
 
 # # ######################################################
@@ -86,56 +88,102 @@ def extract_open_access(open_access):
     return status
 
 
-def transform_openalex_to_df(openalex_data):
+
+def clean_title(title: str) -> str:
+    # Replace smart quotes and dashes with plain equivalents
+    replacements = {
+        "“": '"',
+        "”": '"',
+        "‘": "'",
+        "’": "'",
+        "‐": "-",
+        "–": "-",  # en-dash
+        "—": "-",  # em-dash
+        "\u2028": " ",  # line separator
+        "\u2029": " ",  # paragraph separator
+        "\xa0": " ",    # non-breaking space
+    }
+    for bad, good in replacements.items():
+        title = title.replace(bad, good)
+
+    # Normalize to NFKC to reduce exotic characters
+    title = unicodedata.normalize("NFKC", title)
+
+    # Escape any residual HTML special chars
+    return html.escape(title)
+
+
+
+def transform_openalex_to_df(openalex_data: Dict) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Transforms OpenAlex publication data into a DataFrame for processing and update.
+    Splits into processed and not-processed based on required field presence.
+    """
     processed_publications = []
     not_processed_publications = []
 
     openalex_data = openalex_data.get('results', [])
+
     for publication in openalex_data:
+        try:
+            title_raw = publication.get('title') or ''
+            doi = publication.get('doi') or ''
+            doi = doi.split("doi.org/")[1] if "doi.org/" in doi else doi
+            typeb = publication.get('type') or ''
+            publication_date = publication.get('publication_date', '')
+            year, month, day = extract_date_components(publication_date) if publication_date else (None, None, None)
+            contributors = parse_contributors(publication.get('authorships', []))
+            language = publication.get('language') or ''
+            open_access = extract_open_access(publication.get('open_access'))
+            keywords = extract_keywords(publication)
+            issn = extract_journal_issn(publication)
+            title = clean_title(title_raw)
+            # Validate required fields
+            required_fields = {
+                "title": title,
+                "typeb": typeb,
+                "doi": doi,
+                "year": year,
+                "contributors": contributors
+            }
+            missing_fields = [k for k, v in required_fields.items() if not v]
 
-        title = publication.get('title')
+            if missing_fields:
+                pub_id = publication.get('id', 'Unknown')
+                logging.info(f"Publication ID {pub_id} not processed. Missing fields: {' '.join(missing_fields)}")
+                not_processed_publications.append(publication)
+                continue
 
-        type = publication.get('type')
-        doi = publication.get('doi')
-        doi = doi.split("doi.org/")[1]
-        language = publication.get('language')
-        publication_date = publication.get('publication_date', '')
-        year, month, day = extract_date_components(publication_date)
-        open_access =  extract_open_access(publication.get('open_access'))
-        contributors = parse_contributors(publication.get('authorships', []))
-        keywords = extract_keywords(publication)
-        issn = extract_journal_issn(publication)
-        if not all([title, type, doi, year, contributors]):
-            reason = "Missing fields: "
-            missing_fields = [field for field in ["title", "type", "doi", "year", "contributors"] if not locals()[field]]
-            logging.info(f"Publication ID {publication.get('id', 'Unknown')} not processed. {reason}{' '.join(missing_fields)}")
+            processed_publications.append({
+                'research_output_id': publication.get('id', 'No id'),
+                'title': title,
+                'type': typeb,  # was mistakenly using undefined `type`
+                'peer_review': DEFAULTS['peer_review'],
+                'doi': doi,
+                'publication_date': publication_date,
+                'submission_year': year,
+                'publication_year': year,
+                'publication_month': month,
+                'publication_day': day,
+                'contributors': contributors,
+                'keywords': keywords,
+                'journal_issn': issn,
+                'language_term': 'Undefined/Unknown',
+                'language_uri': DEFAULTS['language_uri'],
+                'visibility_key': DEFAULTS['visibility_key'],
+                'workflow_step': DEFAULTS['workflow_step']
+            })
+
+        except Exception as e:
+            pub_id = publication.get('id', 'Unknown')
+            logging.error(f"Unexpected error processing publication {pub_id}: {e}")
             not_processed_publications.append(publication)
-            continue
-
-        processed_publications.append({
-            'research_output_id': publication.get('id', 'No id'),
-            'title': title,
-            'type': type,
-            'peer_review': DEFAULTS['peer_review'],
-            'doi': doi,
-            'publication_date': publication_date,
-            'submission_year': year,
-            'publication_year': year,
-            'publication_month': month,
-            'publication_day': day,
-            'contributors': contributors,
-            'keywords': keywords,
-            'journal_issn': issn,
-            'language_term': 'Undefined/Unknown',
-            'language_uri': DEFAULTS['language_uri'],
-            'visibility_key': DEFAULTS['visibility_key'],
-            'workflow_step': DEFAULTS['workflow_step']
-        })
 
     df_processed = pd.DataFrame(processed_publications)
     df_not_processed = pd.DataFrame(not_processed_publications)
 
     return df_processed, df_not_processed
+
 
 def parse_contributors(contributors):
     parsed_contributors = []

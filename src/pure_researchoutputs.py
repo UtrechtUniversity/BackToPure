@@ -389,6 +389,7 @@ def format_organizations_from_contributors(contributors):
     formatted_ext_organizations = [{"systemName": "ExternalOrganization", "uuid": uuid} for uuid in ext_organization_uuids]
 
     if not managing_org:
+
         managing_org = None
     return formatted_organizations, formatted_ext_organizations, managing_org
 
@@ -490,6 +491,7 @@ def format_contributors(contributors_data):
 def create_research_output(research_output_json):
     url = " https://staging.research-portal.uu.nl/ws/api/research-outputs"
     json_data = json.dumps(research_output_json)
+
     # Open a file for writing
     with open('test123.json', 'w') as file:
         json.dump(json_data, file, indent=4)
@@ -497,7 +499,7 @@ def create_research_output(research_output_json):
     headers = PURE_HEADERS
     response = requests.put(url, headers=headers, data=json_data)
     if response.status_code in [200, 201]:
-        logger.info(f"created researchoutput: {response.status_code} ")
+        logger.debug(f"created researchoutput: {response.status_code} ")
     else:
         output_file = "research_output.jsonerror"
 
@@ -560,11 +562,14 @@ def format_supervisors(param):
 
 def unique_fields_per_type(row):
     error = False
+
+    reason = row['type']
     if row['type'] == 'article':
 
         if row['journal_issn'] or row['journal_issn'] == None:
             if row['journal_issn'] == 'No ISSN' or  row['journal_issn'] == '':
                 error = True
+                reason = f"No ISSN for {row['title']}"
                 logger.debug(f"No ISSN for {row['title']}")
             else:
                 # Process article type
@@ -572,9 +577,11 @@ def unique_fields_per_type(row):
                 row['journal'] = get_journal_uuid(row['journal_issn'])
                 if row['journal'] == None:
                     error = True
+                    reason = f"No ISSN for {row['title']}"
                     logger.debug(f"No ISSN for {row['title']}")
         else:
             error = True
+            reason = f"No ISSN for {row['title']}"
             logger.debug(f"No ISSN for {row['title']}")
 
     elif row['type'] == 'dissertation':
@@ -593,7 +600,7 @@ def unique_fields_per_type(row):
         # Handle other types or unexpected values
         pass
 
-    return row, error
+    return row, error, reason
 
 
 def format_rest(row):
@@ -662,9 +669,8 @@ def df_to_pure(df):
     logger.info('Formatting the output in Pure needed JSON format. This is a slow process, you might want to get some coffee...')
     for index, row in df.iterrows():
         if index % 25 == 0:  # Print progress every 5 iterations
-            print(f"Processing: {index}", flush=True)
+            logger.info(f"Processing: {index}")
             time.sleep(0.1)  # Simulate work
-
         try:
             logger.debug('Processing research output: %s', row['title'])
 
@@ -675,17 +681,24 @@ def df_to_pure(df):
                 # Get contributor details
                 contributors_details = get_contributors_details(row['contributors'], row['publication_date'])
                 if contributors_details:
+
                     # Format and enrich row data
                     row['parsed_contributors'] = format_contributors(contributors_details)
                     parsed_orgs, formatted_ext_orgs, managing_org = format_organizations_from_contributors(
                         contributors_details)
                     row['parsed_organizations'] = parsed_orgs
                     row['formatted_ext_organizations'] = formatted_ext_orgs
-                    row['managing_org'] = managing_org
+
 
                     # Additional formatting and validation
                     enriched_row = format_rest(row)
-                    enriched_row, error_flag = unique_fields_per_type(enriched_row)
+                    enriched_row, error_flag, reason = unique_fields_per_type(enriched_row)
+
+                    if managing_org:
+                        row['managing_org'] = managing_org
+                    else:
+                        error_flag = True
+                        reason =  'no managing organization found'
 
                     if not error_flag:
                         research_output_json = construct_research_output_json(enriched_row)
@@ -701,29 +714,23 @@ def df_to_pure(df):
 
                         success += 1
                     else:
-                        logger.debug(f"Validation failed for research output {row['research_output_id']}.")
+                        logger.warning(f"Skipped research output {row['research_output_id']}. {reason}")
                         error += 1
                 else:
-                    logger.debug(
+                    logger.warning(
                         f"Skipped research output {row['research_output_id']} due to missing contributor details.")
                     error += 1
             else:
                 inpure += 1
                 logger.debug(f"already in pure {row['doi']}.")
         except Exception as e:
-            logger.debug(f"Error processing row {index}: {e}")
+            logger.info(f"Error processing row {index}: {e}")
             error += 1
 
     # Save the collected research outputs to a JSON file
     output_dir = 'output/research_output'
     os.makedirs(output_dir, exist_ok=True)  # Ensure the output directory exists
     output_file = os.path.join(output_dir, 'output_to_be_updated.json')
-    logger.info(f"{error} items cannot be imported in pure, see log for more info")
-    logger.info(f"{success} items can be updated")
-    logger.info(f"{inpure} items are already in pure")
-    logger.info(f"Research output that can be imported are in file: {output_file}")
-    logger.info(f"Please open that file to check if you want them all to be updated")
-    logger.info(f"if not, please remove the 'X' for that row in the column 'to_be_updated'")
 
     try:
         with open(output_file, 'w', encoding='utf-8') as f:
@@ -735,6 +742,16 @@ def df_to_pure(df):
     # Create and save the "to be updated" DataFrame
     to_be_updated_df = pd.DataFrame(to_be_updated_rows)
     csv_output_file = os.path.join(output_dir, 'to_be_updated.csv')
+
+    logger.info(f"{error} items cannot be imported in pure, see reasons above")
+    logger.info(f"{inpure} items are already in pure")
+    logger.info(f"{success} items can be updated")
+    print(" ")
+    logger.info(f"Research output that can be imported are in file: {csv_output_file}")
+    # logger.info(f"Please open that file to check if you want them all to be updated")
+    # logger.info(f"if not, please remove the 'X' for that row in the column 'to_be_updated'")
+
+
 
     try:
         to_be_updated_df.to_csv(csv_output_file, index=False, encoding='utf-8')

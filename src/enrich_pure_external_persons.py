@@ -269,7 +269,7 @@ def update_externalpersons_pure(persons, matched_personsjson, test_choice):
 
     data_to_save = []  # List to store JSON objects for saving
     rows_to_update = []  # List to store rows for the DataFrame
-    logger.info(f"start updating external persons from pure")
+
     ro, matched_persons, updated_persons, already_ids = 0, 0, 0, 0
     for row in persons:
         uuid = row['Pure_UUID']
@@ -389,7 +389,7 @@ def update_externalpersons_pure(persons, matched_personsjson, test_choice):
             ext_pers_update = ext_pers_update[desired_order]
 
             ext_pers_update.to_csv(csv_output_file, index=False)
-            logger.info(f"Saved {len(rows_to_update)} rows to {csv_output_file}")
+            # logger.info(f"Saved {len(rows_to_update)} rows to {csv_output_file}")
         else:
             logger.info("No rows to save to CSV.")
     except Exception as e:
@@ -404,51 +404,61 @@ def update_externalpersons_pure(persons, matched_personsjson, test_choice):
 
 def get_external_persons_data(persons):
     """
-    Retrieves the data for all external persons based on their UUIDs using the POST /external-persons/search endpoint.
-
-    Parameters:
-    persons (DataFrame): The DataFrame containing the persons with their UUIDs.
-
-    Returns:
-    list: A list of JSON objects, each representing an external person.
+    Retrieves the data for all external persons based on their UUIDs using the POST /external-persons/search endpoint,
+    paging through until no more items are returned.
     """
-    logger.info(f"start fetching external persons from pure")
     all_person_data = []
-    page_size = 500 # Adjust based on Pure API's max page size
+    page_size = 500  # Pure API max page size
 
     def split_into_batches(lst, n):
         for i in range(0, len(lst), n):
             yield lst[i:i + n]
 
-    # Split the UUIDs into batches
+    # Split the UUIDs into batches of up to page_size
     uids = [person['Pure_UUID'] for person in persons]
     batches = list(split_into_batches(uids, page_size))
     session = requests.Session()
-    count = 0
-    for batch in batches:
-        count += 1
-        logger.debug(f"start fetching external persons for batch {count}")
-        json_body = {
-            "uuids": batch,
-            "size": page_size,
-            "offset": 0  # Start with offset 0
-        }
 
-        try:
-            response = session.post(
-                PURE_BASE_URL + 'external-persons/search',
-                json=json_body,
-                headers=headers,
-                verify=False
-            )
-            time.sleep(0.5)
-            response.raise_for_status()
-            data = response.json()
-            persons_data = data.get("items", [])
-            all_person_data.extend(persons_data)
+    for batch_idx, batch in enumerate(batches, 1):
+        logger.debug(f"Fetching external persons for batch {batch_idx}/{len(batches)}")
 
-        except requests.exceptions.RequestException as e:
-            logger.error(f"An error occurred while processing batch: {batch}\nError: {e}")
+        offset = 0
+        while True:
+            json_body = {
+                "uuids": batch,
+                "size": page_size,
+                "offset": offset
+            }
+
+            try:
+                resp = session.post(
+                    PURE_BASE_URL + 'external-persons/search',
+                    json=json_body,
+                    headers=headers,
+                    verify=False
+                )
+                time.sleep(0.5)
+                resp.raise_for_status()
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Error fetching batch {batch_idx} (offset {offset}): {e}")
+                break
+
+            data = resp.json()
+            items = data.get("items", [])
+            if not items:
+                # no more pages
+                break
+
+            all_person_data.extend(items)
+            logger.debug(f"  Retrieved {len(items)} items (offset {offset})")
+
+            # if we got fewer than page_size, that was the last page
+            if len(items) < page_size:
+                break
+
+            offset += page_size
+
+    return all_person_data
     logger.debug(f"end fetching pure")
     logger.debug(f"Matching external persons found: {len(all_person_data)}")
 
@@ -466,7 +476,7 @@ def get_external_persons_data(persons):
 
 def select_faculties(faculty_choice):
     # the text for logger is wrong, it actually gets person roots, then research output, then external persons. but seems to complicated to inform the user
-    logger.info(f"start fetching external persons for {faculty_choice}")
+    logger.info(f"start fetching itemsfor {faculty_choice}")
 
     params = {
         'value': 'uu faculty',
@@ -519,22 +529,60 @@ def select_researchoutputs(persoonroot_key):
 
 
 def select_persons_researchoutput(selected_faculties):
-    all_data = []
+    """
+    Fetches all unique DOIs and Pure UUIDs for research outputs linked to external persons
+    in the selected faculties.
+
+    Returns:
+        list: List of dicts with "doi" and optional "pure_uuid"
+    """
+    all_outputs = []
+    seen_dois = set()
+    max_workers = 10
+
+    def process_personroot(personroot):
+        if not personroot.get('_key'):
+            return []
+        outputs = select_researchoutputs(personroot['_key'])
+        result = []
+        for output in outputs:
+            doi = output["_key"].split("|")[0]
+            if doi in seen_dois:
+                continue
+            seen_dois.add(doi)
+            pure_uuid = output.get("url_other", "").split("/")[-1] \
+                if "publications/" in output.get("url_other", "") else None
+            result.append({
+                "doi": doi,
+                "pure_uuid": pure_uuid
+            })
+        return result
+
     for faculty in selected_faculties:
         logging.info(f"Processing faculty: {faculty}")
-        personroots = fetch_personroots(faculty)
-        for personroot in personroots:
-            if not personroot['_key'] == None:
-                personroot_key = personroot['_key']
-                outputs = select_researchoutputs(personroot_key)
-                for output in outputs:
-                    doi = output["_key"].split("|")[0]
+        try:
+            personroots = fetch_personroots(faculty)
+            if not personroots:
+                logging.warning(f"No personroots found for faculty {faculty}")
+                continue
 
-                    all_data.append(doi)
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = [executor.submit(process_personroot, pr) for pr in personroots]
 
-        all_data.extend(all_data)
-    logger.debug(f"total pubs found in Ricgraph: {len(all_data)}")
-    return all_data
+                for future in as_completed(futures):
+                    try:
+                        outputs = future.result()
+                        all_outputs.extend(outputs)
+                    except Exception as e:
+                        logging.error(f"Error processing personroot: {e}")
+
+        except Exception as e:
+            logging.error(f"Error fetching personroots for faculty {faculty}: {e}")
+
+    logger.info(f"Total unique DOIs found in Ricgraph: {len(seen_dois)}")
+    return all_outputs
+
+
 
 
 def match_persons(doi, openalexjsons, purejsons):
@@ -549,126 +597,186 @@ def match_persons(doi, openalexjsons, purejsons):
     if persons:
         return persons
 
-def split_into_batches(lst: List[str], n: int) -> List[List[str]]:
-    """Splits a list into smaller batches of size n."""
-    for i in range(0, len(lst), n):
-        yield lst[i:i + n]
+import requests
+import math
+import time
+from typing import List, Dict
+from urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
+
+def _make_session(retries: int = 3, backoff: float = 0.3) -> requests.Session:
+    session = requests.Session()
+    retry = Retry(
+        total=retries,
+        backoff_factor=backoff,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["POST"]
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
 
 def fetch_batch(batch: List[str], url: str, headers: Dict[str, str], timeout: int) -> List[Dict]:
-    """Fetch a single batch of research outputs from the Pure API."""
+    """Fetch research outputs by DOI using searchString (pipe-separated), with pagination."""
+    session = _make_session()
     pipe_separated_dois = "|".join(batch)
-    json_data = {
-        'size': 100,  # Set size to batch size
-        'searchString': pipe_separated_dois,
-    }
-    try:
-        response = session.post(url, headers=headers, json=json_data, timeout=timeout)
-        response.raise_for_status()  # Raises HTTPError for bad responses
-        return response.json().get("items", [])
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error occurred while fetching batch: {e}")
-        return []
+    size = 100
+    offset = 0
+    all_items = []
 
-def fetch_pure_researchoutputs(dois: List[str]) -> Dict:
+    while True:
+        json_data = {
+            'size': size,
+            'offset': offset,
+            'searchString': pipe_separated_dois,
+        }
+
+        logger.debug(f"Requesting batch with offset {offset}: {json_data}")
+
+        try:
+            response = session.post(url, headers=headers, json=json_data, timeout=timeout, verify=False)
+            response.raise_for_status()
+
+            data = response.json()
+            items = data.get("items", [])
+            all_items.extend(items)
+
+            total_results = data.get("totalElements", None)
+            logger.debug(f"Fetched {len(items)} items; total results: {total_results}")
+
+            if len(items) < size:
+                break  # Last page
+            offset += size
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error fetching batch at offset {offset}: {e}")
+            break  # Exit loop on error
+
+        time.sleep(0.1)
+
+    return all_items
+
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+def fetch_pure_researchoutputs(outputs: List[Dict], batch_size: int = 500) -> Dict:
     """
-    Fetches research outputs from the Pure API for a given list of DOIs and returns a combined JSON object.
-
-    Parameters:
-    dois (List[str]): List of DOIs.
-
-    Returns:
-    Dict: Combined JSON object containing all research outputs.
+    Fetch research outputs from Pure using batched UUIDs via POST /research-outputs/search.
+    Skips entries without a Pure UUID.
+    Returns: {"results": [...]} list of Pure outputs.
     """
-    logger.debug("Start fetching research outputs from Pure API")
-    url = PURE_BASE_URL + 'research-outputs/search'
-    # headers = {"Authorization": f"Bearer {PURE_API_KEY}"}  # Replace with your API key logic
-    timeout = 100
-    batch_size = 50
-    request_delay = 0.1
+    logger.debug("Start batched fetch of research outputs from Pure by UUID")
+    session = _make_session()
+    url = PURE_BASE_URL.rstrip("/") + "/research-outputs/search"
+    timeout = 30
+    results = []
 
-    deduplicated_dois = list(set(dois))
-    batches = list(split_into_batches(deduplicated_dois, batch_size))
-    all_works = []
-    total_items = 0
+    # Filter UUIDs
+    uuid_list = [entry["pure_uuid"] for entry in outputs if entry.get("pure_uuid")]
+    batches = [uuid_list[i:i + batch_size] for i in range(0, len(uuid_list), batch_size)]
 
-    for batch_index, batch in enumerate(batches):
-        logger.debug(f"Processing batch {batch_index + 1}/{len(batches)}")
+    for idx, batch in enumerate(batches, start=1):
+        logger.info(f"Fetching batch {idx}/{len(batches)} with {len(batch)} UUIDs")
 
-        works = fetch_batch(batch, url, headers, timeout)
-        total_items += len(works)
-        all_works.extend(works)
+        json_data = {
+            "uuids": batch,
+            "size": batch_size,
+            "offset": 0  # no pagination needed — we provide the full list
+        }
 
-        logger.debug(f"Batch {batch_index + 1}/{len(batches)}: Retrieved {len(works)} items.")
-        time.sleep(request_delay)  # Avoid hitting API rate limits
+        try:
+            resp = session.post(url, headers=headers, json=json_data, timeout=timeout, verify=False)
+            resp.raise_for_status()
+            data = resp.json()
+            items = data.get("items", [])
+            logger.info(f"Batch {idx} returned {len(items)} results")
+            results.extend(items)
+        except Exception as e:
+            logger.error(f"Failed to fetch batch {idx}: {e}")
 
-    logger.debug(f"Total matching research outputs found: {total_items}")
-    return {"results": all_works}
+        time.sleep(0.1)
+
+    logger.info(f"Total research outputs fetched from Pure: {len(results)}")
+    return {"results": results}
+
+
+
+
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import requests
+import time
+import logging
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+from config import EMAIL  # You already have this in your project
 
 def fetch_openalex_works(dois):
     """
-    Fetches works from OpenAlex API for a given list of DOIs and returns a combined JSON object.
-
-    Parameters:
-    dois (list): List of DOIs.
-
-    Returns:
-    dict: Combined JSON object containing all works.
+    Fetches works metadata from OpenAlex API for a list of DOIs.
+    Uses parallel requests, retries on errors, and rate limiting.
     """
-    openalexworks = {}
-    # Function to split the list into batches of size n
-    def split_into_batches(lst, n):
+    max_workers = 1  # Safe with backoff
+    batch_size = 10  # Lowered to avoid 403 errors
+    request_delay = 1.2  # Throttle to avoid 429s
+
+    headers = {
+        "Accept": "application/json",
+        "User-Agent": f"mailto:{EMAIL}"
+    }
+
+    def clean_dois(dois):
+        return [doi.strip().rstrip(",") for doi in dois if doi]
+
+    # Before batching
+    dois = list(set(clean_dois(dois)))
+
+
+    def split_batches(lst, n):
         for i in range(0, len(lst), n):
             yield lst[i:i + n]
 
-    # Regex to match valid DOI format
-    doi_pattern = re.compile(r'^10\.\d{4,9}/[-._;()/:A-Z0-9]+$', re.IGNORECASE)
-
-    # Filter valid DOIs
-    dois = [doi for doi in dois if doi_pattern.match(doi)]
-
-    from tenacity import retry, stop_after_attempt, wait_exponential
-
-    # Split the DOIs into batches of 40 (consistent with the code)
-    batches = list(split_into_batches(dois, 40))
-
-    # Initialize an empty list to hold all the works
-    all_works = []
-
-    # Define a retry decorator for making requests
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
-    def fetch_batch(url):
-        response = session.get(url)
-        response.raise_for_status()
-        return response.json()
-
-    # Loop over each batch and make a request
-    for batch in batches:
-        pipe_separated_dois = "|".join(batch)
-        url = f"https://api.openalex.org/works?filter=doi:{pipe_separated_dois}&per-page=50&mailto={EMAIL}"
-
+    @retry(wait=wait_exponential(multiplier=1, min=2, max=60),
+           stop=stop_after_attempt(5),
+           retry=retry_if_exception_type(requests.exceptions.HTTPError))
+    def fetch_batch(batch):
+        pipe_dois = "|".join(batch)
+        url = f"https://api.openalex.org/works?filter=doi:{pipe_dois}&per-page=50"
         try:
-            response_data = fetch_batch(url)
-            works = response_data.get("results", [])
-            all_works.extend(works)
 
-            # Check if there are more pages of results
-            while 'next' in response_data.get('meta', {}):
-                next_url = response_data['meta']['next']
-                response_data = fetch_batch(next_url)
-                works = response_data.get("results", [])
-                all_works.extend(works)
+            response = requests.get(url, headers=headers)
+            if response.status_code == 429:
+                logging.warning(f"Rate limit hit. Retrying batch starting with DOI: {batch[0]}")
+                raise requests.exceptions.HTTPError("Rate limit hit (429)")
+            if response.status_code == 403:
+                logging.error(f"Forbidden. Likely too many DOIs in batch: {batch}")
+                return []
+            response.raise_for_status()
+            data = response.json()
+            results = data.get("results", [])
+            # Handle pagination (rare in this use case)
+            while 'next' in data.get('meta', {}):
+                next_url = data['meta']['next']
+                time.sleep(request_delay)
+                next_resp = requests.get(next_url, headers=headers)
+                next_resp.raise_for_status()
+                data = next_resp.json()
+                results.extend(data.get("results", []))
+            return results
+        except Exception as e:
+            logging.error(f"Error fetching batch starting with {batch[0]}: {e}")
+            return []
 
-        except requests.exceptions.RequestException as e:
-            logger.error(f"An error occurred while processing batch starting with DOI: {batch[0]}\nError: {e}")
+    all_works = []
+    batches = list(split_batches(list(set(dois)), batch_size))
 
-    # Combine all works into one JSON object
-    openalexworks = {"results": all_works} if all_works else {}
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(fetch_batch, batch) for batch in batches]
+        for future in as_completed(futures):
+            results = future.result()
+            all_works.extend(results)
+            time.sleep(request_delay)  # Slow down between batches
 
-    # Log the total number Striof works fetched
-    logger.debug(f"Total number of works fetched from Open Alex: {len(all_works)}")
-
-
-    return openalexworks
+    # logger.info(f"Total works found in OpenAlex: {len(all_works)}")
+    return {"results": all_works}
 
 def match_all_persons(researchoutputs, openalexjsons, purejsons):
     all_persons = []
@@ -686,21 +794,29 @@ def main(faculty_choice, test_choice):
     logger.info("Script to update external persons in pure from ricgraph has started")
 
     logger.info("The script performs the following steps:\n"
-                 "1. **Person Root Node Retrieval**: Retrieves all person-root nodes from Ricgraph for the selected faculty and fetches the associated person IDs.\n"
-                 "2. **Enrichment Check**: Checks if each external person already has the required identifiers in Pure. Prepares to update missing information if needed.\n"
-                 "3. **Update file**: Produces a file with all of the persons that can be updated, with the new ids. after the first part is finished, you can access that file. You must check that file, and remove unwanted updates\n"
-                 "4. **Person Data Update**: After you have checked the file a new button appears that sends the updates to pure.\n\n"
-                 "**Note:** The process may take a while before log items appear on the screen, especially if a large faculty is chosen.")
+     "1. Retrieve internal persons from Ricgraph for the selected faculty.\n"
+    "2. Gather their research outputs (e.g. publications).\n"
+    "3. Find external co-authors linked to those outputs.\n"
+    "4. Check Pure for missing ORCID/OpenAlex IDs on each external person.\n"
+    "5. Export a CSV for manual review and deselect unwanted updates.\n"
+    "6. press the button to apply the approved updates back to Pure.\n"
+)
+
     faculties = select_faculties(faculty_choice)
 
     researchoutputs = select_persons_researchoutput(faculties)
+
     purejsons = fetch_pure_researchoutputs(researchoutputs)
-    openalexjsons = fetch_openalex_works(researchoutputs)
-    all_persons = match_all_persons(researchoutputs, openalexjsons, purejsons)
+
+    dois = [entry["doi"] for entry in researchoutputs if entry.get("doi")]
+
+    openalexjsons = fetch_openalex_works(dois)
+
+    all_persons = match_all_persons(dois, openalexjsons, purejsons)
     matched_personsjson = get_external_persons_data(all_persons)
 
     update_externalpersons_pure(all_persons, matched_personsjson, test_choice)
-    logger.info(f"Script import research output part 1 has ended, ")
+    logger.info(f"Script Update external persons part 1 has ended, ")
 
 # ########################################################################
 # MAIN
@@ -710,8 +826,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Update external persons from Ricgraph')
     parser.add_argument('faculty_choice', type=str, nargs='?',
-                        default='uu faculty: information & technology services|organization_name',
-                        # default='uu faculty: faculteit geowetenschappen|organization_name',
+                        # default='uu faculty: information & technology services|organization_name',
+                        default='uu faculty: geosciences|organization_name',
                         help='Faculty choice or "all"')
     parser.add_argument('test_choice', type=str, nargs='?', default='yes', help='Run in test mode ("yes" or "no")')
     args = parser.parse_args()
