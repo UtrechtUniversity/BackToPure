@@ -44,11 +44,29 @@ from dateutil import parser
 from config import PURE_BASE_URL, PURE_API_KEY, OPENALEXEX_ID_URI, ORCID_ID_URI, OPENALEX_HEADERS, OPENALEX_BASE_URL, PURE_HEADERS
 import time
 import sys
+from functools import lru_cache
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 logger = setup_logging('btp', level=logging.INFO)
+
+session = requests.Session()
+retry_strategy = Retry(
+    total=5,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["GET", "POST", "PUT"],
+    backoff_factor=1,
+)
+session.mount("https://", HTTPAdapter(max_retries=retry_strategy))
+session.mount("http://", HTTPAdapter(max_retries=retry_strategy))
+
+def _normalize_doi(doi_value):
+    if not doi_value:
+        return ""
+    return str(doi_value).replace("https://doi.org/", "").replace("http://doi.org/", "").strip().lower()
 def get_researchoutput(uuid):
     headers = PURE_HEADERS
     api_url = PURE_BASE_URL + 'research-outputs/' + uuid
-    response = requests.get(api_url, headers=headers)
+    response = session.get(api_url, headers=headers, timeout=30)
     if response.status_code == 200:
         data = response.json()
         return data
@@ -99,7 +117,7 @@ def create_external_person(first_name, last_name, orcid, openalex):
     json_data = json.dumps(data)
 
     try:
-        response = requests.put(api_url, headers=PURE_HEADERS, data=json_data)
+        response = session.put(api_url, headers=PURE_HEADERS, data=json_data, timeout=30)
 
         if response.status_code in [200, 201]:
             external_person = response.json()
@@ -110,6 +128,15 @@ def create_external_person(first_name, last_name, orcid, openalex):
         logger.error(f"An error occurred while creating external person: {e}")
 
     return None
+
+
+def _build_pending_external_person(first_name, last_name, orcid, openalex):
+    return {
+        "first_name": first_name,
+        "last_name": last_name,
+        "orcid": orcid or "",
+        "openalex": openalex or "",
+    }
 
 
 def find_external_person(person_ids):
@@ -137,7 +164,7 @@ def find_external_person(person_ids):
         logger.debug(f"Searching for {id_type}: {id_value} with payload: {data}")
 
         try:
-            response = requests.post(api_url, headers=PURE_HEADERS, json=data)  # Using json=data
+            response = session.post(api_url, headers=PURE_HEADERS, json=data, timeout=30)  # Using json=data
             logger.debug(f"Response status code: {response.status_code}")
 
             if response.status_code == 200:
@@ -173,7 +200,7 @@ def find_extenal_orgs(affiliations):
         json_data = json.dumps(data)
         api_url = PURE_BASE_URL + 'external-organizations/search/'
         try:
-            response = requests.post(api_url, headers=PURE_HEADERS, data=json_data)
+            response = session.post(api_url, headers=PURE_HEADERS, data=json_data, timeout=30)
             if response.status_code == 200:
                 data = response.json()
                 items = data.get('items', [])
@@ -221,19 +248,19 @@ def get_contributors_details(contributors, ref_date):
                 external_person_uuid, orcid, openalex = find_external_person(contributor['ids'])
                 externalorg = find_extenal_orgs(contributor['affiliations'])
 
+                persons[contributor_id] = {
+                    "external_person_extorgui": externalorg,
+                    "external_person_uuid": external_person_uuid,
+                    "external_person_first_name": contributor['first_name'],
+                    "external_person_last_name": contributor['last_name'],
+                }
                 if not external_person_uuid:
-
-                    external_person_uuid = create_external_person(contributor['first_name'],contributor['last_name'], orcid, openalex)
-                if external_person_uuid:
-                    logger.debug(f'Created external person: {external_person_uuid}')
-                    persons[contributor_id] = {
-                        "external_person_extorgui": externalorg,
-                        "external_person_uuid": external_person_uuid,
-                        "external_person_first_name": contributor['first_name'],
-                        "external_person_last_name": contributor['last_name']
-                    }
-                else:
-                    logger.error(f"Failed to create external person for {contributor_id}")
+                    persons[contributor_id]["_btp_external_person"] = _build_pending_external_person(
+                        contributor['first_name'],
+                        contributor['last_name'],
+                        orcid,
+                        openalex,
+                    )
     else:
         logger.debug("No internal contributors found in Pure for the research output.")
         return None
@@ -441,6 +468,7 @@ def format_contributors(contributors_data):
 
                 }
             else:  # External Contributor
+                pending_external_person = details.get("_btp_external_person")
                 if details["external_person_extorgui"]:
                     contributor = {
                         "typeDiscriminator": "ExternalContributorAssociation",
@@ -458,12 +486,13 @@ def format_contributors(contributors_data):
                         "role": {
                             "uri": "/dk/atira/pure/researchoutput/roles/contributiontojournal/author",
                             "term": {"en_GB": "Author"}
-                        },
-                        "externalPerson": {
+                        }
+                    }
+                    if details.get('external_person_uuid'):
+                        contributor["externalPerson"] = {
                             "systemName": "ExternalPerson",
                             "uuid": details['external_person_uuid']
                         }
-                    }
                 else:
                     contributor = {
                         "typeDiscriminator": "ExternalContributorAssociation",
@@ -475,12 +504,16 @@ def format_contributors(contributors_data):
                         "role": {
                             "uri": "/dk/atira/pure/researchoutput/roles/contributiontojournal/author",
                             "term": {"en_GB": "Author"}
-                        },
-                        "externalPerson": {
+                        }
+                    }
+                    if details.get('external_person_uuid'):
+                        contributor["externalPerson"] = {
                             "systemName": "ExternalPerson",
                             "uuid": details['external_person_uuid']
                         }
-                    }
+
+                if pending_external_person and not details.get('external_person_uuid'):
+                    contributor["_btp_external_person"] = pending_external_person
 
 
             formatted_contributors.append(contributor)
@@ -488,18 +521,73 @@ def format_contributors(contributors_data):
     return formatted_contributors
 
 
-def create_research_output(research_output_json):
-    url = " https://staging.research-portal.uu.nl/ws/api/research-outputs"
-    json_data = json.dumps(research_output_json)
+def _ensure_research_output_external_people(research_output_json):
+    created_external_people = []
+    for contributor in research_output_json.get("contributors", []):
+        if contributor.get("externalPerson", {}).get("uuid"):
+            contributor.pop("_btp_external_person", None)
+            continue
 
-    # Open a file for writing
-    with open('test123.json', 'w') as file:
-        json.dump(json_data, file, indent=4)
-    # Make the put request
+        pending = contributor.pop("_btp_external_person", None)
+        if not pending:
+            continue
+
+        person_ids = {}
+        if pending.get("orcid"):
+            person_ids["orcid"] = pending["orcid"]
+        if pending.get("openalex"):
+            person_ids["openalex"] = pending["openalex"]
+
+        external_person_uuid = None
+        if person_ids:
+            external_person_uuid, _, _ = find_external_person(person_ids)
+        if not external_person_uuid:
+            external_person_uuid = create_external_person(
+                pending.get("first_name", ""),
+                pending.get("last_name", ""),
+                pending.get("orcid", ""),
+                pending.get("openalex", ""),
+            )
+            if external_person_uuid:
+                created_external_people.append(
+                    {
+                        "uuid": external_person_uuid,
+                        "first_name": pending.get("first_name", ""),
+                        "last_name": pending.get("last_name", ""),
+                        "orcid": pending.get("orcid", ""),
+                        "openalex": pending.get("openalex", ""),
+                    }
+                )
+
+        if not external_person_uuid:
+            raise RuntimeError(
+                f"Could not resolve or create external person for "
+                f"{pending.get('first_name', '')} {pending.get('last_name', '')}".strip()
+            )
+
+        contributor["externalPerson"] = {
+            "systemName": "ExternalPerson",
+            "uuid": external_person_uuid,
+        }
+
+    return created_external_people
+
+
+def create_research_output(research_output_json):
+    url = PURE_BASE_URL + 'research-outputs'
+    payload = json.loads(json.dumps(research_output_json))
+    created_external_people = _ensure_research_output_external_people(payload)
+    json_data = json.dumps(payload)
     headers = PURE_HEADERS
-    response = requests.put(url, headers=headers, data=json_data)
+    response = session.put(url, headers=headers, data=json_data, timeout=30)
     if response.status_code in [200, 201]:
+        response_data = response.json()
         logger.debug(f"created researchoutput: {response.status_code} ")
+        return {
+            "success": True,
+            "uuid": response_data.get("uuid"),
+            "created_external_persons": created_external_people,
+        }
     else:
         output_file = "research_output.jsonerror"
 
@@ -507,9 +595,11 @@ def create_research_output(research_output_json):
         with open(output_file, 'w') as json_file:
             json.dump(research_output_json, json_file, indent=4)
         logger.error(f"Error creating research output: {response.status_code} - {response.text}")
-
-
-    return 'test'
+    return {
+        "success": False,
+        "uuid": None,
+        "created_external_persons": created_external_people,
+    }
 
 
 def get_supervisors(supervisors, ref_date):
@@ -628,17 +718,18 @@ def format_rest(row):
     return row
 
 
+@lru_cache(maxsize=20000)
 def check_research_in_pure(doi):
 
     exists_in_pure =  False
     headers = PURE_HEADERS
-    doi = doi.split("org/")[-1]
+    doi = _normalize_doi(doi)
     data = {"searchString": doi}
 
     json_data = json.dumps(data)
     api_url = PURE_BASE_URL + 'research-outputs/search/'
 
-    response = requests.post(api_url, headers=headers, data=json_data)
+    response = session.post(api_url, headers=headers, data=json_data, timeout=30)
 
     if response.status_code == 200:
         data = response.json()
@@ -649,7 +740,7 @@ def check_research_in_pure(doi):
             electronic_versions = item.get('electronicVersions', [])
             for version in electronic_versions:
                 if 'doi' in version:
-                    full_doi_url = version['doi']
+                    full_doi_url = _normalize_doi(version['doi'])
                     if doi == full_doi_url:
                         exists_in_pure = True
                         logger.debug(f"{doi}: already in pure")
@@ -670,7 +761,6 @@ def df_to_pure(df):
     for index, row in df.iterrows():
         if index % 25 == 0:  # Print progress every 5 iterations
             logger.info(f"Processing: {index}")
-            time.sleep(0.1)  # Simulate work
         try:
             logger.debug('Processing research output: %s', row['title'])
 
@@ -728,7 +818,7 @@ def df_to_pure(df):
             error += 1
 
     # Save the collected research outputs to a JSON file
-    output_dir = 'output/research_output'
+    output_dir = os.environ.get('BTP_OUTPUT_DIR', 'output/research_output')
     os.makedirs(output_dir, exist_ok=True)  # Ensure the output directory exists
     output_file = os.path.join(output_dir, 'output_to_be_updated.json')
 
@@ -746,7 +836,6 @@ def df_to_pure(df):
     logger.info(f"{error} items cannot be imported in pure, see reasons above")
     logger.info(f"{inpure} items are already in pure")
     logger.info(f"{success} items can be updated")
-    print(" ")
     logger.info(f"Research output that can be imported are in file: {csv_output_file}")
     # logger.info(f"Please open that file to check if you want them all to be updated")
     # logger.info(f"if not, please remove the 'X' for that row in the column 'to_be_updated'")
@@ -758,9 +847,6 @@ def df_to_pure(df):
         logger.debug(f"Successfully saved 'to be updated' DataFrame to {csv_output_file}.")
     except Exception as e:
         logger.error(f"Failed to save 'to be updated' DataFrame: {e}")
-
-
-
 
 
 

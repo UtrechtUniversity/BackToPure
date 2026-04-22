@@ -38,6 +38,8 @@ from logging_config import setup_logging
 from config import PURE_BASE_URL, PURE_API_KEY, PURE_HEADERS, RIC_BASE_URL, OPENALEX_HEADERS, OPENALEX_BASE_URL
 import enrich_pure_external_persons as oa
 from datetime import datetime
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 datetimetoday = datetime.now().strftime('%Y%m%d')
 # steps:
 # - get list of faculties
@@ -49,6 +51,15 @@ datetimetoday = datetime.now().strftime('%Y%m%d')
 # Set logging level to INFO for this script
 
 logger = setup_logging('btp', level=logging.INFO)
+session = requests.Session()
+retry_strategy = Retry(
+    total=5,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["GET", "POST"],
+    backoff_factor=1,
+)
+session.mount("https://", HTTPAdapter(max_retries=retry_strategy))
+session.mount("http://", HTTPAdapter(max_retries=retry_strategy))
 
 def print_faculty_list(faculty_list):
     for idx, faculty in enumerate(faculty_list, start=1):
@@ -60,7 +71,7 @@ def fetch_personroots(faculty_key):
     try:
         params = {'key': faculty_key, 'max_nr_items': '0'}
         url = RIC_BASE_URL + 'get_all_personroot_nodes'
-        response = requests.get(url, params=params)
+        response = session.get(url, params=params, timeout=30)
         response.raise_for_status()
         return response.json().get("results", [])
     except requests.RequestException as e:
@@ -74,7 +85,7 @@ def select_faculties(faculty_choice):
         'value': 'uu faculty',
     }
     url = RIC_BASE_URL + 'organization/search'
-    response = requests.get(url, params=params)
+    response = session.get(url, params=params, timeout=30)
     data = response.json()
 
     if faculty_choice.lower() == 'all':
@@ -124,7 +135,7 @@ def select_researchoutputs(persoonroot_key):
     try:
         params = {'key': persoonroot_key, 'category_want': 'journal article'}
         url = RIC_BASE_URL + 'get_all_neighbor_nodes'
-        response = requests.get(url, params=params)
+        response = session.get(url, params=params, timeout=30)
 
         return response.json().get("results", [])
 

@@ -122,7 +122,13 @@ def transform_openalex_to_df(openalex_data: Dict) -> Tuple[pd.DataFrame, pd.Data
     processed_publications = []
     not_processed_publications = []
 
-    openalex_data = openalex_data.get('results', [])
+    openalex_results = openalex_data.get('results', []) if isinstance(openalex_data, dict) else []
+    if not openalex_results and isinstance(openalex_data, dict):
+        by_doi = openalex_data.get('by_doi', {})
+        if isinstance(by_doi, dict):
+            openalex_results = list(by_doi.values())
+
+    openalex_data = openalex_results
 
     for publication in openalex_data:
         try:

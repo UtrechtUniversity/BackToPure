@@ -41,8 +41,19 @@ from pathlib import Path
 from datetime import datetime
 from config import PURE_BASE_URL, DEFAULTS, ORCID_ID_URI, PURE_HEADERS, RIC_BASE_URL, OPENALEX_HEADERS, OPENALEX_BASE_URL, PURE_HEADERS, TYPE_URI
 from logging_config import setup_logging
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 logger = setup_logging('btp', level=logging.INFO)
+session = requests.Session()
+retry_strategy = Retry(
+    total=5,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["GET", "POST", "PUT"],
+    backoff_factor=1,
+)
+session.mount("https://", HTTPAdapter(max_retries=retry_strategy))
+session.mount("http://", HTTPAdapter(max_retries=retry_strategy))
 
 def get_headers(api_key):
     """Constructs the header required for API requests."""
@@ -87,7 +98,7 @@ def format_doi(doi):
 def request_dataset_by_uuid(uuid):
     """Request dataset details by UUID."""
     api_url = f"{PURE_BASE_URL}data-sets/{uuid}"
-    response = requests.get(api_url, headers=PURE_HEADERS)
+    response = session.get(api_url, headers=PURE_HEADERS, timeout=30)
     if response.status_code == 200:
         return response.json()
     else:
@@ -99,7 +110,7 @@ def search_dataset_by_string(search_string):
     data = {"searchString": search_string}
     json_data = json.dumps(data)
     api_url = f"{PURE_BASE_URL}data-sets/search/"
-    response = requests.post(api_url, headers=PURE_HEADERS, data=json_data)
+    response = session.post(api_url, headers=PURE_HEADERS, data=json_data, timeout=30)
     if response.status_code == 200:
         return response.json().get('items', [])
     else:
@@ -157,7 +168,7 @@ def create_external_person(first_name, last_name, orcid):
     json_data = json.dumps(data)
 
     try:
-        response = requests.put(api_url, headers=PURE_HEADERS, data=json_data)
+        response = session.put(api_url, headers=PURE_HEADERS, data=json_data, timeout=30)
         if response.status_code in [200, 201]:
             external_person = response.json()
             return external_person.get('uuid')
@@ -167,6 +178,15 @@ def create_external_person(first_name, last_name, orcid):
         logger.error(f"An error occurred while creating external person: {e}")
 
     return None
+
+
+def _build_pending_external_person(first_name, last_name, orcid, openalex):
+    return {
+        "first_name": first_name,
+        "last_name": last_name,
+        "orcid": orcid or "",
+        "openalex": openalex or "",
+    }
 def get_contributors_details(contributors, ref_date):
     persons = {}
     found_internal_person = False
@@ -201,34 +221,20 @@ def get_contributors_details(contributors, ref_date):
                 # externalorg = pure_persons.find_extenal_orgs(contributor['affiliations'])
                 externalorg = None
 
+                persons[contributor_id] = {
+                    "external_person_extorgui": externalorg,
+                    "external_person_uuid": external_person_uuid,
+                    "external_person_first_name": contributor['first_name'],
+                    "external_person_last_name": contributor['last_name'],
+                    "person_details": person_details
+                }
                 if not external_person_uuid:
-                    orcid = ''
-                    for id_type, id_value in contributor['person_ids'].items():
-
-                        if id_type.lower() == 'orcid':
-                            orcid = id_value
-                    external_person_uuid = create_external_person(contributor['first_name'],contributor['last_name'], orcid)
-                    logging.debug(f'Created external person: {external_person_uuid}')
-
-                if external_person_uuid:
-
-                    persons[contributor_id] = {
-                        "external_person_extorgui": externalorg,
-                        "external_person_uuid": external_person_uuid,
-                        "external_person_first_name": contributor['first_name'],
-                        "external_person_last_name": contributor['last_name'],
-                        "person_details": person_details
-
-                    }
-                else:
-                    persons[contributor_id] = {
-                        "external_person_extorgui": 'externalorg',
-                        "external_person_uuid": 'external_person_uuid',
-                        "external_person_first_name": contributor['first_name'],
-                        "external_person_last_name": contributor['last_name'],
-                        "person_details": person_details
-                    }
-                    logging.error(f"Failed to create external person for {contributor_id}")
+                    persons[contributor_id]["_btp_external_person"] = _build_pending_external_person(
+                        contributor['first_name'],
+                        contributor['last_name'],
+                        orcid,
+                        openalex,
+                    )
     else:
         persons ={}
         logger.debug("No internal contributors found in Pure for the dataset.")
@@ -289,16 +295,70 @@ def format_contributors(contributors_data):
                 "role": {
                     "uri": type_uri,
                     # "term": {"en_GB": details['type']}
-                },
-                "externalPerson": {
+                }
+            }
+            if details.get('external_person_uuid'):
+                contributor["externalPerson"] = {
                     "systemName": "ExternalPerson",
                     "uuid": details['external_person_uuid']
                 }
-            }
+            if details.get("_btp_external_person") and not details.get('external_person_uuid'):
+                contributor["_btp_external_person"] = details["_btp_external_person"]
 
         formatted_contributors.append(contributor)
 
     return formatted_contributors
+
+
+def _ensure_dataset_external_people(dataset_json):
+    created_external_people = []
+    for contributor in dataset_json.get("persons", []):
+        if contributor.get("externalPerson", {}).get("uuid"):
+            contributor.pop("_btp_external_person", None)
+            continue
+
+        pending = contributor.pop("_btp_external_person", None)
+        if not pending:
+            continue
+
+        person_ids = {}
+        if pending.get("orcid"):
+            person_ids["orcid"] = pending["orcid"]
+        if pending.get("openalex"):
+            person_ids["openalex"] = pending["openalex"]
+
+        external_person_uuid = None
+        if person_ids:
+            external_person_uuid, _, _ = pure_persons.find_external_person(person_ids)
+        if not external_person_uuid:
+            external_person_uuid = create_external_person(
+                pending.get("first_name", ""),
+                pending.get("last_name", ""),
+                pending.get("orcid", ""),
+            )
+            if external_person_uuid:
+                created_external_people.append(
+                    {
+                        "uuid": external_person_uuid,
+                        "first_name": pending.get("first_name", ""),
+                        "last_name": pending.get("last_name", ""),
+                        "orcid": pending.get("orcid", ""),
+                        "openalex": pending.get("openalex", ""),
+                    }
+                )
+
+        if not external_person_uuid:
+            raise RuntimeError(
+                f"Could not resolve or create external person for "
+                f"{pending.get('first_name', '')} {pending.get('last_name', '')}".strip()
+            )
+
+        contributor["externalPerson"] = {
+            "systemName": "ExternalPerson",
+            "uuid": external_person_uuid,
+        }
+
+    return created_external_people
 def format_organizations_from_contributors(contributors):
     """
        Extracts and formats organization UUIDs from contributors' details.
@@ -345,7 +405,7 @@ def find_publisher(publisher):
     json_data = json.dumps(data)
     api_url = PURE_BASE_URL + 'publishers/search/'
     try:
-        response = requests.post(api_url, headers=PURE_HEADERS, data=json_data)
+        response = session.post(api_url, headers=PURE_HEADERS, data=json_data, timeout=30)
 
         if response.status_code == 200:
             data = response.json()
@@ -412,17 +472,27 @@ def construct_dataset_json(row):
     return dataset
 def create_dataset(dataset_json):
     url = PURE_BASE_URL + 'data-sets'
-    json_data = json.dumps(dataset_json)
+    payload = json.loads(json.dumps(dataset_json))
+    created_external_people = _ensure_dataset_external_people(payload)
+    json_data = json.dumps(payload)
 
-    response = requests.put(url, headers=PURE_HEADERS, data=json_data)
+    response = session.put(url, headers=PURE_HEADERS, data=json_data, timeout=30)
     if response.status_code in [200, 201]:
         data = response.json()
         logger.info(f"created dataset: {response.status_code} - {data['uuid']}")
-        return data['uuid']
+        return {
+            "success": True,
+            "uuid": data['uuid'],
+            "created_external_persons": created_external_people,
+        }
     else:
         logging.error(f"Error creating dataset {response.status_code} - {response.text}")
         # Print the entire response to see all available details
-        return 'error'
+        return {
+            "success": False,
+            "uuid": None,
+            "created_external_persons": created_external_people,
+        }
         try:
             response_json = response.json()  # If response is JSON
 

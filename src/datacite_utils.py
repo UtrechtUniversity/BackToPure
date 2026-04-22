@@ -33,9 +33,24 @@ import requests
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+import time
 import logging
 from logging_config import setup_logging
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 logger = setup_logging('dataset', level=logging.INFO)
+
+session = requests.Session()
+retry_strategy = Retry(
+    total=5,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["GET"],
+    backoff_factor=1,
+)
+session.mount("https://", HTTPAdapter(max_retries=retry_strategy))
+session.mount("http://", HTTPAdapter(max_retries=retry_strategy))
+NOT_FOUND_DOI_COUNT = 0
+NOT_FOUND_DOI_SAMPLES = []
 
 def get_first_affiliation_name(affiliations):
     if isinstance(affiliations, list) and affiliations:
@@ -50,14 +65,46 @@ def get_first_affiliation_name(affiliations):
 
 def fetch_data_for_doi(doi):
     """Fetch and parse data for a single DOI."""
-    response = requests.get(f'https://api.datacite.org/dois/{doi}')
-    if response.status_code == 200:
-        data = response.json()['data']['attributes']
+    global NOT_FOUND_DOI_COUNT, NOT_FOUND_DOI_SAMPLES
+    wait_seconds = 1.5
+    max_attempts = 5
+    for attempt in range(1, max_attempts + 1):
+        try:
+            response = session.get(f'https://api.datacite.org/dois/{doi}', timeout=30)
+        except requests.RequestException as e:
+            logger.info(f"Failed to fetch data for DOI: {doi} ({e})")
+            time.sleep(wait_seconds)
+            wait_seconds = min(wait_seconds * 2, 30)
+            continue
 
-        return parse_datacite_response(data, doi)
-    else:
-        logger.info(f"Failed to fetch data for DOI: {doi}")
+        if response.status_code == 200:
+            try:
+                data = response.json()['data']['attributes']
+                return parse_datacite_response(data, doi)
+            except Exception as e:
+                logger.info(f"Failed to parse DataCite response for DOI: {doi} ({e})")
+                return None
+
+        if response.status_code == 429:
+            retry_after = response.headers.get("Retry-After")
+            if retry_after and str(retry_after).isdigit():
+                wait_seconds = max(wait_seconds, int(retry_after))
+            logger.info(f"DataCite rate limit for DOI {doi} (attempt {attempt}/{max_attempts}), waiting {wait_seconds:.1f}s")
+            time.sleep(wait_seconds)
+            wait_seconds = min(wait_seconds * 2, 30)
+            continue
+
+        if response.status_code == 404:
+            NOT_FOUND_DOI_COUNT += 1
+            if len(NOT_FOUND_DOI_SAMPLES) < 10:
+                NOT_FOUND_DOI_SAMPLES.append(doi)
+            return None
+
+        logger.info(f"Failed to fetch data for DOI: {doi} (status {response.status_code})")
         return None
+
+    logger.info(f"Failed to fetch data for DOI: {doi} after {max_attempts} attempts")
+    return None
 
 def parse_datacite_response(data, doi):
     """Parse the response from DataCite API and return structured data."""
@@ -117,8 +164,13 @@ def parse_datacite_response(data, doi):
 
 def get_df_from_datacite(datasets):
     """Fetch data for multiple DOIs and return a DataFrame."""
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        results = list(executor.map(fetch_data_for_doi, datasets))
+    global NOT_FOUND_DOI_COUNT, NOT_FOUND_DOI_SAMPLES
+    NOT_FOUND_DOI_COUNT = 0
+    NOT_FOUND_DOI_SAMPLES = []
+
+    unique_datasets = list(dict.fromkeys(datasets))
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(fetch_data_for_doi, unique_datasets))
 
     # Filter out None results in case of failed fetches
     valid_results = [result for result in results if result]
@@ -131,6 +183,9 @@ def get_df_from_datacite(datasets):
 
 
     df = pd.DataFrame(valid_results)
+    if NOT_FOUND_DOI_COUNT > 0:
+        sample_text = ", ".join(NOT_FOUND_DOI_SAMPLES)
+        logger.info(f"DataCite 404 for {NOT_FOUND_DOI_COUNT} DOI(s). Sample: {sample_text}")
     # logger.info("datasets found in open alex: " + str(df.shape[0]))
     # file_path = "datasets.xlsx"
     # logger.info("downloaded datasets in: " + file_path)

@@ -49,21 +49,70 @@ from datetime import datetime
 logger = setup_logging('btp', level=logging.INFO)
 logger.handlers[0].stream.flush = lambda: sys.stdout.flush()
 datetimetoday = datetime.now().strftime('%Y%m%d')
+REQUEST_TIMEOUT = 60
+INTERNAL_ID_ALIASES = {
+    'OPENALEX_ID_PERS': 'OPENALEX',
+}
+
+
+def _output_dir():
+    return os.environ.get('BTP_OUTPUT_DIR', 'output/internal_persons')
 
 def is_nan(value):
     """
        Checks if a given value is NaN (Not a Number).
     """
-    return value is None or (isinstance(value, float) and math.isnan(value))
+    return pd.isna(value)
+
+
+def _normalize_identifier(value):
+    if pd.isna(value):
+        return pd.NA
+    normalized = str(value).strip()
+    if not normalized or normalized.lower() == 'nan':
+        return pd.NA
+    if normalized.lower().startswith("https://orcid.org/"):
+        normalized = normalized.split("/")[-1]
+    if "?" in normalized:
+        normalized = normalized.split("?", 1)[0]
+    if "#" in normalized:
+        normalized = normalized.split("#", 1)[0]
+    return normalized
+
+
+def _normalize_internal_identifier(key, value):
+    normalized = _normalize_identifier(value)
+    if pd.isna(normalized):
+        return pd.NA
+    if key in {'OPENALEX', 'OPENALEX_ID_PERS'} and str(normalized).lower().startswith("https://openalex.org/"):
+        normalized = normalized.rstrip("/").split("/")[-1]
+    return normalized
+
+
+def _resolve_internal_id_uri(key):
+    resolved_key = INTERNAL_ID_ALIASES.get(key, key)
+    return ID_URI.get(resolved_key)
+
+
+def _resolve_pure_person_uuid_column(persondf):
+    """Use PURE_UUID_PERS when present, otherwise fall back to PURE_ID_PERS for Pure lookups."""
+    if 'PURE_UUID_PERS' not in persondf.columns:
+        persondf['PURE_UUID_PERS'] = pd.NA
+
+    persondf['PURE_UUID_PERS'] = persondf['PURE_UUID_PERS'].apply(_normalize_identifier)
+    if 'PURE_ID_PERS' in persondf.columns:
+        fallback_ids = persondf['PURE_ID_PERS'].apply(_normalize_identifier)
+        persondf['PURE_UUID_PERS'] = persondf['PURE_UUID_PERS'].fillna(fallback_ids)
+
+    return persondf
 
 def fetch_personroots(faculty_key):
 
     try:
         params = {'key': faculty_key, 'max_nr_items': '0'}
         url = RIC_BASE_URL + 'get_all_personroot_nodes'
-        response = requests.get(url, params=params)
-        # print(response, faculty_key)
-        # response.raise_for_status()
+        response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
+        response.raise_for_status()
         return response.json().get("results", [])
     except requests.RequestException as e:
         logger.error(f"Error fetching person-roots for faculty {faculty_key}: {e}")
@@ -73,8 +122,8 @@ def fetch_person_ids(persoonroot_key):
     try:
         params = {'key': persoonroot_key, 'category_want': 'person'}
         url = RIC_BASE_URL + 'get_all_neighbor_nodes'
-        response = requests.get(url, params=params)
-        # response.raise_for_status()
+        response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
+        response.raise_for_status()
         return response.json().get("results", [])
     except requests.RequestException as e:
         logger.error(f"Error fetching person IDs for person-root {persoonroot_key}: {e}")
@@ -84,8 +133,8 @@ def checkenrichement(persoonroot_key):
     try:
         params = {'key': persoonroot_key, 'source_system': 'pure uu', 'max_nr_items': 0}
         url = RIC_BASE_URL + 'person/enrich'
-        response = requests.get(url, params=params)
-        # response.raise_for_status()
+        response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
+        response.raise_for_status()
         return response.json().get("results", [])
     except requests.RequestException as e:
         logger.error(f"Error fetching person IDs for person-root {persoonroot_key}: {e}")
@@ -118,11 +167,9 @@ def select_persons(faculties, faculty_choice):
     df_aggregated = df.groupby(['person_id', 'id_name'], as_index=False).agg(lambda x: ' | '.join(x))
     persondf = df_aggregated.pivot(index='person_id', columns='id_name', values='id_value').reset_index()
 
-    # Ensure PURE_UUID_PERS is added or handled properly
-    if 'PURE_UUID_PERS' not in persondf.columns:
-        persondf['PURE_UUID_PERS'] = pd.NA
+    persondf = _resolve_pure_person_uuid_column(persondf)
 
-    file_path = f"output/internal_persons/allpersons_{datetimetoday}.csv"
+    file_path = os.path.join(_output_dir(), f"allpersons_{datetimetoday}.csv")
     # persondf.to_csv(file_path, index=False)
     return persondf
 
@@ -145,33 +192,33 @@ def check_new_ids(row, data):
     existing_ids = {entry.get('id') or entry.get('value'): entry for entry in identifiers}
     new_ids = []
     different_ids_values = []
-    orcid = ''
+    orcid = pd.NA
     orcidchange = ''
     for key, value in row.items():
 
         if key == 'ORCID':
-            orcid = value
-        if key in ID_URI and not is_nan(value):
-            id_type_uri = ID_URI[key]
+            orcid = _normalize_identifier(value)
+        id_type_uri = _resolve_internal_id_uri(key)
+        if id_type_uri and not is_nan(value):
+            normalized_value = _normalize_internal_identifier(key, value)
+            if pd.isna(normalized_value):
+                continue
             found = False
             for entry in identifiers:
                 if entry.get('type', {}).get('uri') == id_type_uri:
                     found = True
-                    if (entry.get('id') or entry.get('value')) != value:
+                    if (entry.get('id') or entry.get('value')) != normalized_value:
                         different_ids_values.append({
-                            'id': value,
+                            'id': normalized_value,
                             'uri': id_type_uri,
                             'existing_id': entry.get('id') or entry.get('value')
                         })
             if not found:
-                new_ids.append({'id': value, 'uri': id_type_uri})
+                new_ids.append({'id': normalized_value, 'uri': id_type_uri})
     if 'orcid' not in data:
-        if isinstance(orcid, float) and math.isnan(orcid):
-            pass
-        else:
-            if orcid:
-                data['orcid'] = orcid
-                orcidchange = 'X'
+        if not pd.isna(orcid):
+            data['orcid'] = orcid
+            orcidchange = 'X'
     return new_ids, data, orcidchange, orcid
 
 def find_item_by_uuid(data, target_uuid):
@@ -212,19 +259,21 @@ def fetch_person_data(person_df, batch_size):
         url = PURE_BASE_URL + 'persons/search/'
 
         try:
-            response = requests.post(url, headers=PURE_HEADERS, json=json_data)
+            response = requests.post(url, headers=PURE_HEADERS, json=json_data, timeout=REQUEST_TIMEOUT)
             response.raise_for_status()
             response_data = response.json()
             batch_data = response_data.get('items', [])
             datatotal.extend(batch_data)  # Append batch response to datatotal
-            total_found += response_data['count']
-            logger.debug(f"processing personnodes  {str(response_data['count'])}, for {batch_size} uuids")
+            total_found += len(batch_data)
+            logger.debug(f"processing personnodes {len(batch_data)}, for {len(batch)} uuids")
         except requests.exceptions.RequestException as e:
             logger.error(f"API request failed for offset {offset}: {e}")
 
     logger.info(f"Total persons found in pure:  {str(total_found)}")
     # Return the combined data
-    with open('output/internal_persons/datatotal.json', 'w') as file:
+    output_dir = _output_dir()
+    os.makedirs(output_dir, exist_ok=True)
+    with open(os.path.join(output_dir, 'datatotal.json'), 'w') as file:
         json.dump(datatotal, file, indent=4)
     return datatotal
 
@@ -234,8 +283,8 @@ def update_persons(person_df, datatotal):
 
     result_list = []
     # Create DataFrames to store rows for new IDs and no new IDs
-    new_df = pd.DataFrame()
     no_new_ids_df = pd.DataFrame()
+    datatotal_by_uuid = {item.get('uuid'): item for item in datatotal if item.get('uuid') is not None}
 
     for index, row in person_df.iterrows():
         count += 1
@@ -243,7 +292,7 @@ def update_persons(person_df, datatotal):
             logger.debug(f"Processed {str(count)} persons in Pure")
 
         logger.debug(f"Checking person: {row['PURE_UUID_PERS']}")
-        data = find_item_by_uuid(datatotal, row['PURE_UUID_PERS'])
+        data = datatotal_by_uuid.get(row['PURE_UUID_PERS'])
 
         if data:
             new_ids, data, orcidchange, orcid = check_new_ids(row, data)
@@ -278,7 +327,6 @@ def update_persons(person_df, datatotal):
                     })
 
                 succes += 1
-                new_df = pd.DataFrame(result_list)
                 logger.debug(f"New IDs found: {new_ids} {orcid}")
                 api_url = PURE_BASE_URL + 'persons/' + row['PURE_UUID_PERS']
 
@@ -294,15 +342,16 @@ def update_persons(person_df, datatotal):
     logger.info(f"Total persons that can be updated: {succes}")
 
     # Define output folder and save CSV files
-    output_folder = 'output/internal_persons'
+    output_folder = _output_dir()
     os.makedirs(output_folder, exist_ok=True)
     new_ids_filename = os.path.join(output_folder, f'personstobeupdated_{datetimetoday}.csv')
     no_new_ids_filename = os.path.join(output_folder, f'persons_without_newids_{datetimetoday}.csv')
 
     # Save the DataFrames to CSV
-
+    result_columns = ['to_be_updated', 'updated', 'FULL_NAME', 'person_id', 'PURE_UUID_PERS', 'new_id', 'new_value', 'uri']
+    new_df = pd.DataFrame(result_list, columns=result_columns)
     new_df.to_csv(new_ids_filename, index=False)
-    # no_new_ids_df.to_csv(no_new_ids_filename, index=False)
+    no_new_ids_df.to_csv(no_new_ids_filename, index=False)
     logger.info(f"Persons without new IDs saved to {no_new_ids_filename}")
 
 
@@ -324,10 +373,12 @@ def main(faculty_choice):
     btp.checks_before_start(faculty_choice)
     faculties = btp.select_faculties(faculty_choice)
     person_df = select_persons(faculties, faculty_choice)
-
+    datatotal = []
     if not person_df.empty:
-       datatotal = fetch_person_data(person_df, 100)
-       update_persons(person_df, datatotal)
+        datatotal = fetch_person_data(person_df, 100)
+    else:
+        logger.info("No persons found for the selected faculty; creating an empty update CSV.")
+    update_persons(person_df, datatotal)
     logger.info(f"Script enrich persons part 1 has ended")
 
 
@@ -347,5 +398,3 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     main(args.faculty_choice)
-
-
