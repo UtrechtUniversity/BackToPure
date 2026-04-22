@@ -5,9 +5,25 @@ src/research_outputs.json
 __pycache__/
 *.pyc
 
+# Local virtual environments and IDE files
+.venv/
+.idea/
+
 # Ignore logs
 logs/
 *.log
 
 # Temporary/lock files
 *.lock
+
+# Local databases and runtime data
+*.db
+data/
+output/
+output.csv
+
+# Frontend local build tooling
+frontend/node_modules/
+frontend/*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
