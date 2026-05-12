@@ -404,3 +404,5 @@ Acceptance criteria:
 - Verification: `BTP_ENV=production` without a secret raises a clear error.
 - Verification: missing `BTP_CONFIG_PATH` raises a clear copy/example message.
 - Backend pytest remains blocked until dev dependencies are added in Phase 3: `/usr/bin/python3: No module named pytest`.
+- Phase 2 commit: `fc55431` (`Harden configuration and secret handling`).
+- Phase 2 push status: blocked by missing GitHub HTTPS credentials in this environment.
