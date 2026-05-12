@@ -390,3 +390,5 @@ Acceptance criteria:
 - Completed Phase 1 repository hygiene.
 - Verification: `git ls-files` no longer reports tracked IDE metadata, bytecode, frontend build output, runtime data, or lock files.
 - Verification: `git check-ignore` confirms `.idea/`, `__pycache__/`, `frontend/dist/`, runtime data, logs, and office lock files are ignored.
+- Phase 1 commit: `38160b5` (`Clean generated files from repository`).
+- Phase 1 push status: blocked by missing GitHub HTTPS credentials in this environment.
