@@ -441,3 +441,5 @@ Acceptance criteria:
 - Added `main()` guard and output-dir routing to `src/merge_external_orgs.py` and redirected `src/openalex_utils.py` debug output into ignored output directories.
 - Verification: `.venv/bin/python -m pytest -q` passed with 136 tests and 5 subtests.
 - Verification: `python3 -m py_compile app/routes.py tests/test_routes.py`.
+- Phase 5 commit: `cfb351f` (`Consolidate legacy Flask workflow routes`).
+- Phase 5 push status: blocked by missing GitHub HTTPS credentials in this environment.
