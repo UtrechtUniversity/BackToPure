@@ -6,10 +6,10 @@ Scope: Make the repository clean, secure, maintainable, and straightforward for 
 
 ## Progress
 
-- Overall status: Phase 6 completed
-- Current focus: Production runtime
-- Completed tickets: `PRD-101`, `PRD-102`, `PRD-201`, `PRD-202`, `PRD-203`, `PRD-301`, `PRD-302`, `PRD-303`, `PRD-401`, `PRD-402`, `PRD-501`, `PRD-502`, `PRD-503`, `PRD-504`, `PRD-601`, `PRD-602`, `PRD-603`
-- Next ticket: `PRD-701`
+- Overall status: Phase 7 completed
+- Current focus: Plan completed
+- Completed tickets: `PRD-101`, `PRD-102`, `PRD-201`, `PRD-202`, `PRD-203`, `PRD-301`, `PRD-302`, `PRD-303`, `PRD-401`, `PRD-402`, `PRD-501`, `PRD-502`, `PRD-503`, `PRD-504`, `PRD-601`, `PRD-602`, `PRD-603`, `PRD-701`, `PRD-702`, `PRD-703`
+- Next ticket: none
 
 ## Goals
 
@@ -327,7 +327,7 @@ Acceptance criteria:
 
 ### PRD-701: Production-safe Flask configuration
 
-Status: Not started
+Status: Completed
 
 Deliverables:
 
@@ -342,7 +342,7 @@ Acceptance criteria:
 
 ### PRD-702: Define deployment artifact strategy
 
-Status: Not started
+Status: Completed
 
 Deliverables:
 
@@ -357,7 +357,7 @@ Acceptance criteria:
 
 ### PRD-703: Runtime data retention and backup policy
 
-Status: Not started
+Status: Completed
 
 Deliverables:
 
@@ -454,3 +454,12 @@ Acceptance criteria:
 - Verification: `npm run build` passed.
 - Phase 6 commit: `8d4f209` (`Add CI quality gates`).
 - Phase 6 push status: blocked by missing GitHub HTTPS credentials in this environment.
+- Completed Phase 7 production runtime hardening.
+- Added runtime path configuration for repository root, runtime root, data directory, log directory, and frontend build directory.
+- Updated the backend job service and legacy Flask helpers to read and write logs and artifacts from the configured runtime root instead of assuming the git checkout is writable.
+- Added a production dependency extra for `gunicorn`.
+- Documented the deployment layout, WSGI launch command, frontend artifact strategy, retention expectations, and backup policy in `docs/runtime-operations.md`.
+- Verification: `BTP_CONFIG_PATH=src/config.example.ini .venv/bin/python -m ruff check --select I,F app tests BackToPure.py`.
+- Verification: `BTP_CONFIG_PATH=src/config.example.ini .venv/bin/python -m pytest -q` passed with 138 tests and 5 subtests.
+- Verification: `npm test` passed with 43 frontend tests.
+- Verification: `npm run build` passed.

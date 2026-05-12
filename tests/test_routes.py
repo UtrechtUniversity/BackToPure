@@ -61,6 +61,8 @@ class FlaskRouteTests(unittest.TestCase):
         self.app = create_app()
         self.app.config["BTP_DATA_DIR"] = os.path.join(self.tempdir.name, "data")
         self.app.config["BTP_PROJECT_ROOT"] = self.tempdir.name
+        self.app.config["BTP_RUNTIME_ROOT"] = self.tempdir.name
+        self.app.config["BTP_LOGS_DIR"] = os.path.join(self.tempdir.name, "logs", "jobs")
         self.app.config["BTP_FRONTEND_DIST"] = os.path.join(self.tempdir.name, "frontend-dist")
         init_db(self.app)
         self.client = self.app.test_client()
@@ -94,6 +96,25 @@ class FlaskRouteTests(unittest.TestCase):
         with self.client.get("/app/assets/app.js") as asset_result:
             self.assertEqual(200, asset_result.status_code)
             self.assertIn("console.log('asset');", asset_result.get_data(as_text=True))
+
+    def test_update_status_uses_runtime_root_for_legacy_output_detection(self):
+        runtime_root = os.path.join(self.tempdir.name, "runtime")
+        output_dir = os.path.join(runtime_root, "output", "research_output")
+        os.makedirs(output_dir, exist_ok=True)
+        self.app.config["BTP_RUNTIME_ROOT"] = runtime_root
+
+        with open(os.path.join(output_dir, "to_be_updated.csv"), "w", encoding="utf-8") as handle:
+            handle.write("doi,to_be_updated\n1,x\n")
+        with open(os.path.join(output_dir, "output_to_be_updated.json"), "w", encoding="utf-8") as handle:
+            handle.write("{}")
+
+        result = self.client.get("/update_status?source=import_research_outputs")
+
+        self.assertEqual(200, result.status_code)
+        self.assertEqual(
+            {"status": "success", "can_open": True, "can_apply": True},
+            result.get_json(),
+        )
 
     @patch("app.routes.requests.get")
     def test_faculties_returns_options(self, mock_get):
@@ -954,7 +975,7 @@ class FlaskRouteTests(unittest.TestCase):
         self.assertEqual(400, result.status_code)
         self.assertEqual("error", result.get_json()["status"])
 
-    @patch("app.routes.os.path.exists", return_value=False)
+    @patch("pathlib.Path.exists", return_value=False)
     def test_update_status_returns_false_when_output_missing(self, _exists):
         result = self.client.get("/update_status?source=import_datasets")
 
@@ -965,7 +986,7 @@ class FlaskRouteTests(unittest.TestCase):
         )
 
     @patch("app.routes._has_named_files")
-    @patch("app.routes.os.path.exists", return_value=True)
+    @patch("pathlib.Path.exists", return_value=True)
     def test_update_status_reports_ready_apply_state(self, _exists, mock_has_named_files):
         mock_has_named_files.side_effect = [True, True]
 

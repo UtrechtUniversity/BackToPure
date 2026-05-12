@@ -31,18 +31,21 @@ class JobService:
         db_path: Path,
         *,
         project_root: Path | None = None,
+        runtime_root: Path | None = None,
         logs_dir: Path | None = None,
         python_executable: str | None = None,
     ):
         self.db_path = Path(db_path)
         self.project_root = Path(project_root) if project_root is not None else self.db_path.parent.parent
-        self.logs_dir = Path(logs_dir) if logs_dir is not None else self.project_root / "logs" / "jobs"
+        self.runtime_root = Path(runtime_root) if runtime_root is not None else self.project_root
+        self.logs_dir = Path(logs_dir) if logs_dir is not None else self.runtime_root / "logs" / "jobs"
         self.python_executable = python_executable or self._default_python_executable()
 
     def healthcheck(self) -> dict:
         return {
             "status": "ok",
             "db_path": str(self.db_path),
+            "runtime_root": str(self.runtime_root),
             "logs_dir": str(self.logs_dir),
         }
 
@@ -288,7 +291,7 @@ class JobService:
         }:
             raise ValueError(f"Job {job_id} cannot be deleted while it is active")
 
-        log_path = self.project_root / job["log_path"] if job.get("log_path") else None
+        log_path = self._runtime_path(job["log_path"]) if job.get("log_path") else None
         with connect_db(self.db_path) as connection:
             connection.execute(
                 "DELETE FROM job_change_set_items WHERE change_set_id IN (SELECT id FROM job_change_sets WHERE job_id = ?)",
@@ -382,7 +385,7 @@ class JobService:
         definition = get_job_type_definition(job["job_type"])
         script_path = self.project_root / definition.script_path
         stored_log_path = Path("logs") / "jobs" / f"{job_id}.log"
-        log_path = self.project_root / stored_log_path
+        log_path = self._runtime_path(stored_log_path)
         self.logs_dir.mkdir(parents=True, exist_ok=True)
 
         started_at = self._utcnow()
@@ -479,7 +482,7 @@ class JobService:
             raise ValueError(f"Job {job_id} has no selected updates to apply")
 
         script_path = self.project_root / "src" / "apply_updates_to_pure.py"
-        log_path = self.project_root / (job["log_path"] or Path("logs") / "jobs" / f"{job_id}.log")
+        log_path = self._runtime_path(job["log_path"] or Path("logs") / "jobs" / f"{job_id}.log")
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         self.update_job(job_id, status=JobStatus.APPLYING)
 
@@ -616,7 +619,7 @@ class JobService:
         )
         self.update_job(job_id, rollback_job_id=rollback_job_id)
 
-        log_path = self.project_root / rollback_log_path
+        log_path = self._runtime_path(rollback_log_path)
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         self._append_log(log_path, f"=== ROLLBACK START {self._utcnow()} ===\n")
 
@@ -913,7 +916,10 @@ class JobService:
         return referers[job_type]
 
     def _artifact_directory(self, artifact_dir: str | None) -> Path:
-        return self.project_root / (artifact_dir or "")
+        return self._runtime_path(artifact_dir or "")
+
+    def _runtime_path(self, relative_path: str | Path) -> Path:
+        return self.runtime_root / Path(relative_path)
 
     @staticmethod
     def _artifact_kind(filename: str) -> str:
@@ -995,7 +1001,7 @@ class JobService:
 
     def _detect_artifacts(self, job_type: str, artifact_dir: str | None) -> dict:
         definition = get_job_type_definition(job_type)
-        directory = self.project_root / (artifact_dir or definition.artifact_dir)
+        directory = self._artifact_directory(artifact_dir or definition.artifact_dir)
         artifacts = {
             "directory": str(Path(artifact_dir or definition.artifact_dir)),
             "csv": [],
@@ -1057,7 +1063,7 @@ class JobService:
         baseline: dict[str, tuple[int, int]],
     ) -> dict:
         definition = get_job_type_definition(job_type)
-        directory = self.project_root / (artifact_dir or definition.artifact_dir)
+        directory = self._artifact_directory(artifact_dir or definition.artifact_dir)
         artifacts = {
             "directory": str(Path(artifact_dir or definition.artifact_dir)),
             "csv": [],

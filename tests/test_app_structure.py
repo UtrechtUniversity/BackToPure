@@ -35,6 +35,24 @@ class FakeCompletedProcess:
 
 
 class AppStructureTests(unittest.TestCase):
+    def test_create_app_reads_runtime_paths_from_environment(self):
+        with tempfile.TemporaryDirectory() as tmpdir, patch.dict(
+            os.environ,
+            {
+                "BTP_RUNTIME_ROOT": os.path.join(tmpdir, "runtime"),
+                "BTP_DATA_DIR": os.path.join(tmpdir, "state", "data"),
+                "BTP_LOGS_DIR": os.path.join(tmpdir, "state", "logs", "jobs"),
+                "BTP_FRONTEND_DIST": os.path.join(tmpdir, "frontend-build"),
+            },
+            clear=False,
+        ):
+            app = create_app()
+
+        self.assertEqual(os.path.join(tmpdir, "runtime"), app.config["BTP_RUNTIME_ROOT"])
+        self.assertEqual(os.path.join(tmpdir, "state", "data"), app.config["BTP_DATA_DIR"])
+        self.assertEqual(os.path.join(tmpdir, "state", "logs", "jobs"), app.config["BTP_LOGS_DIR"])
+        self.assertEqual(os.path.join(tmpdir, "frontend-build"), app.config["BTP_FRONTEND_DIST"])
+
     def test_create_app_initializes_backend_storage_extension(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             app = create_app()
@@ -79,12 +97,13 @@ class AppStructureTests(unittest.TestCase):
         self.assertFalse(is_valid_transition(JobStatus.FAILED, JobStatus.COMPLETED))
 
     def test_job_service_healthcheck_reports_db_path(self):
-        service = JobService("/tmp/jobs.sqlite")
+        service = JobService("/tmp/jobs.sqlite", runtime_root="/tmp/runtime")
 
         result = service.healthcheck()
 
         self.assertEqual("ok", result["status"])
         self.assertEqual("/tmp/jobs.sqlite", result["db_path"])
+        self.assertEqual("/tmp/runtime", result["runtime_root"])
         self.assertIn("logs_dir", result)
 
     def test_job_service_can_create_fetch_list_and_update_jobs(self):

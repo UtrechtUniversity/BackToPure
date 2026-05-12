@@ -126,6 +126,15 @@ For production, set a private Flask secret:
 export BTP_SECRET_KEY='replace-with-a-long-random-value'
 ```
 
+Optional runtime path overrides:
+
+```bash
+export BTP_RUNTIME_ROOT=/var/lib/back-to-pure
+export BTP_DATA_DIR=/var/lib/back-to-pure/data
+export BTP_LOGS_DIR=/var/log/back-to-pure/jobs
+export BTP_FRONTEND_DIST=/opt/back-to-pure/frontend/dist
+```
+
 ---
 
 ## Usage Guide
@@ -146,6 +155,13 @@ The same app can also be started with Flask's CLI:
 
 ```bash
 flask --app BackToPure run --port 5002
+```
+
+For production, do not use the Flask debug server. Install the production extra and run a WSGI server:
+
+```bash
+pip install -e ".[prod]"
+gunicorn --bind 0.0.0.0:5002 --workers 2 --timeout 300 BackToPure:app
 ```
 
 ### 2. Navigate to the Dashboard
@@ -211,6 +227,12 @@ The CI workflow runs:
 Generated outputs such as `data/`, `logs/`, `output/`, and `frontend/dist/` are ignored by git.
 
 For local development, the editable install keeps the `app/` package and the flat workflow modules from `src/` importable without manually setting `PYTHONPATH`.
+
+## Runtime Operations
+
+Production runtime state should live outside the git checkout. Use `BTP_RUNTIME_ROOT` or the more specific `BTP_DATA_DIR`, `BTP_LOGS_DIR`, and `BTP_FRONTEND_DIST` variables to place writable state and built frontend assets in stable paths.
+
+Operational details, retention guidance, and the recommended deployment layout are documented in [docs/runtime-operations.md](docs/runtime-operations.md).
 
 ---
 

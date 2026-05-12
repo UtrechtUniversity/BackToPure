@@ -23,6 +23,9 @@ dev = [
   "pytest",
   "ruff",
 ]
+prod = [
+  "gunicorn",
+]
 
 [tool.ruff]
 line-length = 100

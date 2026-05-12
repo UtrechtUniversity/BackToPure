@@ -32,7 +32,19 @@ class LegacyWorkflow:
 def _job_service() -> JobService:
     db_path = current_app.extensions["btp_db"]["db_path"]
     project_root = Path(current_app.config.get("BTP_PROJECT_ROOT", Path(current_app.root_path).parent))
-    return JobService(db_path, project_root=project_root)
+    runtime_root = Path(current_app.config.get("BTP_RUNTIME_ROOT", project_root))
+    logs_dir = Path(current_app.config.get("BTP_LOGS_DIR", runtime_root / "logs" / "jobs"))
+    return JobService(
+        db_path,
+        project_root=project_root,
+        runtime_root=runtime_root,
+        logs_dir=logs_dir,
+    )
+
+
+def _runtime_root() -> Path:
+    project_root = Path(current_app.config.get("BTP_PROJECT_ROOT", Path(current_app.root_path).parent))
+    return Path(current_app.config.get("BTP_RUNTIME_ROOT", project_root))
 
 
 def _frontend_dist_dir() -> Path:
@@ -143,6 +155,13 @@ def _resolve_output_target(source: str):
     if workflow is None:
         return None, None
     return _workflow_definition(workflow).artifact_dir, _workflow_requirements(workflow)
+
+
+def _resolve_runtime_output_target(source: str):
+    artifact_dir, requirements = _resolve_output_target(source)
+    if artifact_dir is None:
+        return None, requirements
+    return _runtime_root() / artifact_dir, requirements
 
 
 def _has_named_files(directory_path: str, filenames):
@@ -509,18 +528,18 @@ def init_app(app):
         logging.debug(f"open_directory called from referer: {referer}")
         # directory_path = 'output'
         # Step 2: Execute specific logic based on the Referer
-        directory_path, _ = _resolve_output_target(referer)
+        directory_path, _ = _resolve_runtime_output_target(referer)
 
         try:
             if not directory_path:
                 return jsonify({'status': 'error', 'message': f'Unknown source page: {referer}'}), 400
-            os.makedirs(directory_path, exist_ok=True)
+            directory_path.mkdir(parents=True, exist_ok=True)
             # Open the directory using the appropriate command for each OS
             if os.name == 'nt':  # Windows
-                subprocess.Popen(['explorer', directory_path])
+                subprocess.Popen(['explorer', str(directory_path)])
             elif os.name == 'posix':  # macOS and Linux
                 # Use xdg-open for Linux systems
-                subprocess.Popen(['xdg-open', directory_path])
+                subprocess.Popen(['xdg-open', str(directory_path)])
             else:
                 return jsonify({'status': 'error', 'message': 'Unsupported OS'}), 500
 
@@ -531,12 +550,12 @@ def init_app(app):
     @app.route('/update_status', methods=['GET'])
     def update_status():
         source = request.args.get('source', '')
-        directory_path, required_files = _resolve_output_target(source)
+        directory_path, required_files = _resolve_runtime_output_target(source)
 
         if not directory_path:
             return jsonify({'status': 'error', 'message': f'Unknown source: {source}'}), 400
 
-        if not os.path.exists(directory_path):
+        if not directory_path.exists():
             return jsonify({
                 'status': 'success',
                 'can_open': False,
@@ -547,18 +566,18 @@ def init_app(app):
             csv_ok = False
             json_ok = False
             if 'csv' in required_files:
-                csv_ok = _has_named_files(directory_path, required_files['csv'])
+                csv_ok = _has_named_files(str(directory_path), required_files['csv'])
             if 'csv_prefix' in required_files:
-                csv_ok = csv_ok or _has_prefixed_files(directory_path, required_files['csv_prefix'], '.csv')
+                csv_ok = csv_ok or _has_prefixed_files(str(directory_path), required_files['csv_prefix'], '.csv')
             if 'json' in required_files:
-                json_ok = _has_named_files(directory_path, required_files['json'])
+                json_ok = _has_named_files(str(directory_path), required_files['json'])
             return jsonify({
                 'status': 'success',
                 'can_open': csv_ok or json_ok,
                 'can_apply': csv_ok and json_ok,
             })
 
-        files_present = any(os.scandir(directory_path))
+        files_present = any(directory_path.iterdir())
         return jsonify({
             'status': 'success',
             'can_open': files_present,
@@ -576,6 +595,9 @@ def init_app(app):
 
         env = os.environ.copy()
         env['REFERER_PAGE'] = referer
+        output_dir, _ = _resolve_runtime_output_target(referer)
+        if output_dir is not None:
+            env['BTP_OUTPUT_DIR'] = str(output_dir)
         command = _python_command('-u', str(script_path))
         return Response(
             _stream_process(command, env=env, failure_label='apply updates'),
