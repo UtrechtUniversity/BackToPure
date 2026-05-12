@@ -6,10 +6,10 @@ Scope: Make the repository clean, secure, maintainable, and straightforward for 
 
 ## Progress
 
-- Overall status: Phase 2 completed
-- Current focus: Clone-and-run developer experience
-- Completed tickets: `PRD-101`, `PRD-102`, `PRD-201`, `PRD-202`, `PRD-203`
-- Next ticket: `PRD-301`
+- Overall status: Phase 3 completed
+- Current focus: Packaging and project structure
+- Completed tickets: `PRD-101`, `PRD-102`, `PRD-201`, `PRD-202`, `PRD-203`, `PRD-301`, `PRD-302`, `PRD-303`
+- Next ticket: `PRD-401`
 
 ## Goals
 
@@ -133,7 +133,7 @@ Acceptance criteria:
 
 ### PRD-301: Update README for the real project
 
-Status: Not started
+Status: Completed
 
 Deliverables:
 
@@ -149,7 +149,7 @@ Acceptance criteria:
 
 ### PRD-302: Add explicit dev/test dependencies
 
-Status: Not started
+Status: Completed
 
 Deliverables:
 
@@ -164,7 +164,7 @@ Acceptance criteria:
 
 ### PRD-303: Normalize application entry points
 
-Status: Not started
+Status: Completed
 
 Deliverables:
 
@@ -406,3 +406,14 @@ Acceptance criteria:
 - Backend pytest remains blocked until dev dependencies are added in Phase 3: `/usr/bin/python3: No module named pytest`.
 - Phase 2 commit: `fc55431` (`Harden configuration and secret handling`).
 - Phase 2 push status: blocked by missing GitHub HTTPS credentials in this environment.
+- Completed Phase 3 clone-and-run developer experience.
+- Updated README to match the real `app/`, `src/`, `frontend/`, `tests/`, and `docs/` layout.
+- Documented backend setup, frontend setup, private config setup, Flask run commands, React build usage, tests, and common troubleshooting.
+- Added `requirements-dev.txt` with backend test dependencies.
+- Normalized `BackToPure.py` to insert the resolved `src/` path deterministically.
+- Verification: `.venv/bin/python -m pip install -r requirements-dev.txt`.
+- Verification: `.venv/bin/python -m pytest -q` passed with 136 tests and 5 subtests.
+- Verification: `npm test` passed with 43 frontend tests.
+- Verification: `npm run build` passed.
+- Verification: `BTP_CONFIG_PATH=src/config.example.ini .venv/bin/flask --app BackToPure routes` listed the Flask routes.
+- Verification: `git ls-files` still reports no tracked generated artifacts after tests/build.
