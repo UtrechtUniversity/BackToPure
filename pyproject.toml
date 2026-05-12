@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "back-to-pure"
+version = "0.1.0"
+description = "BackToPure workflow tooling for Pure, Ricgraph, and OpenAlex"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "Flask",
+  "requests",
+  "pandas",
+  "urllib3",
+  "tenacity",
+  "python-dateutil",
+  "nameparser",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+]
+
+[tool.setuptools]
+include-package-data = true
+py-modules = [
+  "apply_updates_to_pure",
+  "btp",
+  "config",
+  "datacite_utils",
+  "enrich_internal_persons_with_ids",
+  "enrich_pure_external_orgs",
+  "enrich_pure_external_persons",
+  "fetch_openalex_metadata_cache",
+  "logging_config",
+  "merge_external_orgs",
+  "openalex_cache",
+  "openalex_utils",
+  "personsperpublication",
+  "pure_api_utils",
+  "pure_datasets",
+  "pure_persons",
+  "pure_researchoutputs",
+  "update_datasets_from_ricgraph",
+  "update_researchoutput_from_ricgraph",
+  "yoda_utils",
+]
+packages = [
+  "app",
+  "app.models",
+  "app.services",
+]
+
+[tool.setuptools.package-dir]
+"" = "src"
+app = "app"
+"app.models" = "app/models"
+"app.services" = "app/services"
+
+[tool.setuptools.package-data]
+app = [
+  "templates/*.html",
+  "static/css/*.css",
+  "static/images/*",
+]

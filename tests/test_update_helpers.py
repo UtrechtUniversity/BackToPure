@@ -1,17 +1,9 @@
 import json
 import os
-import sys
 import tempfile
 import unittest
 
 import pandas as pd
-
-
-PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
-SRC_ROOT = os.path.join(PROJECT_ROOT, "src")
-
-if SRC_ROOT not in sys.path:
-    sys.path.insert(0, SRC_ROOT)
 
 from src.apply_updates_to_pure import _selected_for_update, get_csv_files, get_json_files
 

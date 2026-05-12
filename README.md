@@ -93,10 +93,16 @@ source .venv/bin/activate  # Linux/macOS
 
 ### 3. Install Dependencies
 ```bash
-pip install -r requirements-dev.txt
+pip install -e ".[dev]"
 cd frontend
 npm ci
 cd ..
+```
+
+If you prefer requirements files, this still works:
+
+```bash
+pip install -r requirements-dev.txt
 ```
 
 ### 4. Configure the Application
@@ -189,6 +195,8 @@ npm run build
 ```
 
 Generated outputs such as `data/`, `logs/`, `output/`, and `frontend/dist/` are ignored by git.
+
+For local development, the editable install keeps the `app/` package and the flat workflow modules from `src/` importable without manually setting `PYTHONPATH`.
 
 ---
 

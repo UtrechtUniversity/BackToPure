@@ -2,7 +2,6 @@ import json
 import os
 from pathlib import Path
 import sqlite3
-import sys
 import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
@@ -10,13 +9,6 @@ import pandas as pd
 import apply_updates_to_pure
 import pure_datasets
 import pure_researchoutputs
-
-
-PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
-SRC_ROOT = os.path.join(PROJECT_ROOT, "src")
-
-if SRC_ROOT not in sys.path:
-    sys.path.insert(0, SRC_ROOT)
 
 from app import create_app
 from app.db import connect_db, init_db

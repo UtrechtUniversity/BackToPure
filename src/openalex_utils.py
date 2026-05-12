@@ -40,6 +40,12 @@ import unicodedata
 #     'report': rcg.ROTYPE_REPORT
 # }
 
+def _debug_output_path() -> pathlib.Path:
+    output_dir = pathlib.Path(os.environ.get("BTP_OUTPUT_DIR", "output/openalex_cache"))
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return output_dir / "all_responses.json"
+
+
 def get_jsons_from_open_alex(dois):
     OPENALEX_HEADERS = {'Accept': 'application/json',
                         # The following will be read in __main__
@@ -61,8 +67,7 @@ def get_jsons_from_open_alex(dois):
         except requests.exceptions.RequestException as e:
             print(f"An error occurred while fetching data for DOI {item}: {e}")
 
-    # Write all responses to a JSON file
-    with open('all_responses.json', 'w', encoding='utf-8') as f:
+    with open(_debug_output_path(), 'w', encoding='utf-8') as f:
         json.dump(all_responses, f, ensure_ascii=False, indent=4)
 
     return all_responses

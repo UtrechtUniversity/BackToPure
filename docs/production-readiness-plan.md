@@ -6,10 +6,10 @@ Scope: Make the repository clean, secure, maintainable, and straightforward for 
 
 ## Progress
 
-- Overall status: Phase 3 completed
-- Current focus: Packaging and project structure
-- Completed tickets: `PRD-101`, `PRD-102`, `PRD-201`, `PRD-202`, `PRD-203`, `PRD-301`, `PRD-302`, `PRD-303`
-- Next ticket: `PRD-401`
+- Overall status: Phase 4 completed
+- Current focus: Backend maintainability
+- Completed tickets: `PRD-101`, `PRD-102`, `PRD-201`, `PRD-202`, `PRD-203`, `PRD-301`, `PRD-302`, `PRD-303`, `PRD-401`, `PRD-402`
+- Next ticket: `PRD-501`
 
 ## Goals
 
@@ -181,7 +181,7 @@ Acceptance criteria:
 
 ### PRD-401: Replace weak `setup.py` packaging
 
-Status: Not started
+Status: Completed
 
 Deliverables:
 
@@ -198,7 +198,7 @@ Acceptance criteria:
 
 ### PRD-402: Separate source from runtime output
 
-Status: Not started
+Status: Completed
 
 Deliverables:
 
@@ -419,3 +419,15 @@ Acceptance criteria:
 - Verification: `git ls-files` still reports no tracked generated artifacts after tests/build.
 - Phase 3 commit: `dadb0ab` (`Document clone and test workflow`).
 - Phase 3 push status: `dadb0ab` is present on `origin/jobs-orientied`; final checkpoint-status note commit is pending push from an authenticated client.
+- Completed Phase 4 packaging and project structure cleanup.
+- Replaced `setup.py` with `pyproject.toml` and valid package metadata for `back-to-pure`.
+- Added editable install support for the Flask `app` package and the flat workflow modules from `src/`.
+- Centralized test `src/` path bootstrapping in `tests/conftest.py` and removed repeated `sys.path` edits from individual test files.
+- Updated README to document editable install for local development.
+- Added `.gitignore` coverage for `*.egg-info/`.
+- Redirected remaining ad hoc root-level debug/output files into ignored output directories.
+- Verification: `.venv/bin/python -m pip install -e '.[dev]'` passed.
+- Verification: `.venv/bin/python -m pytest -q` passed with 136 tests and 5 subtests.
+- Verification: `python3 -m py_compile BackToPure.py tests/conftest.py src/openalex_utils.py src/merge_external_orgs.py`.
+- Verification: `git ls-files` reports no tracked generated artifacts under `output/`, `logs/`, `data/`, `frontend/dist/`, or `*.egg-info/`.
+- Verification: only `tests/conftest.py` and `BackToPure.py` still adjust `sys.path`.

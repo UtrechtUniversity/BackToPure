@@ -6,6 +6,7 @@ import requests
 import csv
 import json
 import argparse
+import os
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import urllib3
@@ -33,6 +34,23 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Initialize an empty list to store rows
 rors = []
+
+
+def _output_dir():
+    output_dir = os.environ.get("BTP_OUTPUT_DIR", "output/external_orgs/manual")
+    os.makedirs(output_dir, exist_ok=True)
+    return output_dir
+
+
+def _input_csv_path():
+    return os.environ.get(
+        "BTP_INPUT_CSV",
+        os.path.join(_output_dir(), "external_orgs_to_update.csv"),
+    )
+
+
+def _artifact_path(filename):
+    return os.path.join(_output_dir(), filename)
 
 def merge_external_orgs(final_result):
     items = []
@@ -99,54 +117,47 @@ def fetch_org_data(rors, batch_size):
 
     logger.info(f"total ext orgs found in pure:  {str(total_found)}")
 
-    with open('extorgs.json', "w") as f:
+    with open(_artifact_path('extorgs.json'), "w") as f:
         json.dump(datatotal, f, indent=4)
 
     # Return the combined data
     return datatotal
 
-# Open and read the CSV file
-with open('external_orgs_to_update.csv', mode='r') as file:
-    reader = csv.reader(file)
-    for row in reader:
+def main():
+    with open(_input_csv_path(), mode='r') as file:
+        reader = csv.reader(file)
+        for row in reader:
+            if len(row) > 1:
+                rors.append(row[3])
 
-        if len(row) > 1:
-            rors.append(row[3])  # Index 1 corresponds to the second column
+    datatotal = fetch_org_data(rors, 20)
 
-datatotal = fetch_org_data(rors, 20)
+    result = []
+    for entry in datatotal:
+        uuid = entry.get('uuid')
+        ror_ids = [
+            identifier['id']
+            for identifier in entry.get('identifiers', [])
+            if identifier.get('type') and identifier['type']['term'].get('en_GB') == 'ROR ID'
+        ]
+        if uuid and ror_ids:
+            for ror_id in ror_ids:
+                result.append({"uuid": uuid, "ror": ror_id})
 
-# Extract the uuid and ROR IDs for each entry
-result = []
-for entry in datatotal:
-    uuid = entry.get('uuid')
+    clustered_result = {}
+    for item in result:
+        ror = item['ror']
+        uuid = item['uuid']
+        if ror not in clustered_result:
+            clustered_result[ror] = set()
+        clustered_result[ror].add(uuid)
 
-    ror_ids = [identifier['id'] for identifier in entry.get('identifiers', [])
-               if identifier.get('type') and identifier['type']['term'].get('en_GB') == 'ROR ID']
+    final_result = {ror: list(uuids) for ror, uuids in clustered_result.items() if len(uuids) > 1}
 
-    if uuid and ror_ids:
-        for ror_id in ror_ids:
-            result.append({"uuid": uuid, "ror": ror_id})
-# Cluster UUIDs by ROR, ensuring uniqueness
-clustered_result = {}
-for item in result:
-    ror = item['ror']
-    uuid = item['uuid']
-    if ror not in clustered_result:
-        clustered_result[ror] = set()  # Use a set to ensure unique UUIDs
-    clustered_result[ror].add(uuid)
+    print(final_result)
+    with open(_artifact_path('exorgs.json'), 'w') as file:
+        json.dump(final_result, file, indent=4)
 
 
-# Save only RORs that have more than one UUID
-final_result = {ror: list(uuids) for ror, uuids in clustered_result.items() if len(uuids) > 1}
-
-
-print(final_result)
-# merge_external_orgs(final_result)
-
-# Save JSON to file
-with open('exorgs.json', 'w') as file:
-    json.dump(final_result, file, indent=4)  # indent=4 makes the file more readable
-
-# print(datatotal)
-# pure_orgsjsons = org.fetch_pure_extorgs(uuids)
-
+if __name__ == "__main__":
+    main()
