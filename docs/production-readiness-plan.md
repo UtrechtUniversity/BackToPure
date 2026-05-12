@@ -431,3 +431,5 @@ Acceptance criteria:
 - Verification: `python3 -m py_compile BackToPure.py tests/conftest.py src/openalex_utils.py src/merge_external_orgs.py`.
 - Verification: `git ls-files` reports no tracked generated artifacts under `output/`, `logs/`, `data/`, `frontend/dist/`, or `*.egg-info/`.
 - Verification: only `tests/conftest.py` and `BackToPure.py` still adjust `sys.path`.
+- Phase 4 commit: `f793481` (`Modernize packaging and source layout`).
+- Phase 4 push status: blocked by missing GitHub HTTPS credentials in this environment.
