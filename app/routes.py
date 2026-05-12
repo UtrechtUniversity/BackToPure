@@ -1,14 +1,32 @@
-from flask import render_template, request, jsonify, Response, current_app, send_from_directory
-import requests
-import subprocess
-import os
+from dataclasses import dataclass
 import logging
+import os
 import sys
 from pathlib import Path
+import subprocess
 from uuid import uuid4
+
+import requests
+from flask import Response, current_app, jsonify, render_template, request, send_from_directory
+
 from config import RIC_BASE_URL, FACULTY_PREFIX
+from app.models import JobType, get_job_type_definition
 from app.services import JobService
-# Configure logging
+
+
+@dataclass(frozen=True)
+class LegacyWorkflow:
+    job_type: JobType
+    page_route: str
+    page_endpoint: str
+    template_name: str
+    run_route: str
+    run_endpoint: str
+    source_tokens: tuple[str, ...]
+    cli_arg_spec: tuple[object, ...]
+    form_defaults: dict[str, str] | None = None
+    template_context: dict[str, str] | None = None
+    failure_label: str | None = None
 
 
 def _job_service() -> JobService:
@@ -36,33 +54,95 @@ def _fetch_faculties():
     return [{'value': f['_key'], 'label': f['value']} for f in faculties]
 
 
+LEGACY_WORKFLOWS = (
+    LegacyWorkflow(
+        job_type=JobType.INTERNAL_PERSONS,
+        page_route="/enrich_internal_persons_with_ids",
+        page_endpoint="enrich_internal_persons",
+        template_name="enrich_internal_persons.html",
+        run_route="/run_enrich_internal_persons",
+        run_endpoint="run_enrich_internal_persons",
+        source_tokens=("enrich_internal_persons_with_ids",),
+        cli_arg_spec=(("faculty_choice",),),
+        failure_label="internal persons",
+    ),
+    LegacyWorkflow(
+        job_type=JobType.EXTERNAL_PERSONS,
+        page_route="/enrich_external_persons",
+        page_endpoint="enrich_external_persons",
+        template_name="enrich_external_persons.html",
+        run_route="/run_enrich_external_persons",
+        run_endpoint="run_enrich_pure_external_persons",
+        source_tokens=("enrich_external_persons",),
+        cli_arg_spec=(("faculty_choice",), "yes", ("use_openalex_fallback",)),
+        form_defaults={"use_openalex_fallback": "yes"},
+        failure_label="external persons",
+    ),
+    LegacyWorkflow(
+        job_type=JobType.EXTERNAL_ORGS,
+        page_route="/enrich_external_orgs",
+        page_endpoint="enrich_external_orgs",
+        template_name="enrich_external_orgs.html",
+        run_route="/run_enrich_pure_external_orgs",
+        run_endpoint="run_enrich_pure_external_orgs",
+        source_tokens=("enrich_external_orgs",),
+        cli_arg_spec=(("faculty_choice",),),
+        template_context={"feature": "Enrich External Organisations"},
+        failure_label="external orgs",
+    ),
+    LegacyWorkflow(
+        job_type=JobType.RESEARCH_OUTPUTS,
+        page_route="/import_research_outputs",
+        page_endpoint="import_research_outputs",
+        template_name="import_research_outputs.html",
+        run_route="/run_import_research_outputs",
+        run_endpoint="run_import_research_outputs",
+        source_tokens=("import_research_output", "import_research_outputs"),
+        cli_arg_spec=(("faculty_choice",),),
+        failure_label="research outputs",
+    ),
+    LegacyWorkflow(
+        job_type=JobType.DATASETS,
+        page_route="/import_datasets",
+        page_endpoint="import_datasets",
+        template_name="import_datasets.html",
+        run_route="/run_import_datasets",
+        run_endpoint="run_import_datasets",
+        source_tokens=("import_datasets",),
+        cli_arg_spec=(("faculty_choice",),),
+        failure_label="datasets",
+    ),
+)
+
+
+def _workflow_definition(workflow: LegacyWorkflow):
+    return get_job_type_definition(workflow.job_type)
+
+
+def _workflow_requirements(workflow: LegacyWorkflow):
+    definition = _workflow_definition(workflow)
+    requirements = {}
+    if definition.required_csv:
+        requirements["csv"] = list(definition.required_csv)
+    if definition.required_csv_prefixes:
+        requirements["csv_prefix"] = list(definition.required_csv_prefixes)
+    if definition.required_json:
+        requirements["json"] = list(definition.required_json)
+    return requirements
+
+
+def _resolve_legacy_workflow(source: str) -> LegacyWorkflow | None:
+    for workflow in LEGACY_WORKFLOWS:
+        if any(token in source for token in workflow.source_tokens):
+            return workflow
+    return None
+
+
 def _resolve_output_target(source: str):
-    if 'enrich_external_persons' in source:
-        return "output/external_persons", {
-            "csv": ["ext_pers_update.csv"],
-            "json": ["to_be_updated.json"],
-        }
-    if 'enrich_internal_persons_with_ids' in source:
-        return "output/internal_persons", {
-            "csv_prefix": ["personstobeupdated_"],
-            "json": ["datatotal.json"],
-        }
-    if 'enrich_external_orgs' in source:
-        return "output/external_orgs", {
-            "csv": ["external_orgs_to_update.csv"],
-            "json": ["external_orgs_updates.json"],
-        }
-    if 'import_datasets' in source:
-        return "output/datasets", {
-            "csv": ["to_be_updated.csv"],
-            "json": ["datasets_to_be_updated.json"],
-        }
-    if 'import_research_output' in source or 'import_research_outputs' in source:
-        return "output/research_output", {
-            "csv": ["to_be_updated.csv"],
-            "json": ["output_to_be_updated.json"],
-        }
-    return None, None
+    workflow = _resolve_legacy_workflow(source)
+    if workflow is None:
+        return None, None
+    return _workflow_definition(workflow).artifact_dir, _workflow_requirements(workflow)
 
 
 def _has_named_files(directory_path: str, filenames):
@@ -89,6 +169,84 @@ def _script_python():
 
 def _python_command(*args):
     return [_script_python(), *args]
+
+
+def _script_path(script_path: str) -> Path:
+    return Path(current_app.config.get("BTP_PROJECT_ROOT", Path(current_app.root_path).parent)) / script_path
+
+
+def _stream_process(command, *, env=None, failure_label: str):
+    try:
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            env=env,
+        )
+    except FileNotFoundError as exc:
+        yield f"Error: could not start Python interpreter: {exc}\n"
+        return
+
+    assert process.stdout is not None
+    for line in iter(process.stdout.readline, ''):
+        logging.debug(line.rstrip())
+        yield line
+
+    process.stdout.close()
+    process.wait()
+    if process.returncode != 0:
+        yield f"Error: {failure_label} script exited with code {process.returncode}\n"
+
+
+def _workflow_cli_args(workflow: LegacyWorkflow, form_data):
+    args = []
+    defaults = workflow.form_defaults or {}
+    for item in workflow.cli_arg_spec:
+        if isinstance(item, str):
+            args.append(item)
+            continue
+        value = None
+        for key in item:
+            value = form_data.get(key)
+            if value is not None:
+                break
+        if value is None:
+            for key in item:
+                if key in defaults:
+                    value = defaults[key]
+                    break
+        args.append("" if value is None else value)
+    return args
+
+
+def _render_workflow_page(workflow: LegacyWorkflow, **context):
+    page_context = dict(workflow.template_context or {})
+    page_context.update(context)
+    return render_template(workflow.template_name, **page_context)
+
+
+def _legacy_page_view(workflow: LegacyWorkflow):
+    def view():
+        return _render_workflow_page(workflow)
+
+    return view
+
+
+def _legacy_run_view(workflow: LegacyWorkflow):
+    def view():
+        script_path = _script_path(_workflow_definition(workflow).script_path)
+        if not script_path.exists():
+            return _render_workflow_page(workflow, message=f"Script path does not exist: {script_path}")
+
+        command = _python_command("-u", str(script_path), *_workflow_cli_args(workflow, request.form))
+        return Response(
+            _stream_process(command, failure_label=workflow.failure_label or workflow.page_endpoint),
+            mimetype='text/plain',
+        )
+
+    return view
 
 def init_app(app):
     @app.route('/app')
@@ -325,214 +483,18 @@ def init_app(app):
         _job, artifact_path = resolved
         return send_from_directory(artifact_path.parent, artifact_path.name, as_attachment=True)
 
-    @app.route('/enrich_internal_persons_with_ids')
-    def enrich_internal_persons():
-        return render_template('enrich_internal_persons.html')
-
-    @app.route('/run_enrich_internal_persons', methods=['POST'])
-    def run_enrich_internal_persons():
-        faculty_choice = request.form.get('faculty_choice')
-        # test_choice = request.form.get('test_choice')
-
-        script_path = os.path.join('src', 'enrich_internal_persons_with_ids.py')
-        if not os.path.exists(script_path):
-            return render_template('enrich_internal_persons.html', message=f"Script path does not exist: {script_path}")
-
-        def generate():
-            script_path = os.path.join('src', 'enrich_internal_persons_with_ids.py')
-            if not os.path.exists(script_path):
-                yield f"Script path does not exist: {script_path}\n"
-                return
-
-            try:
-                process = subprocess.Popen(
-                    _python_command('-u', script_path, faculty_choice),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    bufsize=1
-                )
-            except FileNotFoundError as exc:
-                yield f"Error: could not start Python interpreter: {exc}\n"
-                return
-
-            for line in iter(process.stdout.readline, ''):
-                yield line
-
-            for line in iter(process.stderr.readline, ''):
-                logging.error(line.strip())
-                yield f"Error: {line}"
-
-            process.stdout.close()
-            process.stderr.close()
-            process.wait()
-            if process.returncode != 0:
-                yield f"Error: external orgs script exited with code {process.returncode}\n"
-
-        return Response(generate(), mimetype='text/plain')
-
-    @app.route('/enrich_external_persons')
-    def enrich_external_persons():
-        return render_template('enrich_external_persons.html')
-
-    @app.route('/run_enrich_external_persons', methods=['POST'])
-    def run_enrich_pure_external_persons():
-        faculty_choice = request.form.get('faculty_choice')
-        use_openalex_fallback = request.form.get('use_openalex_fallback', 'yes')
-
-        def generate():
-            script_path = os.path.join('src', 'enrich_pure_external_persons.py')
-            if not os.path.exists(script_path):
-                yield f"Script path does not exist: {script_path}\n"
-                return
-
-            try:
-                process = subprocess.Popen(
-                    _python_command('-u', script_path, faculty_choice, 'yes', use_openalex_fallback),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True
-                )
-            except FileNotFoundError as exc:
-                yield f"Error: could not start Python interpreter: {exc}\n"
-                return
-
-            for line in iter(process.stdout.readline, ''):
-                yield line
-
-            for line in iter(process.stderr.readline, ''):
-                logging.error(line.strip())
-                yield f"Error: {line}"
-
-            process.stdout.close()
-            process.stderr.close()
-            process.wait()
-            if process.returncode != 0:
-                yield f"Error: external persons script exited with code {process.returncode}\n"
-
-        return Response(generate(), mimetype='text/plain')
-
-    @app.route('/enrich_external_orgs')
-    def enrich_external_orgs():
-        return render_template('enrich_external_orgs.html', feature='Enrich External Organisations')
-
-    @app.route('/run_enrich_pure_external_orgs', methods=['POST'])
-    def run_enrich_pure_external_orgs():
-        faculty_choice = request.form.get('faculty_choice')
-
-
-        def generate():
-            script_path = os.path.join('src', 'enrich_pure_external_orgs.py')
-            if not os.path.exists(script_path):
-                yield f"Script path does not exist: {script_path}\n"
-                return
-
-            try:
-                process = subprocess.Popen(
-                    _python_command('-u', script_path, faculty_choice),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    bufsize=1
-                )
-            except FileNotFoundError as exc:
-                yield f"Error: could not start Python interpreter: {exc}\n"
-                return
-
-            for line in iter(process.stdout.readline, ''):
-                yield line
-
-            for line in iter(process.stderr.readline, ''):
-                logging.error(line.strip())
-                yield f"Error: {line}"
-
-            process.stdout.close()
-            process.stderr.close()
-            process.wait()
-            if process.returncode != 0:
-                yield f"Error: external orgs script exited with code {process.returncode}\n"
-
-        return Response(generate(), mimetype='text/plain')
-
-    @app.route('/import_research_outputs')
-    def import_research_outputs():
-        return render_template('import_research_outputs.html')
-
-    @app.route('/run_import_research_outputs', methods=['POST'])
-    def run_import_research_outputs():
-        faculty_choice = request.form.get('faculty_choice')
-        # test_choice = request.form.get('test_choice')
-
-        def generate():
-            script_path = os.path.join('src', 'update_researchoutput_from_ricgraph.py')
-            if not os.path.exists(script_path):
-                yield f"Script path does not exist: {script_path}\n"
-                return
-
-            try:
-                process = subprocess.Popen(
-                    _python_command('-u', script_path, faculty_choice),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    bufsize=1  # Enable line buffering
-                )
-            except FileNotFoundError as exc:
-                yield f"Error: could not start Python interpreter: {exc}\n"
-                return
-
-            for line in iter(process.stdout.readline, ''):
-                yield line
-
-            for line in iter(process.stderr.readline, ''):
-                logging.error(line.strip())
-                yield f"Error: {line}"
-
-            process.stdout.close()
-            process.stderr.close()
-            process.wait()
-
-        return Response(generate(), mimetype='text/plain')
-    @app.route('/import_datasets')
-    def import_datasets():
-        return render_template('import_datasets.html')
-
-    @app.route('/run_import_datasets', methods=['POST'])
-    def run_import_datasets():
-        faculty_choice = request.form.get('faculty_choice')
-        # test_choice = request.form.get('test_choice')
-        script_path = os.path.join('src', 'update_datasets_from_ricgraph.py')
-
-        if not os.path.exists(script_path):
-            return render_template('import_datasets.html', message=f"Script path does not exist: {script_path}")
-
-        def generate():
-            try:
-                process = subprocess.Popen(
-                    _python_command(script_path, faculty_choice),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True
-                )
-            except FileNotFoundError as exc:
-                yield f"Error: could not start Python interpreter: {exc}\n"
-                return
-
-            # Stream the stdout
-            for line in iter(process.stdout.readline, ''):
-                logging.debug(line.strip())
-                yield line
-
-            # Stream the stderr
-            for line in iter(process.stderr.readline, ''):
-                logging.error(line.strip())
-                yield f"Error: {line}"
-
-            process.stdout.close()
-            process.stderr.close()
-            process.wait()
-
-        return Response(generate(), mimetype='text/plain')
+    for workflow in LEGACY_WORKFLOWS:
+        app.add_url_rule(
+            workflow.page_route,
+            endpoint=workflow.page_endpoint,
+            view_func=_legacy_page_view(workflow),
+        )
+        app.add_url_rule(
+            workflow.run_route,
+            endpoint=workflow.run_endpoint,
+            view_func=_legacy_run_view(workflow),
+            methods=['POST'],
+        )
 
     @app.route('/home')
     def home():
@@ -605,60 +567,17 @@ def init_app(app):
 
     @app.route('/run_apply_updates_to_pure', methods=['POST'])
     def run_apply_updates_to_pure():
-
         referer = request.headers.get('Referer', 'unknown')
-        script_path = os.path.join('src', 'apply_updates_to_pure.py')
-
-        # Step 1: Check if script path exists and log
+        script_path = _script_path('src/apply_updates_to_pure.py')
         logging.debug(f"Checking if script exists at path: {script_path}")
-        if not os.path.exists(script_path):
+        if not script_path.exists():
             logging.error(f"Script path does not exist: {script_path}")
             return jsonify({'status': 'error', 'message': f'Script path does not exist: {script_path}'}), 404
 
-        def generate():
-            logging.debug("Script has started running...\n")
-            logging.debug("Script execution has started...")
-
-            try:
-                # Step 2: Attempt to start the subprocess
-                env = os.environ.copy()
-                env['REFERER_PAGE'] = referer
-
-                process = subprocess.Popen(
-                    _python_command('-u', script_path),  # '-u' for unbuffered output
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    env=env  # Pass the environment variables
-                )
-                logging.debug(f"Subprocess started with PID: {process.pid}")
-
-                # Step 3: Stream stdout
-                for line in iter(process.stdout.readline, ''):
-                    logging.debug(f"stdout: {line.strip()}")
-                    yield line
-
-                # Step 4: Stream stderr
-                for line in iter(process.stderr.readline, ''):
-                    logging.error(f"stderr: {line.strip()}")
-                    yield f"Error: {line}"
-
-                # Step 5: Close streams and check return code
-                process.stdout.close()
-                process.stderr.close()
-                return_code = process.wait()
-                logging.debug(f"Process finished with return code: {return_code}")
-
-                if return_code != 0:
-                    logging.debug(f"Script finished with errors. Return code: {return_code}\n")
-                else:
-                    logging.debug("Script finished successfully.\n")
-
-            except FileNotFoundError as fnf_error:
-                logging.error(f"FileNotFoundError: {fnf_error}")
-                yield "Error: Script file not found.\n"
-            except Exception as e:
-                logging.error(f"Exception occurred: {e}")
-                yield f"Error: {str(e)}\n"
-
-        return Response(generate(), mimetype='text/plain')
+        env = os.environ.copy()
+        env['REFERER_PAGE'] = referer
+        command = _python_command('-u', str(script_path))
+        return Response(
+            _stream_process(command, env=env, failure_label='apply updates'),
+            mimetype='text/plain',
+        )

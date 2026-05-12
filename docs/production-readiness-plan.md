@@ -6,10 +6,10 @@ Scope: Make the repository clean, secure, maintainable, and straightforward for 
 
 ## Progress
 
-- Overall status: Phase 4 completed
-- Current focus: Backend maintainability
-- Completed tickets: `PRD-101`, `PRD-102`, `PRD-201`, `PRD-202`, `PRD-203`, `PRD-301`, `PRD-302`, `PRD-303`, `PRD-401`, `PRD-402`
-- Next ticket: `PRD-501`
+- Overall status: Phase 5 completed
+- Current focus: Tests, CI, and quality gates
+- Completed tickets: `PRD-101`, `PRD-102`, `PRD-201`, `PRD-202`, `PRD-203`, `PRD-301`, `PRD-302`, `PRD-303`, `PRD-401`, `PRD-402`, `PRD-501`, `PRD-502`, `PRD-503`, `PRD-504`
+- Next ticket: `PRD-601`
 
 ## Goals
 
@@ -215,7 +215,7 @@ Acceptance criteria:
 
 ### PRD-501: Consolidate subprocess execution
 
-Status: Not started
+Status: Completed
 
 Deliverables:
 
@@ -231,7 +231,7 @@ Acceptance criteria:
 
 ### PRD-502: Reduce old route duplication
 
-Status: Not started
+Status: Completed
 
 Deliverables:
 
@@ -246,7 +246,7 @@ Acceptance criteria:
 
 ### PRD-503: Audit script modules for import safety
 
-Status: Not started
+Status: Completed
 
 Deliverables:
 
@@ -264,7 +264,7 @@ Acceptance criteria:
 
 ### PRD-504: Replace debug prints with logging
 
-Status: Not started
+Status: Completed
 
 Deliverables:
 
@@ -433,3 +433,11 @@ Acceptance criteria:
 - Verification: only `tests/conftest.py` and `BackToPure.py` still adjust `sys.path`.
 - Phase 4 commit: `f793481` (`Modernize packaging and source layout`).
 - Phase 4 push status: blocked by missing GitHub HTTPS credentials in this environment.
+- Completed Phase 5 backend maintainability cleanup.
+- Replaced five duplicated legacy runner implementations in `app/routes.py` with one shared legacy workflow registry and one shared streaming subprocess helper.
+- Reused job-type definitions for legacy script paths and artifact expectations instead of duplicating them in route conditionals.
+- Switched legacy subprocess streaming to a single stdout stream with `stderr` redirected, which removes the previous deadlock-prone sequential pipe reads.
+- Removed unused legacy templates: `coming_soon.html`, `index.html`, and `script_page.html`.
+- Added `main()` guard and output-dir routing to `src/merge_external_orgs.py` and redirected `src/openalex_utils.py` debug output into ignored output directories.
+- Verification: `.venv/bin/python -m pytest -q` passed with 136 tests and 5 subtests.
+- Verification: `python3 -m py_compile app/routes.py tests/test_routes.py`.

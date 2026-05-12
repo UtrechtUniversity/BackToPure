@@ -978,7 +978,7 @@ class FlaskRouteTests(unittest.TestCase):
             result.get_json(),
         )
 
-    @patch("app.routes.os.path.exists", return_value=True)
+    @patch("app.routes.Path.exists", return_value=True)
     @patch("app.routes.subprocess.Popen")
     def test_run_endpoints_stream_subprocess_output(self, mock_popen, _exists):
         mock_popen.side_effect = lambda *args, **kwargs: FakeProcess(stdout_lines=["line 1\n", "line 2\n"])
@@ -1000,9 +1000,9 @@ class FlaskRouteTests(unittest.TestCase):
                 self.assertIn("line 1", body)
                 self.assertIn("line 2", body)
                 command = mock_popen.call_args[0][0]
-                self.assertIn(script_path, command)
+                self.assertTrue(any(str(item).endswith(script_path) for item in command))
 
-    @patch("app.routes.os.path.exists", return_value=True)
+    @patch("app.routes.Path.exists", return_value=True)
     @patch("app.routes.subprocess.Popen")
     def test_run_apply_updates_streams_output(self, mock_popen, _exists):
         mock_popen.return_value = FakeProcess(stdout_lines=["apply ok\n"])
@@ -1018,7 +1018,7 @@ class FlaskRouteTests(unittest.TestCase):
         self.assertIn("apply ok", body)
         self.assertEqual("http://localhost/import_datasets", mock_popen.call_args.kwargs["env"]["REFERER_PAGE"])
 
-    @patch("app.routes.os.path.exists", return_value=False)
+    @patch("app.routes.Path.exists", return_value=False)
     def test_run_apply_updates_returns_404_when_script_missing(self, _exists):
         result = self.client.post("/run_apply_updates_to_pure")
 
