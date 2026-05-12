@@ -463,3 +463,5 @@ Acceptance criteria:
 - Verification: `BTP_CONFIG_PATH=src/config.example.ini .venv/bin/python -m pytest -q` passed with 138 tests and 5 subtests.
 - Verification: `npm test` passed with 43 frontend tests.
 - Verification: `npm run build` passed.
+- Phase 7 commit: `ede28d5` (`Harden production runtime paths`).
+- Phase 7 push status: blocked by missing GitHub HTTPS credentials in this environment.
