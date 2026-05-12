@@ -1,7 +1,6 @@
 import os
 import sys
 
-
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 SRC_ROOT = os.path.join(PROJECT_ROOT, "src")
 

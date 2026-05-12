@@ -180,6 +180,12 @@ Run backend tests from the repository root:
 python3 -m pytest -q
 ```
 
+Run Python formatting and lint checks:
+
+```bash
+python3 -m ruff check --select I,F app tests BackToPure.py
+```
+
 Run frontend tests from `frontend/`:
 
 ```bash
@@ -193,6 +199,14 @@ Build the frontend:
 cd frontend
 npm run build
 ```
+
+The CI workflow runs:
+
+- backend editable install with `.[dev]`
+- `ruff check --select I,F app tests BackToPure.py`
+- backend pytest
+- frontend `npm test`
+- frontend `npm run build`
 
 Generated outputs such as `data/`, `logs/`, `output/`, and `frontend/dist/` are ignored by git.
 

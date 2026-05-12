@@ -5,8 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from requests.exceptions import RequestException
 
-from app import create_app
-from app import routes
+from app import create_app, routes
 from app.db import connect_db, init_db
 from app.services import JobService
 

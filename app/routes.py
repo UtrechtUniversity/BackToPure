@@ -1,17 +1,17 @@
-from dataclasses import dataclass
 import logging
 import os
-import sys
-from pathlib import Path
 import subprocess
+import sys
+from dataclasses import dataclass
+from pathlib import Path
 from uuid import uuid4
 
 import requests
 from flask import Response, current_app, jsonify, render_template, request, send_from_directory
 
-from config import RIC_BASE_URL, FACULTY_PREFIX
 from app.models import JobType, get_job_type_definition
 from app.services import JobService
+from config import FACULTY_PREFIX, RIC_BASE_URL
 
 
 @dataclass(frozen=True)

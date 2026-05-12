@@ -6,14 +6,21 @@ import os
 import subprocess
 import sys
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from datetime import datetime, timezone
+
+import requests
 
 from app.db import connect_db
-from app.models import JobStatus, JobType, get_job_type_definition, is_valid_transition, parse_job_status
+from app.models import (
+    JobStatus,
+    JobType,
+    get_job_type_definition,
+    is_valid_transition,
+    parse_job_status,
+)
 from config import OPENALEXEX_ID_URI, ORCID_ID_URI, PURE_BASE_URL, PURE_HEADERS, ROR_ID_URI
-import requests
 
 
 class JobService:
@@ -357,7 +364,7 @@ class JobService:
         db_fields["id"] = job_id
 
         with connect_db(self.db_path) as connection:
-            cursor = connection.execute(
+            connection.execute(
                 f"UPDATE jobs SET {assignments} WHERE id = :id",
                 db_fields,
             )
@@ -597,7 +604,7 @@ class JobService:
 
         rollback_job_id = f"rollback_{uuid.uuid4().hex[:12]}"
         rollback_log_path = Path("logs") / "jobs" / f"{rollback_job_id}.log"
-        rollback_job = self.create_job(
+        self.create_job(
             job_id=rollback_job_id,
             job_type=job["job_type"],
             status=JobStatus.APPLYING,
@@ -1905,7 +1912,6 @@ class JobService:
 
                 identifiers = person.get("identifiers", [])
                 removable_indexes: list[tuple[int, dict[str, Any]]] = []
-                conflict_found = False
                 for item in entity_items:
                     new_identifier = item["new_value"] or {}
                     new_id = new_identifier.get("id")
@@ -1928,7 +1934,6 @@ class JobService:
                             ("conflict", reason, item["id"]),
                         )
                         self._append_log(log_path, f"SKIP {reason}\n")
-                        conflict_found = True
                         continue
                     removable_indexes.append((match_index, item))
 

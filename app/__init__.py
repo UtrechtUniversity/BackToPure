@@ -1,9 +1,9 @@
-from flask import Flask
 import os
 import secrets
 
-from .db import init_db
-from .db import project_root
+from flask import Flask
+
+from .db import init_db, project_root
 
 
 def _secret_key() -> str:

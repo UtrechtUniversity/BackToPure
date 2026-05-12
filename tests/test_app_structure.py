@@ -1,18 +1,25 @@
 import json
 import os
-from pathlib import Path
 import sqlite3
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
+
 import pandas as pd
+
 import apply_updates_to_pure
 import pure_datasets
 import pure_researchoutputs
-
 from app import create_app
 from app.db import connect_db, init_db
-from app.models import JOB_TYPE_REGISTRY, JobStatus, JobType, get_job_type_definition, is_valid_transition
+from app.models import (
+    JOB_TYPE_REGISTRY,
+    JobStatus,
+    JobType,
+    get_job_type_definition,
+    is_valid_transition,
+)
 from app.services import JobService
 from config import OPENALEXEX_ID_URI, ORCID_ID_URI, PURE_BASE_URL, ROR_ID_URI
 

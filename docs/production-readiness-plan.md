@@ -6,10 +6,10 @@ Scope: Make the repository clean, secure, maintainable, and straightforward for 
 
 ## Progress
 
-- Overall status: Phase 5 completed
-- Current focus: Tests, CI, and quality gates
-- Completed tickets: `PRD-101`, `PRD-102`, `PRD-201`, `PRD-202`, `PRD-203`, `PRD-301`, `PRD-302`, `PRD-303`, `PRD-401`, `PRD-402`, `PRD-501`, `PRD-502`, `PRD-503`, `PRD-504`
-- Next ticket: `PRD-601`
+- Overall status: Phase 6 completed
+- Current focus: Production runtime
+- Completed tickets: `PRD-101`, `PRD-102`, `PRD-201`, `PRD-202`, `PRD-203`, `PRD-301`, `PRD-302`, `PRD-303`, `PRD-401`, `PRD-402`, `PRD-501`, `PRD-502`, `PRD-503`, `PRD-504`, `PRD-601`, `PRD-602`, `PRD-603`
+- Next ticket: `PRD-701`
 
 ## Goals
 
@@ -281,7 +281,7 @@ Acceptance criteria:
 
 ### PRD-601: Make backend tests runnable in CI
 
-Status: Not started
+Status: Completed
 
 Deliverables:
 
@@ -296,7 +296,7 @@ Acceptance criteria:
 
 ### PRD-602: Keep frontend tests in CI
 
-Status: Not started
+Status: Completed
 
 Deliverables:
 
@@ -310,7 +310,7 @@ Acceptance criteria:
 
 ### PRD-603: Add formatting and linting
 
-Status: Not started
+Status: Completed
 
 Deliverables:
 
@@ -443,3 +443,12 @@ Acceptance criteria:
 - Verification: `python3 -m py_compile app/routes.py tests/test_routes.py`.
 - Phase 5 commit: `cfb351f` (`Consolidate legacy Flask workflow routes`).
 - Phase 5 push status: blocked by missing GitHub HTTPS credentials in this environment.
+- Completed Phase 6 tests, CI, and quality gates.
+- Removed the stale docs deployment workflow and replaced it with `.github/workflows/ci.yml` for backend and frontend verification on pushes and pull requests.
+- Added `ruff` to the backend development dependencies and documented the local lint/test commands in README.
+- Scoped the Python CI lint gate to the maintained backend surface: `app`, `tests`, and `BackToPure.py`.
+- Auto-fixed import ordering in the maintained backend files and removed the remaining unused local in `app/services/jobs.py`.
+- Verification: `BTP_CONFIG_PATH=src/config.example.ini .venv/bin/python -m ruff check --select I,F app tests BackToPure.py`.
+- Verification: `BTP_CONFIG_PATH=src/config.example.ini .venv/bin/python -m pytest -q` passed with 136 tests and 5 subtests.
+- Verification: `npm test` passed with 43 frontend tests.
+- Verification: `npm run build` passed.

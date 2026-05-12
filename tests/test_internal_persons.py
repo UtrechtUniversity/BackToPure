@@ -5,29 +5,31 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
-from enrich_pure_external_persons import (
-    REQUEST_TIMEOUT as EXTERNAL_REQUEST_TIMEOUT,
-    extract_openalex_id,
-    extract_orcid_id,
-    select_researchoutputs,
-)
-from enrich_pure_external_orgs import (
-    address_needs_update,
-    dedupe_records_by_uuid,
-    get_ext_orgdata_pure,
-    match_organizations,
-    _has_identifier,
-    _points_equal,
-)
 from config import ROR_ID_URI
 from enrich_internal_persons_with_ids import (
     REQUEST_TIMEOUT,
     _normalize_identifier,
-    check_new_ids,
     _resolve_pure_person_uuid_column,
+    check_new_ids,
     fetch_person_ids,
     fetch_personroots,
     update_persons,
+)
+from enrich_pure_external_orgs import (
+    _has_identifier,
+    _points_equal,
+    address_needs_update,
+    dedupe_records_by_uuid,
+    get_ext_orgdata_pure,
+    match_organizations,
+)
+from enrich_pure_external_persons import (
+    REQUEST_TIMEOUT as EXTERNAL_REQUEST_TIMEOUT,
+)
+from enrich_pure_external_persons import (
+    extract_openalex_id,
+    extract_orcid_id,
+    select_researchoutputs,
 )
 
 

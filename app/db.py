@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 import sqlite3
-
+from pathlib import Path
 
 JOBS_SCHEMA = """
 CREATE TABLE IF NOT EXISTS jobs (
