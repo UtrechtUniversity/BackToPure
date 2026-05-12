@@ -417,3 +417,5 @@ Acceptance criteria:
 - Verification: `npm run build` passed.
 - Verification: `BTP_CONFIG_PATH=src/config.example.ini .venv/bin/flask --app BackToPure routes` listed the Flask routes.
 - Verification: `git ls-files` still reports no tracked generated artifacts after tests/build.
+- Phase 3 commit: `dadb0ab` (`Document clone and test workflow`).
+- Phase 3 push status: `dadb0ab` is present on `origin/jobs-orientied`; final checkpoint-status note commit is pending push from an authenticated client.
