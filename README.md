@@ -90,13 +90,25 @@ pip install -r requirements.txt
 ```
 
 ### 4. Configure the Application
-Edit `config.py` to set the following variables:
-- `PURE_BASE_URL`: Base URL of the Pure API
-- `PURE_API_KEY`: API key for Pure
-- `RIC_BASE_URL`: Base URL of the Ricgraph API
-- `FACULTY_PREFIX`: Prefix for faculties in Ricgraph
+Create a private local config file from the example:
 
-Ensure `src/config.ini` is updated with relevant API settings if needed.
+```bash
+cp src/config.example.ini src/config.ini
+```
+
+Then edit `src/config.ini` with your Pure, Ricgraph, and OpenAlex settings. This file is intentionally ignored by git because it contains local URLs and API keys.
+
+You can also point the app at a private config file elsewhere:
+
+```bash
+export BTP_CONFIG_PATH=/path/to/config.ini
+```
+
+For production, set a private Flask secret:
+
+```bash
+export BTP_SECRET_KEY='replace-with-a-long-random-value'
+```
 
 ---
 
@@ -161,4 +173,3 @@ SOFTWARE.
 
 ## Contribution
 Feel free to open issues and submit pull requests to improve the project.
-

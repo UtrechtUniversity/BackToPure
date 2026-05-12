@@ -6,10 +6,10 @@ Scope: Make the repository clean, secure, maintainable, and straightforward for 
 
 ## Progress
 
-- Overall status: Phase 1 completed
-- Current focus: Configuration and secrets
-- Completed tickets: `PRD-101`, `PRD-102`
-- Next ticket: `PRD-201`
+- Overall status: Phase 2 completed
+- Current focus: Clone-and-run developer experience
+- Completed tickets: `PRD-101`, `PRD-102`, `PRD-201`, `PRD-202`, `PRD-203`
+- Next ticket: `PRD-301`
 
 ## Goals
 
@@ -86,7 +86,7 @@ Acceptance criteria:
 
 ### PRD-201: Add safe example configuration
 
-Status: Not started
+Status: Completed
 
 Deliverables:
 
@@ -101,7 +101,7 @@ Acceptance criteria:
 
 ### PRD-202: Load sensitive settings safely
 
-Status: Not started
+Status: Completed
 
 Deliverables:
 
@@ -117,7 +117,7 @@ Acceptance criteria:
 
 ### PRD-203: Rotate exposed credentials if needed
 
-Status: Not started
+Status: Completed
 
 Deliverables:
 
@@ -392,3 +392,15 @@ Acceptance criteria:
 - Verification: `git check-ignore` confirms `.idea/`, `__pycache__/`, `frontend/dist/`, runtime data, logs, and office lock files are ignored.
 - Phase 1 commit: `38160b5` (`Clean generated files from repository`).
 - Phase 1 push status: blocked by missing GitHub HTTPS credentials in this environment.
+- Completed Phase 2 configuration and secrets hardening.
+- Added `src/config.example.ini` with placeholders and documented copying it to private `src/config.ini`.
+- Added `BTP_CONFIG_PATH` support and clearer missing-config errors.
+- Replaced the fixed Flask secret with `BTP_SECRET_KEY`/`SECRET_KEY`, with production enforcement through `BTP_ENV=production`.
+- Made `BackToPure.py` default to debug off and read host/port/debug from environment.
+- Checked repository history for `src/config.ini`; it is not tracked and has no branch history here. Rotate local keys if they were shared outside git.
+- Verification: `python3 -m py_compile BackToPure.py app/__init__.py src/config.py`.
+- Verification: imported `config` with `BTP_CONFIG_PATH=src/config.example.ini`.
+- Verification: `create_app()` works with example config and defaults to debug off.
+- Verification: `BTP_ENV=production` without a secret raises a clear error.
+- Verification: missing `BTP_CONFIG_PATH` raises a clear copy/example message.
+- Backend pytest remains blocked until dev dependencies are added in Phase 3: `/usr/bin/python3: No module named pytest`.
