@@ -452,3 +452,5 @@ Acceptance criteria:
 - Verification: `BTP_CONFIG_PATH=src/config.example.ini .venv/bin/python -m pytest -q` passed with 136 tests and 5 subtests.
 - Verification: `npm test` passed with 43 frontend tests.
 - Verification: `npm run build` passed.
+- Phase 6 commit: `8d4f209` (`Add CI quality gates`).
+- Phase 6 push status: blocked by missing GitHub HTTPS credentials in this environment.
