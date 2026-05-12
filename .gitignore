@@ -3,11 +3,15 @@ src/research_outputs.json
 
 # Ignore Python bytecode files
 __pycache__/
+**/__pycache__/
 *.pyc
+*.pyo
+*.pyd
 
 # Local virtual environments and IDE files
 .venv/
 .idea/
+.vscode/
 
 # Ignore logs
 logs/
@@ -15,15 +19,20 @@ logs/
 
 # Temporary/lock files
 *.lock
+.~lock.*#
 
 # Local databases and runtime data
 *.db
+*.db-*
+*.sqlite
+*.sqlite3
 data/
 output/
 output.csv
 
 # Frontend local build tooling
 frontend/node_modules/
-frontend/*.tsbuildinfo
+frontend/dist/
+*.tsbuildinfo
 frontend/vite.config.js
 frontend/vite.config.d.ts
