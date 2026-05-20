@@ -3,56 +3,56 @@ import { Link } from "react-router-dom";
 export function HomePage() {
   return (
     <section className="page page-home">
-      <header className="hero-card home-hero">
+      <header className="panel page-header home-header">
         <div>
           <p className="eyebrow">Home</p>
           <h2>BackToPure</h2>
           <p className="hero-copy">
-            BackToPure helps teams check data from Ricgraph against Pure, prepare review files,
-            and apply only the updates that have been checked first.
+            Review data against Pure, prepare files, and apply only the rows that were checked.
           </p>
         </div>
         <div className="inline-actions">
           <Link className="primary-action" to="/dashboard">
-            Open Dashboard
+            Dashboard
+          </Link>
+          <Link className="secondary-action" to="/history">
+            History
           </Link>
         </div>
       </header>
 
       <section className="home-grid">
         <article className="panel home-card">
-          <p className="eyebrow">What It Is</p>
-          <h3>A review-first update tool</h3>
+          <p className="eyebrow">Role</p>
+          <h3>Review-first updates</h3>
           <p>
-            The application runs controlled workflows for internal persons, external persons,
-            external organisations, research outputs, and datasets. Each run keeps its own log and
-            review files together.
+            Run controlled workflows for persons, organisations, outputs, and datasets with logs
+            and review files stored per job.
           </p>
         </article>
 
         <article className="panel home-card">
-          <p className="eyebrow">What It Does</p>
-          <h3>Checks first, updates after</h3>
+          <p className="eyebrow">Flow</p>
+          <h3>Check, then apply</h3>
           <p>
-            BackToPure compares source data with what is already in Pure, shows the proposed
-            changes in review files, and only applies the selected rows after review.
+            Compare source data with Pure, review the proposed changes, and apply only the selected
+            rows.
           </p>
         </article>
 
         <article className="panel home-card">
-          <p className="eyebrow">Ricgraph</p>
-          <h3>The connected graph source</h3>
+          <p className="eyebrow">Source</p>
+          <h3>Ricgraph input</h3>
           <p>
-            Ricgraph is the graph-based source used here to collect and connect information about
-            people, organisations, outputs, and datasets before those results are checked against
-            Pure.
+            Ricgraph provides the connected source data that is checked against Pure before any
+            update is applied.
           </p>
         </article>
       </section>
 
       <section className="panel home-flow">
-        <p className="eyebrow">How It Works</p>
-        <h3>Simple flow</h3>
+        <p className="eyebrow">Process</p>
+        <h3>Three-step flow</h3>
         <div className="home-steps">
           <article>
             <strong>1. Start a job</strong>

@@ -76,7 +76,7 @@ describe("NewResearchOutputsJobPage", () => {
       initialEntries: ["/jobs/new/research-outputs"],
     });
 
-    await screen.findByText("Research Outputs");
+    await screen.findByRole("heading", { name: "Research Outputs" });
     await screen.findByRole("option", { name: "Law" });
     await user.selectOptions(screen.getByRole("combobox"), "law");
     await user.click(screen.getByRole("button", { name: "Create Job" }));

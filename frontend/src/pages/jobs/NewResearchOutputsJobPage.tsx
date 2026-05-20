@@ -45,18 +45,13 @@ export function NewResearchOutputsJobPage() {
       <header className="page-header">
         <p className="eyebrow">Create Job</p>
         <h2>Research Outputs</h2>
-        <p>
-          Create a research-outputs job for the selected faculty.
-        </p>
+        <p>Choose a faculty and create the job.</p>
       </header>
 
       <form className="panel form-panel" onSubmit={onSubmit}>
         <div className="info-strip">
-          <strong>What this job does</strong>
-          <span>
-            This job collects research outputs linked to the selected faculty, prepares the review
-            CSV and JSON files, and lets you apply only the approved outputs afterward.
-          </span>
+          <strong>Purpose</strong>
+          <span>Collect research outputs and prepare review files.</span>
         </div>
 
         <label className="field">
@@ -81,9 +76,7 @@ export function NewResearchOutputsJobPage() {
           <button className="primary-action" type="submit" disabled={createJobMutation.isPending}>
             {createJobMutation.isPending ? "Creating..." : "Create Job"}
           </button>
-          <p className="hint">
-            Review the proposed outputs carefully before importing them into Pure.
-          </p>
+          <p className="hint">Review the proposed outputs before importing them into Pure.</p>
         </div>
       </form>
     </section>

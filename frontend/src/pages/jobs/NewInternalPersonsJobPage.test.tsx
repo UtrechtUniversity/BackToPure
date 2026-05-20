@@ -66,7 +66,7 @@ describe("NewInternalPersonsJobPage", () => {
       initialEntries: ["/jobs/new/internal-persons"],
     });
 
-    await screen.findByText("Internal Persons");
+    await screen.findByRole("heading", { name: "Internal Persons" });
     await screen.findByRole("option", { name: "Science" });
     await user.selectOptions(screen.getByRole("combobox"), "sci");
     await user.click(screen.getByRole("button", { name: "Create Job" }));
@@ -94,7 +94,7 @@ describe("NewInternalPersonsJobPage", () => {
       initialEntries: ["/jobs/new/internal-persons"],
     });
 
-    await screen.findByText("Internal Persons");
+    await screen.findByRole("heading", { name: "Internal Persons" });
     await user.click(screen.getByRole("button", { name: "Create Job" }));
 
     expect(await screen.findByText("An active internal_persons job already exists")).toBeInTheDocument();

@@ -45,18 +45,13 @@ export function NewDatasetsJobPage() {
       <header className="page-header">
         <p className="eyebrow">Create Job</p>
         <h2>Datasets</h2>
-        <p>
-          Create a datasets job for the selected faculty.
-        </p>
+        <p>Choose a faculty and create the job.</p>
       </header>
 
       <form className="panel form-panel" onSubmit={onSubmit}>
         <div className="info-strip">
-          <strong>What this job does</strong>
-          <span>
-            This job collects datasets linked to the selected faculty, prepares the review CSV and
-            JSON files, and lets you apply only the approved dataset imports afterward.
-          </span>
+          <strong>Purpose</strong>
+          <span>Collect datasets and prepare review files.</span>
         </div>
 
         <label className="field">
@@ -81,9 +76,7 @@ export function NewDatasetsJobPage() {
           <button className="primary-action" type="submit" disabled={createJobMutation.isPending}>
             {createJobMutation.isPending ? "Creating..." : "Create Job"}
           </button>
-          <p className="hint">
-            Review the proposed dataset imports carefully before sending them to Pure.
-          </p>
+          <p className="hint">Review the proposed dataset imports before sending them to Pure.</p>
         </div>
       </form>
     </section>

@@ -30,19 +30,19 @@ export function AppShell() {
             History
           </NavLink>
           <NavLink to="/jobs/new/internal-persons" className="nav-link">
-            New Internal Persons Job
+            Internal Persons
           </NavLink>
           <NavLink to="/jobs/new/external-persons" className="nav-link">
-            New External Persons Job
+            External Persons
           </NavLink>
           <NavLink to="/jobs/new/external-orgs" className="nav-link">
-            New External Organisations Job
+            External Organisations
           </NavLink>
           <NavLink to="/jobs/new/research-outputs" className="nav-link">
-            New Research Outputs Job
+            Research Outputs
           </NavLink>
           <NavLink to="/jobs/new/datasets" className="nav-link">
-            New Datasets Job
+            Datasets
           </NavLink>
         </nav>
       </aside>

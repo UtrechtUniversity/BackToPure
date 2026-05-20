@@ -75,7 +75,7 @@ describe("NewExternalPersonsJobPage", () => {
       initialEntries: ["/jobs/new/external-persons"],
     });
 
-    await screen.findByText("External Persons");
+    await screen.findByRole("heading", { name: "External Persons" });
     await screen.findByRole("option", { name: "Law" });
     await user.selectOptions(screen.getByRole("combobox"), "law");
     await user.click(screen.getByRole("button", { name: "Create Job" }));

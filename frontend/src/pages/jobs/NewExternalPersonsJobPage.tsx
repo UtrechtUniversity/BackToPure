@@ -45,18 +45,13 @@ export function NewExternalPersonsJobPage() {
       <header className="page-header">
         <p className="eyebrow">Create Job</p>
         <h2>External Persons</h2>
-        <p>
-          Create an external-persons job for the selected faculty.
-        </p>
+        <p>Choose a faculty and create the job.</p>
       </header>
 
       <form className="panel form-panel" onSubmit={onSubmit}>
         <div className="info-strip">
-          <strong>What this job does</strong>
-          <span>
-            This job gathers external co-author matches, prepares review files, and lets you apply
-            only the approved updates afterward.
-          </span>
+          <strong>Purpose</strong>
+          <span>Gather external co-author matches and prepare review files.</span>
         </div>
 
         <label className="field">
@@ -81,7 +76,7 @@ export function NewExternalPersonsJobPage() {
           <button className="primary-action" type="submit" disabled={createJobMutation.isPending}>
             {createJobMutation.isPending ? "Creating..." : "Create Job"}
           </button>
-          <p className="hint">Choose the faculty and review the generated files before applying updates.</p>
+          <p className="hint">Review the generated files before applying updates.</p>
         </div>
       </form>
     </section>

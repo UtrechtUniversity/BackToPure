@@ -58,7 +58,7 @@ describe("DashboardPage", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders recent jobs and the review-flow message", async () => {
+  it("renders recent jobs and the results overview", async () => {
     mockedApi.getJobs.mockResolvedValue({
       items: [
         makeJob(),
@@ -102,16 +102,20 @@ describe("DashboardPage", () => {
     });
 
     expect(await screen.findByText("Tracked Runs")).toBeInTheDocument();
-    expect(screen.getByText("Net Results Across All Jobs")).toBeInTheDocument();
-    expect(await screen.findByText("Internal Persons")).toBeInTheDocument();
+    expect(screen.getByText("Net Results")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Internal Persons" })).toBeInTheDocument();
     expect(await screen.findByText("Rollback 0")).toBeInTheDocument();
-    expect(screen.getByText("Review rows before applying updates")).toBeInTheDocument();
+    expect(screen.getByText("Review rows in each job before applying updates.")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Open Guide" })).not.toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: "New Datasets Job" })).toHaveLength(2);
-    expect(screen.getAllByRole("link", { name: "New Research Outputs Job" })).toHaveLength(2);
-    expect(screen.getAllByRole("link", { name: "New External Persons Job" })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: "Datasets" })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: "Research Outputs" })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: "External Persons" })).toHaveLength(2);
+    expect(screen.queryByRole("link", { name: "New Datasets Job" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "New Research Outputs Job" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "New External Persons Job" })).not.toBeInTheDocument();
     expect(await screen.findByText("job-001")).toBeInTheDocument();
     expect(await screen.findByText("job-002")).toBeInTheDocument();
+    expect(screen.getAllByText("Faculty: All faculties")).toHaveLength(2);
   });
 
   it("supports manual refresh", async () => {
@@ -140,7 +144,7 @@ describe("DashboardPage", () => {
     });
 
     await screen.findByText("job-001");
-    await user.click(screen.getAllByRole("button", { name: "Refresh" })[1]);
+    await user.click(screen.getAllByRole("button", { name: "Refresh" })[0]);
 
     expect(mockedApi.getJobs).toHaveBeenCalledTimes(2);
   });
@@ -186,5 +190,47 @@ describe("DashboardPage", () => {
 
     expect(mockedApi.deleteJob).toHaveBeenCalledWith("job-001");
     expect(await screen.findByText("job-002")).toBeInTheDocument();
+  });
+
+  it("allows deleting a queued job from the dashboard", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("confirm", vi.fn(() => true));
+    mockedApi.getJobs
+      .mockResolvedValueOnce({
+        items: [
+          makeJob({ id: "job-001", status: "queued" }),
+          makeJob({ id: "job-002", status: "running" }),
+        ],
+      })
+      .mockResolvedValueOnce({
+        items: [makeJob({ id: "job-002", status: "running" })],
+      });
+    mockedApi.getResultsDashboard.mockResolvedValue({
+      totals: {
+        applied_items: 0,
+        rolled_back_items: 0,
+        net_items: 0,
+        applied_entities: 0,
+        rolled_back_entities: 0,
+        net_entities: 0,
+      },
+      workflows: [],
+    });
+    mockedApi.deleteJob.mockResolvedValue(undefined);
+
+    renderWithRouter({
+      routes: [
+        {
+          path: "/",
+          element: <AppShell />,
+          children: [{ index: true, element: <DashboardPage /> }],
+        },
+      ],
+    });
+
+    await screen.findByText("job-001");
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(mockedApi.deleteJob).toHaveBeenCalledWith("job-001");
   });
 });

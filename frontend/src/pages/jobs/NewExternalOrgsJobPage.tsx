@@ -45,18 +45,13 @@ export function NewExternalOrgsJobPage() {
       <header className="page-header">
         <p className="eyebrow">Create Job</p>
         <h2>External Organisations</h2>
-        <p>
-          Create an external-organisations job for the selected faculty.
-        </p>
+        <p>Choose a faculty and create the job.</p>
       </header>
 
       <form className="panel form-panel" onSubmit={onSubmit}>
         <div className="info-strip">
-          <strong>What this job does</strong>
-          <span>
-            This job gathers external organisation matches, prepares the review CSV and JSON files,
-            and lets you apply only the approved updates afterward.
-          </span>
+          <strong>Purpose</strong>
+          <span>Gather external organisation matches and prepare review files.</span>
         </div>
 
         <label className="field">
@@ -81,9 +76,7 @@ export function NewExternalOrgsJobPage() {
           <button className="primary-action" type="submit" disabled={createJobMutation.isPending}>
             {createJobMutation.isPending ? "Creating..." : "Create Job"}
           </button>
-          <p className="hint">
-            Review the organisation match, ROR, and address change before applying updates.
-          </p>
+          <p className="hint">Review the organisation match, ROR, and address change first.</p>
         </div>
       </form>
     </section>

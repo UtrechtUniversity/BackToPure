@@ -17,9 +17,10 @@ describe("HomePage", () => {
     });
 
     expect(await screen.findByRole("heading", { name: "BackToPure" })).toBeInTheDocument();
-    expect(screen.getByText("A review-first update tool")).toBeInTheDocument();
-    expect(screen.getByText("The connected graph source")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open Dashboard" })).toHaveAttribute("href", "/dashboard");
+    expect(screen.getByText("Review-first updates")).toBeInTheDocument();
+    expect(screen.getByText("Ricgraph input")).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Dashboard" })[1]).toHaveAttribute("href", "/dashboard");
+    expect(screen.getAllByRole("link", { name: "History" })[1]).toHaveAttribute("href", "/history");
     expect(screen.getByAltText("BackToPure Logo").closest("a")).toHaveAttribute("href", "/");
   });
 });

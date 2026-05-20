@@ -45,18 +45,13 @@ export function NewInternalPersonsJobPage() {
       <header className="page-header">
         <p className="eyebrow">Create Job</p>
         <h2>Internal Persons</h2>
-        <p>
-          Create an internal-persons job for the selected faculty.
-        </p>
+        <p>Choose a faculty and create the job.</p>
       </header>
 
       <form className="panel form-panel" onSubmit={onSubmit}>
         <div className="info-strip">
-          <strong>What this job does</strong>
-          <span>
-            This job collects person data, prepares review files, and lets you apply approved
-            updates afterward.
-          </span>
+          <strong>Purpose</strong>
+          <span>Collect person data and prepare review files.</span>
         </div>
 
         <label className="field">

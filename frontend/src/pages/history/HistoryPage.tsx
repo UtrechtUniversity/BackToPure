@@ -77,14 +77,14 @@ export function HistoryPage() {
       <header className="page-header">
         <p className="eyebrow">History</p>
         <h2>Job History</h2>
-        <p>Browse all jobs, filter by workflow or status, and jump back into a specific run.</p>
+        <p>Browse runs, filter by workflow or status, and reopen a specific job.</p>
       </header>
 
       <section className="panel">
         <div className="panel-header">
           <div>
             <p className="eyebrow">Filters</p>
-            <h3>Find A Job</h3>
+            <h3>Filters</h3>
           </div>
           <button className="secondary-action" type="button" onClick={() => void jobsQuery.refetch()}>
             Refresh
@@ -126,9 +126,9 @@ export function HistoryPage() {
 
       <section className="metric-grid">
         <article className="metric-card">
-          <p className="eyebrow">Visible Jobs</p>
+          <p className="eyebrow">Visible</p>
           <strong>{filteredJobs.length}</strong>
-          <span>Current filter result</span>
+          <span>Current result</span>
         </article>
         <article className="metric-card">
           <p className="eyebrow">Completed</p>
@@ -136,7 +136,7 @@ export function HistoryPage() {
           <span>Finished successfully</span>
         </article>
         <article className="metric-card">
-          <p className="eyebrow">Needs Review</p>
+          <p className="eyebrow">Review</p>
           <strong>{reviewJobs}</strong>
           <span>Still waiting for action</span>
         </article>
