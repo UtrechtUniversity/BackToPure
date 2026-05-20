@@ -1,15 +1,15 @@
 # Production Readiness Plan
 
-Last updated: 2026-05-12
+Last updated: 2026-05-20
 Owner: BackToPure maintainers
-Scope: Make the repository clean, secure, maintainable, and straightforward for a new developer to clone, configure, test, and run.
+Scope: Make the repository clean, secure, maintainable, and straightforward for another organization to clone, configure, test, validate, and run against its own Pure and Ricgraph data.
 
 ## Progress
 
-- Overall status: Phase 7 completed
-- Current focus: Plan completed
-- Completed tickets: `PRD-101`, `PRD-102`, `PRD-201`, `PRD-202`, `PRD-203`, `PRD-301`, `PRD-302`, `PRD-303`, `PRD-401`, `PRD-402`, `PRD-501`, `PRD-502`, `PRD-503`, `PRD-504`, `PRD-601`, `PRD-602`, `PRD-603`, `PRD-701`, `PRD-702`, `PRD-703`
-- Next ticket: none
+- Overall status: Phase 10 completed; Phase 11 in progress
+- Current focus: Phase verification, commit, and push discipline is blocked by pre-existing dirty worktree
+- Completed tickets: `PRD-101`, `PRD-102`, `PRD-201`, `PRD-202`, `PRD-203`, `PRD-301`, `PRD-302`, `PRD-303`, `PRD-401`, `PRD-402`, `PRD-501`, `PRD-502`, `PRD-503`, `PRD-504`, `PRD-601`, `PRD-602`, `PRD-603`, `PRD-701`, `PRD-702`, `PRD-703`, `PRD-801`, `PRD-802`, `PRD-803`, `PRD-901`, `PRD-902`, `PRD-903`, `PRD-1001`, `PRD-1002`, `PRD-1003`, `PRD-1101`, `PRD-1102`
+- Next ticket: `PRD-1103`
 
 ## Goals
 
@@ -20,12 +20,16 @@ Scope: Make the repository clean, secure, maintainable, and straightforward for 
 - The Flask backend can run with production-safe defaults.
 - Legacy scripts and UI routes are either migrated, documented, or removed.
 - The remaining code has clear ownership boundaries and minimal duplication.
+- A non-UU organization can configure Pure, Ricgraph, OpenAlex, and required Pure source/type URIs without editing source code.
+- Ricgraph can be supplied by a local instance or a compatible remote endpoint such as `https://explorer.ricgraph.eu/api/` when the data is appropriate.
+- First-run setup includes all required local snapshots and validation checks before any Pure update is possible.
 
 ## Non-Goals
 
 - Full cloud deployment automation in the first cleanup pass.
 - Rewriting the Pure/Ricgraph business logic from scratch.
 - Removing the legacy Flask UI before the React/API replacement is complete.
+- Guaranteeing that public Ricgraph Explorer data is suitable for every organization. Production use still requires the Ricgraph data source to match the target Pure instance.
 
 ## Review Baseline
 
@@ -370,6 +374,253 @@ Acceptance criteria:
 - Operators know which files are disposable and which files are durable state.
 - Large caches are not accidentally treated as source code.
 
+## Phase 8: Organization-Neutral Configuration
+
+### PRD-801: Remove hard-coded Ricgraph localhost URLs
+
+Status: Completed
+
+Deliverables:
+
+- Replace every remaining `http://127.0.0.1:3030/api/...` Ricgraph call with `RIC_BASE_URL`.
+- Cover dataset import paths, especially `fetch_personroots`, `select_faculties`, and dataset `all` selection.
+- Add tests that fail if workflow modules contain hard-coded Ricgraph base URLs.
+
+Acceptance criteria:
+
+- Setting `RICGRAPH-API.BaseURL` controls every Ricgraph request.
+- Dataset jobs can use local Ricgraph or a compatible remote Ricgraph endpoint without code edits.
+- `grep -R "127.0.0.1:3030" src app` finds only example config/docs, not executable workflow code.
+
+### PRD-802: Replace UU-specific faculty assumptions with config
+
+Status: Completed
+
+Deliverables:
+
+- Move primary faculty matching rules into configuration.
+- Replace hard-coded checks for `uu faculty:` and `uu faculty research:` with configurable include/exclude prefixes or organization types.
+- Keep current UU defaults in `src/config.example.ini` as an example.
+- Document how another institution should define its faculty/organization scope.
+
+Acceptance criteria:
+
+- A non-UU organization can list/select its organizational units without changing Python/TypeScript.
+- Research organizations can be excluded through config where needed.
+- Existing UU behavior remains unchanged with the current config.
+
+### PRD-803: Validate Pure source/type URI configuration
+
+Status: Completed
+
+Deliverables:
+
+- Add a startup/config validation command that checks required Pure source/type URIs are present.
+- Validate the most important IDs:
+  - internal OpenAlex person source
+  - external OpenAlex person source
+  - external ORCID source
+  - external organization ROR source
+  - research output and dataset type/role URIs used by create workflows
+- Provide clear errors telling operators which `src/config.ini` values to fix.
+
+Acceptance criteria:
+
+- Bad or missing Pure URI config is caught before running jobs.
+- Another organization can verify its Pure-specific values from one command.
+- Documentation states that these URI values are Pure-instance-specific.
+
+## Phase 9: Clone-And-Run Onboarding
+
+### PRD-901: Add a first-run setup guide
+
+Status: Completed
+
+Deliverables:
+
+- Add `docs/first-run-setup.md`.
+- Cover:
+  - clone
+  - Python virtualenv
+  - editable install
+  - frontend install/build
+  - private `src/config.ini`
+  - optional `BTP_CONFIG_PATH`
+  - Ricgraph source selection
+  - OpenAlex institution snapshot build
+  - safe first test job
+  - review before apply
+- Include a minimum viable local/dev path and a production path.
+
+Acceptance criteria:
+
+- A new organization can follow one document from clone to first safe dry-run job.
+- The guide distinguishes demo/testing from production update use.
+- The guide warns not to apply updates until artifacts have been reviewed.
+
+### PRD-902: Add an environment verification command
+
+Status: Completed
+
+Deliverables:
+
+- Add a command or script, for example `btp doctor` or `src/doctor.py`.
+- Check:
+  - Python package imports
+  - config file exists
+  - Pure API reachable
+  - Ricgraph API reachable
+  - required Ricgraph routes respond
+  - frontend build exists or React UI fallback is explained
+  - OpenAlex institution snapshot exists for external organization jobs
+  - runtime directories are writable
+- Make checks read-only.
+
+Acceptance criteria:
+
+- Operators can verify setup without starting a real enrichment/update job.
+- Failures are actionable and name the setting or command to fix.
+- The command exits non-zero when a required production prerequisite fails.
+
+### PRD-903: Make OpenAlex snapshot setup explicit and repeatable
+
+Status: Completed
+
+Deliverables:
+
+- Document `.venv/bin/python src/snapshot_openalex_institutions.py --download`.
+- Add expected output and approximate size/time.
+- Explain that `output/openalex_cache/openalex_institutions_snapshot_by_ror.json` is required for external organization jobs.
+- Document refresh cadence and whether old snapshots can be reused.
+
+Acceptance criteria:
+
+- A fresh clone can create the external-organization snapshot without AWS CLI.
+- Missing snapshot errors point to the same documented command.
+- Operators understand which OpenAlex cache files are required and which are legacy/optional.
+
+## Phase 10: Ricgraph Source Portability
+
+### PRD-1001: Define supported Ricgraph API contract
+
+Status: Completed
+
+Deliverables:
+
+- Document the Ricgraph routes BackToPure uses:
+  - `organization/search`
+  - `get_all_personroot_nodes`
+  - `get_all_neighbor_nodes`
+  - `advanced_search`
+  - `person/enrich`
+- Document expected parameters, response fields, and key formats.
+- State what data must exist in Ricgraph for each workflow.
+
+Acceptance criteria:
+
+- A Ricgraph operator can tell whether their endpoint is compatible before running BackToPure.
+- Public Explorer, local Ricgraph, and institution-hosted Ricgraph can be compared against the same contract.
+
+### PRD-1002: Add remote Ricgraph smoke tests
+
+Status: Completed
+
+Deliverables:
+
+- Add optional integration tests gated by an environment variable such as `BTP_RICGRAPH_TEST_BASE_URL`.
+- Test read-only routes against a configured Ricgraph endpoint.
+- Include an example using `https://explorer.ricgraph.eu/api/` for route-shape validation only.
+
+Acceptance criteria:
+
+- CI does not depend on public Ricgraph.
+- Maintainers can run a smoke test against local or remote Ricgraph before release.
+- The test makes clear that route availability does not prove the data matches the target Pure instance.
+
+### PRD-1003: Make public Explorer usage a documented mode
+
+Status: Completed
+
+Deliverables:
+
+- Document when `https://explorer.ricgraph.eu/api/` is acceptable:
+  - demo
+  - route compatibility checks
+  - UU-like data exploration
+- Document when it is not enough:
+  - production updates for another Pure tenant
+  - private/institution-specific data
+  - missing Pure UUID links for the target Pure instance
+
+Acceptance criteria:
+
+- Users do not confuse public Explorer compatibility with production readiness.
+- The docs give a clear recommendation: production updates should use the institution's own Ricgraph data source unless the public endpoint is explicitly known to match the target Pure.
+
+## Phase 11: Production Safety And Validation
+
+### PRD-1101: Add dry-run validation before apply
+
+Status: Completed
+
+Deliverables:
+
+- Ensure every workflow has a safe dry-run/review artifact path.
+- Prevent apply unless a completed job has review artifacts and selected rows.
+- Display source config summary on job detail:
+  - Pure base URL
+  - Ricgraph base URL
+  - selected organization/faculty scope
+  - snapshot/cache status where relevant
+
+Acceptance criteria:
+
+- Operators can see which Pure and Ricgraph endpoints produced a job before applying it.
+- Apply is blocked for incomplete or non-reviewable jobs.
+
+### PRD-1102: Improve external organization funnel reporting
+
+Status: Completed
+
+Deliverables:
+
+- Add unique-count counters to external organization logs/results:
+  - Ricgraph research outputs selected
+  - Pure outputs fetched
+  - Ricgraph organization links found
+  - unique Pure external organization UUIDs found
+  - Pure org records fetched
+  - matched exact
+  - matched fuzzy
+  - ambiguous
+  - no match
+  - already has ROR
+  - proposed update
+- De-duplicate OpenAlex ambiguous candidates by ROR/OpenAlex ID before marking a match ambiguous.
+
+Acceptance criteria:
+
+- A reviewer can explain why a job produced its update count.
+- Safe obvious duplicates in the OpenAlex snapshot do not suppress valid proposals.
+
+### PRD-1103: Phase verification, commit, and push discipline
+
+Status: Blocked
+
+Deliverables:
+
+- At the end of each new phase:
+  - run focused backend tests
+  - run relevant frontend tests/build when UI changes
+  - update this plan's progress log
+  - commit
+  - push from an authenticated client
+
+Acceptance criteria:
+
+- Every completed phase has a verification note, commit hash, and push status in this file.
+- Work remains reviewable and recoverable.
+
 ## Tracking Rules
 
 - Update `Last updated` whenever this file changes.
@@ -381,6 +632,100 @@ Acceptance criteria:
 - Record the commit hash and push status in `Progress Log` for each completed phase.
 
 ## Progress Log
+
+### 2026-05-20
+
+- Reopened the production readiness plan after reviewing what another organization would need after cloning from GitHub.
+- Added organization-neutral readiness goals for configurable Pure/Ricgraph setup, first-run onboarding, OpenAlex snapshot setup, remote Ricgraph compatibility, and production safety checks.
+- Added Phase 8 through Phase 11:
+  - Phase 8: remove hard-coded local Ricgraph URLs, make faculty filters configurable, and validate Pure-specific URI config.
+  - Phase 9: add first-run docs, environment verification, and explicit OpenAlex snapshot setup.
+  - Phase 10: define and test the Ricgraph API contract, including public Explorer as a documented demo/smoke-test source.
+  - Phase 11: strengthen production safety, apply gating, external-organization funnel reporting, and commit/push discipline.
+- Set `PRD-801` as the next ticket because hard-coded Ricgraph localhost URLs block remote Ricgraph use.
+- Completed `PRD-801`.
+- Replaced dataset workflow Ricgraph calls in `src/update_datasets_from_ricgraph.py` with `RIC_BASE_URL`.
+- Changed dataset faculty lookup to use configured `FACULTY_PREFIX` instead of a literal `uu faculty`.
+- Added a regression test that fails if executable Python code under `src/` or `app/` hard-codes `127.0.0.1:3030/api`.
+- Verification: `.venv/bin/python -m pytest tests/test_app_structure.py -q` passed with 69 tests.
+- Verification: `.venv/bin/python -m py_compile src/update_datasets_from_ricgraph.py`.
+- Verification: `grep -R --exclude-dir='__pycache__' "127.0.0.1:3030/api" -n src app` now finds only local/example config files, not executable workflow code.
+- Completed `PRD-802`.
+- Added configurable Ricgraph organization scope in `src/config.py`:
+  - `PrimaryOrganizationPrefixes`
+  - `ExcludedOrganizationPrefixes`
+- Kept UU-compatible defaults by deriving prefixes from `FacultyPrefix` when the new config values are absent.
+- Replaced hard-coded `uu faculty` search values in external persons, external organizations, research outputs, and datasets with `FACULTY_PREFIX`.
+- Replaced hard-coded primary/research organization filtering in app routes, job validation, and workflow scripts with shared config helpers.
+- Documented organization scope settings in `README.md` and `src/config.example.ini`.
+- Verification: `.venv/bin/python -m pytest tests/test_app_structure.py tests/test_internal_persons.py tests/test_routes.py -q` passed with 160 tests and 5 subtests.
+- Verification: `.venv/bin/python -m py_compile src/config.py src/enrich_pure_external_persons.py src/enrich_pure_external_orgs.py src/update_researchoutput_from_ricgraph.py src/update_datasets_from_ricgraph.py src/btp.py app/routes.py app/services/jobs.py`.
+- Verification: `BTP_CONFIG_PATH=src/config.example.ini .venv/bin/python` confirmed configured include/exclude prefixes accept primary organization keys and reject excluded organization keys.
+- Completed `PRD-803`.
+- Added `validate_pure_uri_config()` in `src/config.py` for Pure-specific source/type/default checks.
+- Added `src/doctor.py --config-only` as a read-only validation command.
+- Added packaging metadata for the new `doctor` module.
+- Documented the config-only doctor command in `README.md`.
+- Verification: `.venv/bin/python src/doctor.py --config-only` passed against the local private config.
+- Verification: `BTP_CONFIG_PATH=src/config.example.ini .venv/bin/python src/doctor.py --config-only` reports the intentional placeholder publisher/university values.
+- Verification: `.venv/bin/python -m pytest tests/test_app_structure.py tests/test_internal_persons.py tests/test_routes.py -q` passed with 161 tests and 5 subtests.
+- Verification: `.venv/bin/python -m py_compile src/config.py src/doctor.py`.
+- Phase 8 is complete. Next ticket is `PRD-901`: add a first-run setup guide.
+- Completed `PRD-901`.
+- Added `docs/first-run-setup.md` covering clone/install, private config, Ricgraph source selection, Pure URI validation, OpenAlex institution snapshot creation, local/production launch, safe first jobs, review-before-apply rules, and runtime state.
+- Linked the first-run guide from `README.md`.
+- Verification: reviewed `docs/first-run-setup.md` for the required setup path and corrected it to avoid claiming job detail source summaries before `PRD-1101`.
+- Next ticket is `PRD-902`: add a broader environment verification command.
+- Completed `PRD-902`.
+- Extended `src/doctor.py` beyond config-only mode.
+- The doctor now checks Python imports, frontend build presence, OpenAlex institution snapshot presence, runtime path writability, and optional Pure/Ricgraph HTTP reachability.
+- Added `--skip-network` for deterministic local checks and kept `--config-only` for Pure URI/source validation only.
+- Documented the broader doctor command in `README.md`.
+- Verification: `.venv/bin/python src/doctor.py --skip-network` passed locally.
+- Verification: `.venv/bin/python -m pytest tests/test_app_structure.py tests/test_internal_persons.py tests/test_routes.py -q` passed with 162 tests and 5 subtests.
+- Verification: `.venv/bin/python -m py_compile src/doctor.py src/config.py`.
+- Next ticket is `PRD-903`: make OpenAlex snapshot setup explicit and repeatable.
+- Completed `PRD-903`.
+- Expanded `docs/first-run-setup.md` with OpenAlex snapshot paths, expected rough size, compact lookup output, repeat behavior, refresh cadence, and a warning not to confuse the snapshot lookup with older API caches.
+- Added the snapshot build command to `README.md`.
+- Confirmed the external-organization missing-snapshot error already points to `.venv/bin/python src/snapshot_openalex_institutions.py --download`.
+- Verification: `.venv/bin/python src/doctor.py --skip-network` confirms the snapshot is present locally.
+- Phase 9 is complete. Next ticket is `PRD-1001`: define the supported Ricgraph API contract.
+- Completed `PRD-1001`.
+- Added `docs/ricgraph-api-contract.md` with the required Ricgraph routes, expected parameters, response fields, workflow-specific data requirements, and public Explorer caveats.
+- Linked the Ricgraph API contract from `README.md`.
+- Verification: confirmed the contract documents `organization/search`, `get_all_personroot_nodes`, `get_all_neighbor_nodes`, `advanced_search`, and `person/enrich`.
+- Next ticket is `PRD-1002`: add optional remote Ricgraph smoke tests.
+- Completed `PRD-1002`.
+- Added `tests/test_ricgraph_smoke.py` with optional route-shape tests gated by `BTP_RICGRAPH_TEST_BASE_URL`.
+- Documented how to run the optional smoke tests in `README.md`.
+- Verification: `.venv/bin/python -m pytest tests/test_ricgraph_smoke.py -q` skips all smoke tests when no endpoint is configured.
+- Verification: `BTP_RICGRAPH_TEST_BASE_URL=https://explorer.ricgraph.eu/api/ .venv/bin/python -m pytest tests/test_ricgraph_smoke.py -q` passed with 5 tests.
+- Next ticket is `PRD-1003`: document public Explorer usage as a supported mode with clear limits.
+- Completed `PRD-1003`.
+- Expanded `docs/ricgraph-api-contract.md` with explicit public Explorer allowed/not-allowed use cases.
+- Added the same public Explorer warning to `docs/first-run-setup.md`.
+- Verification: confirmed docs distinguish demo/route checks from production updates for another Pure tenant.
+- Phase 10 is complete. Next ticket is `PRD-1101`: add dry-run validation before apply.
+- Completed `PRD-1101`.
+- Verified the existing apply gate blocks jobs that are not `needs_review`, jobs without ready artifacts, and jobs with zero selected updates.
+- Added `sourceConfig` to job API responses with Pure base URL, Ricgraph base URL, configured faculty prefix, and selected faculty/organization scope.
+- Displayed the source summary on the React job detail page so reviewers can see which configured sources produced a job before applying.
+- Verification: `.venv/bin/python -m pytest tests/test_app_structure.py tests/test_internal_persons.py tests/test_routes.py -q` passed with 163 tests and 5 subtests.
+- Verification: `npm run build` passed.
+- Verification: `.venv/bin/python -m py_compile app/services/jobs.py`.
+- Next ticket is `PRD-1102`: improve external organization funnel reporting.
+- Completed `PRD-1102`.
+- Added external-organization funnel logging for selected Ricgraph outputs, fetched Pure outputs, publications with organizations, external organization links, unique external organization UUIDs, fetched Pure organization records, exact/fuzzy proposals, already-with-ROR, no-name-match, and ambiguous counts.
+- De-duplicated OpenAlex institution match candidates by ROR/OpenAlex ID before applying the ambiguity gap rule, so duplicate snapshot aliases no longer suppress clear matches.
+- Added a regression test for duplicate OpenAlex candidates with the same ROR.
+- Verification: `.venv/bin/python -m pytest tests/test_internal_persons.py -q` passed with 35 tests.
+- Verification: `.venv/bin/python -m pytest tests/test_app_structure.py tests/test_internal_persons.py tests/test_routes.py tests/test_ricgraph_smoke.py -q` passed with 164 tests, 5 skipped smoke tests, and 5 subtests.
+- Verification: `.venv/bin/python -m py_compile src/enrich_pure_external_orgs.py`.
+- Next ticket is `PRD-1103`: phase verification, commit, and push discipline.
+- Started `PRD-1103` and marked it blocked.
+- `git status --short` shows a broad pre-existing dirty worktree across backend, frontend, docs, and workflow files. Some of those changes predate this pass, so committing from this environment risks mixing unrelated work.
+- Verification has been completed for the work above, but commit/push should be done from PyCharm or after the worktree is reviewed and staged deliberately.
 
 ### 2026-05-12
 

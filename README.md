@@ -114,6 +114,18 @@ cp src/config.example.ini src/config.ini
 
 Then edit `src/config.ini` with your Pure, Ricgraph, and OpenAlex settings. This file is intentionally ignored by git because it contains local URLs and API keys.
 
+The Ricgraph organization scope is configurable. For UU this normally looks like:
+
+```ini
+[RICGRAPH-API]
+BaseURL = https://explorer.ricgraph.eu/api/
+FacultyPrefix = uu faculty
+PrimaryOrganizationPrefixes = uu faculty:
+ExcludedOrganizationPrefixes = uu faculty research:
+```
+
+For another organization, set `FacultyPrefix` to the value used for Ricgraph organization search, set `PrimaryOrganizationPrefixes` to the organization key prefix that should appear in the dropdown, and set `ExcludedOrganizationPrefixes` to any related trees that should never be selected for jobs.
+
 You can also point the app at a private config file elsewhere:
 
 ```bash
@@ -124,6 +136,28 @@ For production, set a private Flask secret:
 
 ```bash
 export BTP_SECRET_KEY='replace-with-a-long-random-value'
+```
+
+Before running jobs against a real Pure tenant, validate the local Pure URI/source configuration:
+
+```bash
+.venv/bin/python src/doctor.py --config-only
+```
+
+This check is read-only. It catches missing or placeholder Pure source/type values such as ORCID, OpenAlex, ROR, dataset roles, dataset type, and default organization settings.
+
+For broader local setup checks, including imports, frontend build, runtime paths, OpenAlex snapshot, and optional Pure/Ricgraph reachability:
+
+```bash
+.venv/bin/python src/doctor.py
+```
+
+Use `--skip-network` when you only want local checks.
+
+External organization jobs require the OpenAlex institution snapshot lookup. Build or refresh it with:
+
+```bash
+.venv/bin/python src/snapshot_openalex_institutions.py --download
 ```
 
 Optional runtime path overrides:
@@ -233,6 +267,17 @@ For local development, the editable install keeps the `app/` package and the fla
 Production runtime state should live outside the git checkout. Use `BTP_RUNTIME_ROOT` or the more specific `BTP_DATA_DIR`, `BTP_LOGS_DIR`, and `BTP_FRONTEND_DIST` variables to place writable state and built frontend assets in stable paths.
 
 Operational details, retention guidance, and the recommended deployment layout are documented in [docs/runtime-operations.md](docs/runtime-operations.md).
+
+For a new organization setting up BackToPure from a fresh clone, follow [docs/first-run-setup.md](docs/first-run-setup.md).
+
+The expected Ricgraph routes and data shapes are documented in [docs/ricgraph-api-contract.md](docs/ricgraph-api-contract.md).
+
+Optional Ricgraph route-shape smoke tests can be run against a local or remote endpoint:
+
+```bash
+BTP_RICGRAPH_TEST_BASE_URL=https://explorer.ricgraph.eu/api/ \
+  .venv/bin/python -m pytest tests/test_ricgraph_smoke.py -q
+```
 
 ---
 
