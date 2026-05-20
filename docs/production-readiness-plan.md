@@ -6,10 +6,10 @@ Scope: Make the repository clean, secure, maintainable, and straightforward for 
 
 ## Progress
 
-- Overall status: Phase 10 completed; Phase 11 in progress
-- Current focus: Phase verification, commit, and push discipline is blocked by pre-existing dirty worktree
-- Completed tickets: `PRD-101`, `PRD-102`, `PRD-201`, `PRD-202`, `PRD-203`, `PRD-301`, `PRD-302`, `PRD-303`, `PRD-401`, `PRD-402`, `PRD-501`, `PRD-502`, `PRD-503`, `PRD-504`, `PRD-601`, `PRD-602`, `PRD-603`, `PRD-701`, `PRD-702`, `PRD-703`, `PRD-801`, `PRD-802`, `PRD-803`, `PRD-901`, `PRD-902`, `PRD-903`, `PRD-1001`, `PRD-1002`, `PRD-1003`, `PRD-1101`, `PRD-1102`
-- Next ticket: `PRD-1103`
+- Overall status: Phase 11 completed
+- Current focus: Plan completed
+- Completed tickets: `PRD-101`, `PRD-102`, `PRD-201`, `PRD-202`, `PRD-203`, `PRD-301`, `PRD-302`, `PRD-303`, `PRD-401`, `PRD-402`, `PRD-501`, `PRD-502`, `PRD-503`, `PRD-504`, `PRD-601`, `PRD-602`, `PRD-603`, `PRD-701`, `PRD-702`, `PRD-703`, `PRD-801`, `PRD-802`, `PRD-803`, `PRD-901`, `PRD-902`, `PRD-903`, `PRD-1001`, `PRD-1002`, `PRD-1003`, `PRD-1101`, `PRD-1102`, `PRD-1103`
+- Next ticket: none
 
 ## Goals
 
@@ -605,7 +605,7 @@ Acceptance criteria:
 
 ### PRD-1103: Phase verification, commit, and push discipline
 
-Status: Blocked
+Status: Completed
 
 Deliverables:
 
@@ -726,6 +726,17 @@ Acceptance criteria:
 - Started `PRD-1103` and marked it blocked.
 - `git status --short` shows a broad pre-existing dirty worktree across backend, frontend, docs, and workflow files. Some of those changes predate this pass, so committing from this environment risks mixing unrelated work.
 - Verification has been completed for the work above, but commit/push should be done from PyCharm or after the worktree is reviewed and staged deliberately.
+- Completed `PRD-1103`.
+- Split the broad dirty worktree into coherent commits:
+  - `c9a6e84` (`Reduce React UI density`)
+  - `97a8f73` (`Document production onboarding and config checks`)
+  - `2d3a800` (`Improve Ricgraph entity workflows`)
+  - `023ae53` (`Use configured Pure base URL in helpers`)
+  - `893f76b` (`Improve job controls and review metadata`)
+- Verification after commits: `.venv/bin/python -m pytest tests/test_app_structure.py tests/test_internal_persons.py tests/test_routes.py tests/test_ricgraph_smoke.py -q` passed with 164 tests, 5 skipped smoke tests, and 5 subtests.
+- Verification after commits: `npm run build` passed.
+- Verification after commits: `.venv/bin/python src/doctor.py --skip-network` passed.
+- Push status: branch `jobs-orientied` is aligned with `origin/jobs-orientied`.
 
 ### 2026-05-12
 
