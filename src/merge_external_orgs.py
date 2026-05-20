@@ -66,7 +66,7 @@ def merge_external_orgs(final_result):
         "items": items
     }
 
-    url = "https://staging.research-portal.uu.nl/ws/api/external-organizations/merge"
+    url = PURE_BASE_URL.rstrip("/") + "/external-organizations/merge"
     headers = {
         "accept": "application/json",
         "api-key": PURE_API_KEY,  # Replace with your actual API key

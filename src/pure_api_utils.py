@@ -112,7 +112,7 @@ def get_pure_person_details(contributor, headers):
     """
 
     # api_url = BASE_URL + 'persons/search/'
-    api_url = "https://staging.research-portal.uu.nl/ws/api/persons/search/"
+    api_url = BASE_URL.rstrip("/") + "/persons/search/"
     specific_date = datetime.strptime('2023-01-01', "%Y-%m-%d")
 
     for id_type, id_value in contributor['ids'].items():
@@ -162,7 +162,7 @@ def create_external_person(contributor, headers):
     :return: UUID of the newly created external person.
     """
 
-    url = "https://staging.research-portal.uu.nl/ws/api/external-persons"
+    url = BASE_URL.rstrip("/") + "/external-persons"
     # url = BASE_URL + '/external-persons'
 
     data = {"name": {"firstName": contributor['first_name'], "lastName": contributor['last_name']}}
@@ -255,7 +255,7 @@ def parse_contributors(contributors_str):
 
 def get_journal_uuid(issn, headers):
     print('get journal id')
-    url = "https://staging.research-portal.uu.nl/ws/api/journals/search/"
+    url = BASE_URL.rstrip("/") + "/journals/search/"
     # url = BASE_URL + '/journals/search/'
     data = {"searchString": issn}
     json_data = json.dumps(data)
@@ -272,7 +272,7 @@ def get_journal_uuid(issn, headers):
 def create_research_output(ro, headers):
 
     print('create research output')
-    url = " https://staging.research-portal.uu.nl/ws/api/research-outputs"
+    url = BASE_URL.rstrip("/") + "/research-outputs"
     json_data = json.dumps(ro)
     print(json_data)
 
@@ -364,4 +364,3 @@ def format_organizations_from_contributors(contributors, default_uuid="cdd6493c-
 
     formatted_organizations = [{"systemName": "Organization", "uuid": uuid} for uuid in organization_uuids]
     return formatted_organizations
-

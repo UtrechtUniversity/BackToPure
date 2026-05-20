@@ -81,7 +81,7 @@ def create_external_person(first_name, last_name, orcid, openalex):
     :return: UUID of the newly created external person.
     """
     api_url = PURE_BASE_URL + 'external-persons/'
-    url = "https://staging.research-portal.uu.nl/ws/api/external-persons"
+    url = PURE_BASE_URL.rstrip("/") + "/external-persons"
 
     data = {"name": {"firstName": first_name, "lastName": last_name}}
     if openalex:
@@ -290,7 +290,6 @@ def parse_keywords(keywords):
     return data
 
 def get_journal_uuid(issn):
-    # url = "https://staging.research-portal.uu.nl/ws/api/journals/search/"
     url = PURE_BASE_URL + '/journals/search/'
     data = {"searchString": issn}
     json_data = json.dumps(data)
@@ -847,7 +846,5 @@ def df_to_pure(df):
         logger.debug(f"Successfully saved 'to be updated' DataFrame to {csv_output_file}.")
     except Exception as e:
         logger.error(f"Failed to save 'to be updated' DataFrame: {e}")
-
-
 
 
