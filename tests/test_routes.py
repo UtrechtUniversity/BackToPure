@@ -35,6 +35,27 @@ class FakeProcess:
 
 
 class RouteHelperTests(unittest.TestCase):
+    @patch("app.routes.requests.get")
+    def test_fetch_faculties_excludes_research_organisations(self, mock_get):
+        response = MagicMock()
+        response.json.return_value = {
+            "results": [
+                {"_key": "uu faculty: faculteit test|organization_name", "value": "UU Faculty: Test"},
+                {
+                    "_key": "uu faculty research: faculteit test|organization_name",
+                    "value": "UU Faculty research: Test",
+                },
+            ]
+        }
+        mock_get.return_value = response
+
+        result = routes._fetch_faculties()
+
+        self.assertEqual(
+            [{"value": "uu faculty: faculteit test|organization_name", "label": "UU Faculty: Test"}],
+            result,
+        )
+
     def test_resolve_output_target_maps_known_sources(self):
         directory, required = routes._resolve_output_target("import_research_outputs")
         self.assertEqual("output/research_output", directory)
@@ -119,14 +140,19 @@ class FlaskRouteTests(unittest.TestCase):
     @patch("app.routes.requests.get")
     def test_faculties_returns_options(self, mock_get):
         response = MagicMock()
-        response.json.return_value = {"results": [{"_key": "fac-1", "value": "Science"}]}
+        response.json.return_value = {
+            "results": [{"_key": "uu faculty: science|organization_name", "value": "Science"}]
+        }
         response.raise_for_status.return_value = None
         mock_get.return_value = response
 
         result = self.client.get("/faculties")
 
         self.assertEqual(200, result.status_code)
-        self.assertEqual([{"value": "fac-1", "label": "Science"}], result.get_json())
+        self.assertEqual(
+            [{"value": "uu faculty: science|organization_name", "label": "Science"}],
+            result.get_json(),
+        )
 
     @patch("app.routes.requests.get", side_effect=RequestException("down"))
     def test_faculties_returns_error_when_ricgraph_unavailable(self, _mock_get):
@@ -138,14 +164,19 @@ class FlaskRouteTests(unittest.TestCase):
     @patch("app.routes.requests.get")
     def test_api_faculties_returns_items(self, mock_get):
         response = MagicMock()
-        response.json.return_value = {"results": [{"_key": "fac-1", "value": "Science"}]}
+        response.json.return_value = {
+            "results": [{"_key": "uu faculty: science|organization_name", "value": "Science"}]
+        }
         response.raise_for_status.return_value = None
         mock_get.return_value = response
 
         result = self.client.get("/api/faculties")
 
         self.assertEqual(200, result.status_code)
-        self.assertEqual({"items": [{"value": "fac-1", "label": "Science"}]}, result.get_json())
+        self.assertEqual(
+            {"items": [{"value": "uu faculty: science|organization_name", "label": "Science"}]},
+            result.get_json(),
+        )
 
     @patch("app.routes.requests.get", side_effect=RequestException("down"))
     def test_api_faculties_returns_error_when_ricgraph_unavailable(self, _mock_get):
@@ -505,6 +536,22 @@ class FlaskRouteTests(unittest.TestCase):
         self.assertEqual(400, result.status_code)
         self.assertIn("cannot be deleted while it is active", result.get_json()["error"])
 
+    def test_api_delete_job_allows_queued_job(self):
+        service = JobService(
+            self.app.extensions["btp_db"]["db_path"],
+            project_root=self.tempdir.name,
+        )
+        service.create_job(
+            job_id="job-queued",
+            job_type="internal_persons",
+            status="queued",
+            created_at="2026-04-20T13:00:00Z",
+        )
+
+        result = self.client.delete("/api/jobs/job-queued")
+
+        self.assertEqual(204, result.status_code)
+
     def test_api_delete_job_removes_inactive_job(self):
         service = JobService(
             self.app.extensions["btp_db"]["db_path"],
@@ -817,6 +864,30 @@ class FlaskRouteTests(unittest.TestCase):
             os.path.join(self.tempdir.name, created["artifact_dir"]),
             mock_popen.call_args.kwargs["env"]["BTP_OUTPUT_DIR"],
         )
+
+    @patch("app.services.jobs.JobService._terminate_pid")
+    @patch("app.services.jobs.JobService._find_active_job_pids", return_value=[1234])
+    def test_api_cancel_job_stops_active_job(self, _find_pids, terminate_pid):
+        service = JobService(
+            self.app.extensions["btp_db"]["db_path"],
+            project_root=self.tempdir.name,
+        )
+        service.create_job(
+            job_id="job-running",
+            job_type="internal_persons",
+            status="running",
+            created_at="2026-04-20T13:00:00Z",
+            started_at="2026-04-20T13:01:00Z",
+            log_path="logs/jobs/job-running.log",
+        )
+
+        result = self.client.post("/api/jobs/job-running/cancel")
+        body = result.get_json()
+
+        self.assertEqual(200, result.status_code)
+        self.assertEqual("failed", body["status"])
+        self.assertEqual("Job was cancelled by user", body["error_message"])
+        terminate_pid.assert_called_once_with(1234)
 
     @patch("app.services.jobs.subprocess.Popen")
     def test_api_apply_job_executes_apply_flow_and_exposes_logs(self, mock_popen):

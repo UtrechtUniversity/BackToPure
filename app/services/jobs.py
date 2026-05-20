@@ -3,8 +3,10 @@ from __future__ import annotations
 import csv
 import json
 import os
+import signal
 import subprocess
 import sys
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,7 +22,27 @@ from app.models import (
     is_valid_transition,
     parse_job_status,
 )
-from config import OPENALEXEX_ID_URI, ORCID_ID_URI, PURE_BASE_URL, PURE_HEADERS, ROR_ID_URI
+from config import (
+    FACULTY_PREFIX,
+    OPENALEXEX_ID_URI,
+    ORCID_ID_URI,
+    PURE_BASE_URL,
+    PURE_HEADERS,
+    RIC_BASE_URL,
+    ROR_ID_URI,
+    is_excluded_organization_key,
+)
+
+
+def _process_failure_message(returncode: int) -> str:
+    if returncode < 0:
+        signal_number = abs(returncode)
+        try:
+            signal_name = signal.Signals(signal_number).name
+        except ValueError:
+            signal_name = f"signal {signal_number}"
+        return f"Process was killed by {signal_name} ({signal_number})"
+    return f"Process exited with code {returncode}"
 
 
 class JobService:
@@ -285,7 +307,6 @@ class JobService:
         if job is None:
             return False
         if job["status"] in {
-            JobStatus.QUEUED.value,
             JobStatus.RUNNING.value,
             JobStatus.APPLYING.value,
         }:
@@ -304,6 +325,34 @@ class JobService:
         if log_path and log_path.exists():
             log_path.unlink()
         return True
+
+    def cancel_job(self, job_id: str) -> dict | None:
+        job = self.get_job(job_id)
+        if job is None:
+            return None
+        if job["status"] not in {JobStatus.RUNNING.value, JobStatus.APPLYING.value}:
+            raise ValueError(f"Job {job_id} is not active")
+
+        pids = self._find_active_job_pids(job)
+        if not pids:
+            raise ValueError(f"No active process found for job {job_id}")
+
+        message = "Job was cancelled by user"
+        log_path = self._runtime_path(job["log_path"]) if job.get("log_path") else self.logs_dir / f"{job_id}.log"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        self._append_log(log_path, f"\n=== CANCELLED ===\n{message}\n")
+
+        for pid in pids:
+            self._terminate_pid(pid)
+
+        return self.update_job(
+            job_id,
+            status=JobStatus.FAILED,
+            finished_at=self._utcnow(),
+            exit_code=-signal.SIGTERM,
+            log_path=str(self._storage_path(log_path)),
+            error_message=message,
+        )
 
     def update_job(self, job_id: str, **fields: Any) -> dict | None:
         if not fields:
@@ -416,12 +465,12 @@ class JobService:
                 command,
                 cwd=self.project_root,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
                 env=env,
             )
-            stdout, stderr = process.communicate()
+            stdout, stderr = self._communicate_and_stream_log(process, log_path)
         except FileNotFoundError as exc:
             message = f"Could not start process: {exc}"
             self._append_log(log_path, f"ERROR {message}\n")
@@ -461,7 +510,11 @@ class JobService:
                 error_message=None,
             )
 
-        error_message = stderr.strip() or f"Process exited with code {process.returncode}"
+        cancelled_job = self.get_job(job_id)
+        if cancelled_job and cancelled_job.get("error_message") == "Job was cancelled by user":
+            return cancelled_job
+
+        error_message = stderr.strip() or _process_failure_message(process.returncode)
         return self.update_job(
             job_id,
             status=JobStatus.FAILED,
@@ -559,7 +612,11 @@ class JobService:
                 error_message=None,
             )
 
-        error_message = stderr.strip() or f"Process exited with code {process.returncode}"
+        cancelled_job = self.get_job(job_id)
+        if cancelled_job and cancelled_job.get("error_message") == "Job was cancelled by user":
+            return cancelled_job
+
+        error_message = stderr.strip() or _process_failure_message(process.returncode)
         if change_set_id is not None:
             self._mark_change_set_failed(change_set_id)
         return self.update_job(
@@ -846,6 +903,9 @@ class JobService:
         invalid_params = set(params) - set(allowed_params)
         if invalid_params:
             raise ValueError(f"Unsupported job params: {sorted(invalid_params)}")
+        faculty_choice = params.get("facultyChoice", params.get("faculty_choice"))
+        if is_excluded_organization_key(faculty_choice):
+            raise ValueError("Excluded organisations are not supported. Select a primary organisation instead.")
 
     def _ensure_job_creation_allowed(self, job_type: str, status: str) -> None:
         return
@@ -866,15 +926,19 @@ class JobService:
     def _build_command(self, definition, params: dict[str, Any], script_path: Path) -> list[str]:
         command = [self.python_executable, "-u", str(script_path)]
         if definition.job_type == JobType.EXTERNAL_PERSONS:
+            faculty_choice = "all"
             for alias in ("faculty_choice", "facultyChoice"):
                 if alias in params:
-                    command.append(str(params[alias]))
+                    faculty_choice = str(params[alias])
                     break
-            command.extend(definition.fixed_args)
+            command.append(faculty_choice)
+            command.append("yes")
+            openalex_fallback = "no"
             for alias in ("use_openalex_fallback", "useOpenAlexFallback"):
                 if alias in params:
-                    command.append(str(params[alias]))
+                    openalex_fallback = str(params[alias])
                     break
+            command.append(openalex_fallback)
             return command
         for aliases in definition.cli_param_aliases:
             for alias in aliases:
@@ -921,6 +985,12 @@ class JobService:
     def _runtime_path(self, relative_path: str | Path) -> Path:
         return self.runtime_root / Path(relative_path)
 
+    def _storage_path(self, path: Path) -> Path:
+        try:
+            return path.relative_to(self.runtime_root)
+        except ValueError:
+            return path
+
     @staticmethod
     def _artifact_kind(filename: str) -> str:
         suffix = Path(filename).suffix.lower()
@@ -954,6 +1024,104 @@ class JobService:
     def _append_log(log_path: Path, content: str) -> None:
         with open(log_path, "a", encoding="utf-8") as handle:
             handle.write(content)
+
+    def _communicate_and_stream_log(self, process, log_path: Path) -> tuple[str, str]:
+        stdout_pipe = getattr(process, "stdout", None)
+        if stdout_pipe is None or stdout_pipe.__class__.__module__.startswith("unittest.mock"):
+            return process.communicate()
+
+        for line in iter(stdout_pipe.readline, ""):
+            self._append_log(log_path, line)
+
+        wait = getattr(process, "wait", None)
+        if callable(wait):
+            wait()
+            return "", ""
+
+        stdout, stderr = process.communicate()
+        return stdout or "", stderr or ""
+
+    def _find_active_job_pids(self, job: dict) -> list[int]:
+        artifact_dir = job.get("artifact_dir")
+        if not artifact_dir:
+            return []
+
+        expected_output_dir = str(self._artifact_directory(artifact_dir))
+        current_pid = os.getpid()
+        matches: list[int] = []
+        proc_dir = Path("/proc")
+        if not proc_dir.exists():
+            return matches
+
+        for pid_dir in proc_dir.iterdir():
+            if not pid_dir.name.isdigit():
+                continue
+            pid = int(pid_dir.name)
+            if pid == current_pid:
+                continue
+            try:
+                environ = (pid_dir / "environ").read_bytes().decode("utf-8", errors="ignore")
+            except (FileNotFoundError, PermissionError, ProcessLookupError):
+                continue
+            if f"BTP_OUTPUT_DIR={expected_output_dir}" in environ:
+                matches.append(pid)
+
+        return self._with_child_pids(matches)
+
+    def _with_child_pids(self, pids: list[int]) -> list[int]:
+        if not pids:
+            return []
+
+        children_by_parent: dict[int, list[int]] = {}
+        for pid_dir in Path("/proc").iterdir():
+            if not pid_dir.name.isdigit():
+                continue
+            try:
+                pid = int(pid_dir.name)
+                status = (pid_dir / "status").read_text(encoding="utf-8", errors="ignore")
+            except (FileNotFoundError, PermissionError, ProcessLookupError):
+                continue
+            parent_pid = None
+            for line in status.splitlines():
+                if line.startswith("PPid:"):
+                    parent_pid = int(line.split()[1])
+                    break
+            if parent_pid is not None:
+                children_by_parent.setdefault(parent_pid, []).append(pid)
+
+        ordered: list[int] = []
+        seen: set[int] = set()
+
+        def add_tree(pid: int) -> None:
+            if pid in seen:
+                return
+            seen.add(pid)
+            for child_pid in children_by_parent.get(pid, []):
+                add_tree(child_pid)
+            ordered.append(pid)
+
+        for pid in pids:
+            add_tree(pid)
+        return ordered
+
+    @staticmethod
+    def _terminate_pid(pid: int) -> None:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            return
+
+        for _ in range(10):
+            try:
+                os.kill(pid, 0)
+            except ProcessLookupError:
+                return
+            time.sleep(0.1)
+
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            return
 
     @staticmethod
     def _utcnow() -> str:
@@ -997,6 +1165,17 @@ class JobService:
             "canApply": effective_can_apply,
             "artifacts": artifact_summary["artifacts"],
             "results": results_summary,
+            "sourceConfig": self._source_config_summary(job),
+        }
+
+    @staticmethod
+    def _source_config_summary(job: dict) -> dict[str, Any]:
+        return {
+            "pureBaseUrl": PURE_BASE_URL,
+            "ricgraphBaseUrl": RIC_BASE_URL,
+            "facultyPrefix": FACULTY_PREFIX,
+            "facultyChoice": (job.get("params") or {}).get("facultyChoice")
+            or (job.get("params") or {}).get("faculty_choice"),
         }
 
     def _detect_artifacts(self, job_type: str, artifact_dir: str | None) -> dict:

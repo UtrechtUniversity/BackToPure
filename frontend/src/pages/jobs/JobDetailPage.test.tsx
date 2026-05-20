@@ -16,6 +16,7 @@ vi.mock("../../lib/api", () => ({
     updateJobReviewTable: vi.fn(),
     getJobChangeSet: vi.fn(),
     runJob: vi.fn(),
+    cancelJob: vi.fn(),
     applyJob: vi.fn(),
     rollbackJob: vi.fn(),
     deleteJob: vi.fn(),
@@ -111,7 +112,9 @@ describe("JobDetailPage", () => {
     });
 
     expect(await screen.findByText("job-001")).toBeInTheDocument();
-    expect(await screen.findAllByText("Download and inspect the CSV and JSON review files before applying updates.")).toHaveLength(2);
+    expect(await screen.findByText("Faculty")).toBeInTheDocument();
+    expect(await screen.findByText("All faculties")).toBeInTheDocument();
+    expect(await screen.findByText("Download and check these files before applying updates.")).toBeInTheDocument();
     expect(await screen.findByText("personstobeupdated_20260420.csv")).toBeInTheDocument();
     expect((await screen.findAllByText("Persons found")).length).toBeGreaterThan(0);
     expect((await screen.findAllByText("Persons ready to update")).length).toBeGreaterThan(0);
@@ -131,7 +134,7 @@ describe("JobDetailPage", () => {
     await user.click(screen.getByRole("button", { name: "Show main log (1 lines)" }));
     expect(await screen.findByText("done")).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Review Table" })).toBeInTheDocument();
-    expect(await screen.findByText("Review the CSV here and update which rows should be applied.")).toBeInTheDocument();
+    expect(await screen.findByText("Adjust which rows should be applied.")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Selected" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Updated" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Name" })).toBeInTheDocument();
@@ -159,7 +162,7 @@ describe("JobDetailPage", () => {
       );
     mockedApi.getJobLogs
       .mockResolvedValueOnce({ jobId: "job-001", logPath: null, content: "" })
-      .mockResolvedValueOnce({
+      .mockResolvedValue({
         jobId: "job-001",
         logPath: "logs/jobs/job-001.log",
         content: "collected",
@@ -208,7 +211,7 @@ describe("JobDetailPage", () => {
 
     await waitFor(() => expect(mockedApi.runJob).toHaveBeenCalledWith("job-001"));
     await waitFor(() => expect(mockedApi.getJob).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(mockedApi.getJobLogs).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockedApi.getJobLogs).toHaveBeenCalledTimes(3));
     await waitFor(() => expect(mockedApi.getJobArtifacts).toHaveBeenCalledTimes(2));
   });
 
@@ -245,7 +248,7 @@ describe("JobDetailPage", () => {
       );
     mockedApi.getJobLogs
       .mockResolvedValueOnce({ jobId: "job-001", logPath: "logs/jobs/job-001.log", content: "review ready" })
-      .mockResolvedValueOnce({
+      .mockResolvedValue({
         jobId: "job-001",
         logPath: "logs/jobs/job-001.log",
         content: "review ready\napply ok",
@@ -318,7 +321,7 @@ describe("JobDetailPage", () => {
 
     await waitFor(() => expect(mockedApi.applyJob).toHaveBeenCalledWith("job-001"));
     await waitFor(() => expect(mockedApi.getJob).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(mockedApi.getJobLogs).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockedApi.getJobLogs).toHaveBeenCalledTimes(3));
     await waitFor(() => expect(mockedApi.getJobArtifacts).toHaveBeenCalledTimes(2));
   });
 
@@ -415,6 +418,84 @@ describe("JobDetailPage", () => {
 
     await waitFor(() => expect(mockedApi.deleteJob).toHaveBeenCalledWith("job-001"));
     expect(await screen.findByText("Dashboard", { selector: "div" })).toBeInTheDocument();
+  });
+
+  it("allows deleting a queued job before it starts", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("confirm", vi.fn(() => true));
+    mockedApi.getJobChangeSet.mockResolvedValue(null);
+    mockedApi.getJob.mockResolvedValue(
+      makeJob({
+        status: "queued",
+      }),
+    );
+    mockedApi.getJobLogs.mockResolvedValue({ jobId: "job-001", logPath: null, content: "" });
+    mockedApi.getJobArtifacts.mockResolvedValue({ jobId: "job-001", directory: "output/internal_persons", items: [] });
+    mockedApi.deleteJob.mockResolvedValue(undefined);
+
+    renderWithRouter({
+      routes: [
+        {
+          path: "/",
+          element: <AppShell />,
+          children: [
+            { index: true, element: <div>Dashboard</div> },
+            { path: "jobs/:jobId", element: <JobDetailPage /> },
+          ],
+        },
+      ],
+      initialEntries: ["/jobs/job-001"],
+    });
+
+    await screen.findByRole("button", { name: "Delete Job" });
+    await user.click(screen.getByRole("button", { name: "Delete Job" }));
+
+    await waitFor(() => expect(mockedApi.deleteJob).toHaveBeenCalledWith("job-001"));
+  });
+
+  it("allows stopping a running job", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("confirm", vi.fn(() => true));
+    mockedApi.getJobChangeSet.mockResolvedValue(null);
+    mockedApi.getJob
+      .mockResolvedValueOnce(
+        makeJob({
+          status: "running",
+          log_path: "logs/jobs/job-001.log",
+        }),
+      )
+      .mockResolvedValueOnce(
+        makeJob({
+          status: "failed",
+          log_path: "logs/jobs/job-001.log",
+          error_message: "Job was cancelled by user",
+        }),
+      );
+    mockedApi.getJobLogs.mockResolvedValue({ jobId: "job-001", logPath: "logs/jobs/job-001.log", content: "" });
+    mockedApi.getJobArtifacts.mockResolvedValue({ jobId: "job-001", directory: "output/internal_persons", items: [] });
+    mockedApi.cancelJob.mockResolvedValue(
+      makeJob({
+        status: "failed",
+        log_path: "logs/jobs/job-001.log",
+        error_message: "Job was cancelled by user",
+      }),
+    );
+
+    renderWithRouter({
+      routes: [
+        {
+          path: "/",
+          element: <AppShell />,
+          children: [{ path: "jobs/:jobId", element: <JobDetailPage /> }],
+        },
+      ],
+      initialEntries: ["/jobs/job-001"],
+    });
+
+    await screen.findByRole("button", { name: "Stop Job" });
+    await user.click(screen.getByRole("button", { name: "Stop Job" }));
+
+    await waitFor(() => expect(mockedApi.cancelJob).toHaveBeenCalledWith("job-001"));
   });
 
   it("shows rollback details and starts rollback for a completed internal persons job", async () => {
@@ -676,7 +757,7 @@ describe("JobDetailPage", () => {
     });
 
     expect(await screen.findByText("job-001")).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: "Rollback Option" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Rollback" })).toBeInTheDocument();
     expect(await screen.findByText("No rollback data is available for this job.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Rollback Updates" })).not.toBeInTheDocument();
   });
@@ -732,7 +813,7 @@ describe("JobDetailPage", () => {
     });
 
     expect(await screen.findByText("job-001")).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: "Rollback Option" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Rollback" })).toBeInTheDocument();
     expect(await screen.findByText("No rollback data is available for this job.")).toBeInTheDocument();
     expect(
       await screen.findByText(
@@ -920,7 +1001,7 @@ describe("JobDetailPage", () => {
       initialEntries: ["/jobs/job-456"],
     });
 
-    expect(await screen.findByText("Latest Apply Error")).toBeInTheDocument();
+    expect(await screen.findByText("Latest Error")).toBeInTheDocument();
     expect(await screen.findByText("Failed to update data for UUID ext-1: bad request")).toBeInTheDocument();
   });
 
@@ -950,7 +1031,7 @@ describe("JobDetailPage", () => {
       initialEntries: ["/jobs/job-456"],
     });
 
-    expect(await screen.findByText("Latest Apply Error")).toBeInTheDocument();
+    expect(await screen.findByText("Latest Error")).toBeInTheDocument();
     expect(
       await screen.findByText(
         "Pure rejected the ORCID for T.K. Košir because the format is invalid. Check the ORCID value in the review table before applying again.",
@@ -992,7 +1073,7 @@ describe("JobDetailPage", () => {
       initialEntries: ["/jobs/job-789"],
     });
 
-    expect(await screen.findByText("Latest Apply Error")).toBeInTheDocument();
+    expect(await screen.findByText("Latest Error")).toBeInTheDocument();
     expect(
       await screen.findByText(
         "Pure rejected a DOI because it already exists. Check whether this record is already present in Pure.",

@@ -167,8 +167,29 @@ export function isActiveJobStatus(status: JobStatus) {
   return ACTIVE_STATUSES.includes(status);
 }
 
+export function canDeleteJobStatus(status: JobStatus) {
+  return status !== "running" && status !== "applying";
+}
+
+export function canCancelJobStatus(status: JobStatus) {
+  return status === "running" || status === "applying";
+}
+
 export function formatJobStatus(status: JobStatus | JobType) {
   return status.replace(/_/g, " ");
+}
+
+export function formatJobScope(job: JobRecord) {
+  const rawScope = job.params.facultyChoice ?? job.params.faculty_choice;
+  if (typeof rawScope !== "string" || rawScope.trim() === "") {
+    return "Scope not recorded";
+  }
+
+  const scope = rawScope.trim();
+  if (scope.toLowerCase() === "all") {
+    return "All faculties";
+  }
+  return scope.replace(/\|organization_name$/i, "");
 }
 
 export function formatTimestamp(value: string | null) {

@@ -63,6 +63,13 @@ export interface JobResultsSummary {
   rolled_back_count?: number;
 }
 
+export interface JobSourceConfig {
+  pureBaseUrl: string;
+  ricgraphBaseUrl: string;
+  facultyPrefix: string;
+  facultyChoice: string | null;
+}
+
 export interface JobRecord {
   id: string;
   job_type: JobType;
@@ -81,6 +88,7 @@ export interface JobRecord {
   canApply: boolean;
   artifacts: JobArtifacts;
   results: JobResultsSummary;
+  sourceConfig?: JobSourceConfig;
 }
 
 export interface JobChangeSetItem {

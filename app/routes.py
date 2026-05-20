@@ -11,7 +11,7 @@ from flask import Response, current_app, jsonify, render_template, request, send
 
 from app.models import JobType, get_job_type_definition
 from app.services import JobService
-from config import FACULTY_PREFIX, RIC_BASE_URL
+from config import FACULTY_PREFIX, RIC_BASE_URL, is_primary_organization_key
 
 
 @dataclass(frozen=True)
@@ -63,7 +63,15 @@ def _fetch_faculties():
     response.raise_for_status()
     data = response.json()
     faculties = data.get("results", [])
-    return [{'value': f['_key'], 'label': f['value']} for f in faculties]
+    return [
+        {'value': f['_key'], 'label': f['value']}
+        for f in faculties
+        if _is_primary_faculty_key(f.get('_key'))
+    ]
+
+
+def _is_primary_faculty_key(key):
+    return is_primary_organization_key(key)
 
 
 LEGACY_WORKFLOWS = (
@@ -87,7 +95,7 @@ LEGACY_WORKFLOWS = (
         run_endpoint="run_enrich_pure_external_persons",
         source_tokens=("enrich_external_persons",),
         cli_arg_spec=(("faculty_choice",), "yes", ("use_openalex_fallback",)),
-        form_defaults={"use_openalex_fallback": "yes"},
+        form_defaults={"use_openalex_fallback": "no"},
         failure_label="external persons",
     ),
     LegacyWorkflow(
@@ -375,6 +383,18 @@ def init_app(app):
         service = _job_service()
         try:
             job = service.run_job(job_id)
+        except ValueError as exc:
+            return jsonify({'error': str(exc)}), 400
+
+        if job is None:
+            return jsonify({'error': f'Job not found: {job_id}'}), 404
+        return jsonify(job)
+
+    @app.route('/api/jobs/<job_id>/cancel', methods=['POST'])
+    def api_cancel_job(job_id):
+        service = _job_service()
+        try:
+            job = service.cancel_job(job_id)
         except ValueError as exc:
             return jsonify({'error': str(exc)}), 400
 

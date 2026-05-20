@@ -1,6 +1,9 @@
+import configparser
 import json
 import os
+import signal
 import sqlite3
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -9,6 +12,8 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 
 import apply_updates_to_pure
+import config as btp_config
+import doctor
 import pure_datasets
 import pure_researchoutputs
 from app import create_app
@@ -21,7 +26,7 @@ from app.models import (
     is_valid_transition,
 )
 from app.services import JobService
-from config import OPENALEXEX_ID_URI, ORCID_ID_URI, PURE_BASE_URL, ROR_ID_URI
+from config import FACULTY_PREFIX, OPENALEXEX_ID_URI, ORCID_ID_URI, PURE_BASE_URL, RIC_BASE_URL, ROR_ID_URI
 
 
 class FakeCompletedProcess:
@@ -34,7 +39,92 @@ class FakeCompletedProcess:
         return self._stdout, self._stderr
 
 
+class FakeReadableStream:
+    def __init__(self, lines):
+        self._lines = list(lines)
+
+    def readline(self):
+        if self._lines:
+            return self._lines.pop(0)
+        return ""
+
+
+class FakeStreamingProcess:
+    def __init__(self, stdout_lines=None, stderr="", returncode=0):
+        self.stdout = FakeReadableStream(stdout_lines or [])
+        self.returncode = returncode
+        self._stderr = stderr
+
+    def communicate(self):
+        return "", self._stderr
+
+
 class AppStructureTests(unittest.TestCase):
+    def test_workflow_code_does_not_hardcode_local_ricgraph_api(self):
+        project_root = Path(__file__).resolve().parents[1]
+        forbidden = "127.0.0.1:3030/api"
+        offenders = []
+
+        for base in (project_root / "src", project_root / "app"):
+            for path in base.rglob("*.py"):
+                if "__pycache__" in path.parts:
+                    continue
+                text = path.read_text(encoding="utf-8")
+                if forbidden in text:
+                    offenders.append(str(path.relative_to(project_root)))
+
+        self.assertEqual([], offenders)
+
+    def test_primary_organization_filter_uses_configured_prefixes(self):
+        with patch.object(btp_config, "PRIMARY_ORGANIZATION_PREFIXES", ("school:",)), patch.object(
+            btp_config, "EXCLUDED_ORGANIZATION_PREFIXES", ("school research:", "archive:")
+        ):
+            self.assertTrue(btp_config.is_primary_organization_key("school: medicine|organization_name"))
+            self.assertFalse(
+                btp_config.is_primary_organization_key("school research: medicine|organization_name")
+            )
+            self.assertFalse(btp_config.is_primary_organization_key("department: medicine|organization_name"))
+            self.assertTrue(btp_config.is_excluded_organization_key("archive: old|organization_name"))
+
+    def test_pure_uri_config_validation_reports_placeholders(self):
+        parser = configparser.ConfigParser()
+        parser.read_dict(
+            {
+                "ID_URI": {
+                    "OPENALEX": "/dk/atira/pure/person/personsources/open_alex_id",
+                    "OPENALEXEX": "replace-with-external-openalex-source",
+                    "ORCIDEXT": "/dk/atira/pure/externalperson/externalpersonsources/orcid",
+                    "ROR_ID_URI": "/dk/atira/pure/ueoexternalorganisation/ueoexternalorganisationsources/ror_id",
+                },
+                "URI": {
+                    "contributor": "/dk/atira/pure/dataset/roles/dataset/contributor",
+                    "creator": "/dk/atira/pure/dataset/roles/dataset/creator",
+                    "type_dataset": "/dk/atira/pure/dataset/datasettypes/dataset/dataset",
+                    "supervisor": "/dk/atira/pure/researchoutput/roles/internalexternal/thesis/supervisor",
+                    "cosupervisor": "/dk/atira/pure/researchoutput/roles/internalexternal/thesis/cosupervisor",
+                },
+                "DEFAULTS": {
+                    "publisher": "replace-with-default-publisher-uuid",
+                    "university": "organization-uuid",
+                    "visibility_key": "FREE",
+                    "workflow_step": "forApproval",
+                    "language_uri": "/dk/atira/pure/core/languages/und",
+                },
+            }
+        )
+
+        issues = btp_config.validate_pure_uri_config(parser)
+
+        self.assertIn("Placeholder or empty value for external person OpenAlex source URI", issues[0])
+        self.assertTrue(any("[DEFAULTS] publisher" in issue for issue in issues))
+
+    def test_doctor_skip_network_runs_local_checks(self):
+        results = doctor.run_environment_checks(skip_network=True)
+
+        self.assertIn("imports", [result.name for result in results])
+        self.assertNotIn("Pure API", [result.name for result in results])
+        self.assertTrue(all(result.ok or not result.required for result in results))
+
     def test_create_app_reads_runtime_paths_from_environment(self):
         with tempfile.TemporaryDirectory() as tmpdir, patch.dict(
             os.environ,
@@ -71,6 +161,29 @@ class AppStructureTests(unittest.TestCase):
                 ).fetchone()
 
             self.assertEqual(("jobs",), table)
+
+    def test_job_service_includes_source_config_summary(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            app = create_app()
+            app.config["BTP_DATA_DIR"] = tmpdir
+            init_db(app)
+
+            service = JobService(app.extensions["btp_db"]["db_path"])
+            created = service.create_job(
+                job_id="job-source-config",
+                job_type=JobType.INTERNAL_PERSONS.value,
+                status=JobStatus.QUEUED,
+                params={"facultyChoice": "uu faculty: faculteit test|organization_name"},
+                created_at="2026-04-20T13:00:00Z",
+            )
+
+            self.assertEqual(PURE_BASE_URL, created["sourceConfig"]["pureBaseUrl"])
+            self.assertEqual(RIC_BASE_URL, created["sourceConfig"]["ricgraphBaseUrl"])
+            self.assertEqual(FACULTY_PREFIX, created["sourceConfig"]["facultyPrefix"])
+            self.assertEqual(
+                "uu faculty: faculteit test|organization_name",
+                created["sourceConfig"]["facultyChoice"],
+            )
 
     def test_job_model_enums_expose_phase_one_types_and_statuses(self):
         self.assertEqual("internal_persons", JobType.INTERNAL_PERSONS.value)
@@ -157,6 +270,23 @@ class AppStructureTests(unittest.TestCase):
             self.assertEqual("output/external_persons/job-002", created["artifact_dir"])
             self.assertFalse(created["canOpen"])
             self.assertFalse(created["canApply"])
+
+    def test_job_service_rejects_faculty_research_organisation_scope(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            app = create_app()
+            app.config["BTP_DATA_DIR"] = tmpdir
+            init_db(app)
+
+            service = JobService(app.extensions["btp_db"]["db_path"])
+
+            with self.assertRaisesRegex(ValueError, "Excluded organisations are not supported"):
+                service.create_job(
+                    job_id="job-research-scope",
+                    job_type=JobType.EXTERNAL_PERSONS.value,
+                    status=JobStatus.QUEUED,
+                    params={"facultyChoice": "uu faculty research: faculteit test|organization_name"},
+                    created_at="2026-04-20T13:00:00Z",
+                )
 
     def test_job_service_uses_job_scoped_artifact_dir_for_research_outputs(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -733,6 +863,67 @@ class AppStructureTests(unittest.TestCase):
                 os.path.join(tmpdir, "output", "internal_persons", "job-001"),
                 mock_popen.call_args.kwargs["env"]["BTP_OUTPUT_DIR"],
             )
+
+    @patch("app.services.jobs.subprocess.Popen")
+    def test_job_service_run_job_streams_stdout_to_job_log(self, mock_popen):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            app = create_app()
+            app.config["BTP_DATA_DIR"] = os.path.join(tmpdir, "data")
+            init_db(app)
+
+            service = JobService(
+                app.extensions["btp_db"]["db_path"],
+                project_root=tmpdir,
+            )
+            os.makedirs(os.path.join(tmpdir, "src"), exist_ok=True)
+            with open(os.path.join(tmpdir, "src", "enrich_internal_persons_with_ids.py"), "w", encoding="utf-8") as handle:
+                handle.write("print('placeholder')\n")
+
+            service.create_job(
+                job_id="job-001",
+                job_type=JobType.INTERNAL_PERSONS.value,
+                params={"facultyChoice": "all"},
+                created_at="2026-04-20T13:00:00Z",
+            )
+            mock_popen.return_value = FakeStreamingProcess(stdout_lines=["line 1\n", "line 2\n"])
+
+            result = service.run_job("job-001")
+
+            self.assertEqual("completed", result["status"])
+            with open(os.path.join(tmpdir, "logs", "jobs", "job-001.log"), "r", encoding="utf-8") as handle:
+                contents = handle.read()
+            self.assertIn("line 1", contents)
+            self.assertIn("line 2", contents)
+            self.assertEqual(subprocess.STDOUT, mock_popen.call_args.kwargs["stderr"])
+
+    @patch("app.services.jobs.subprocess.Popen")
+    def test_job_service_run_job_reports_killed_process_signal(self, mock_popen):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            app = create_app()
+            app.config["BTP_DATA_DIR"] = os.path.join(tmpdir, "data")
+            init_db(app)
+
+            service = JobService(
+                app.extensions["btp_db"]["db_path"],
+                project_root=tmpdir,
+            )
+            os.makedirs(os.path.join(tmpdir, "src"), exist_ok=True)
+            with open(os.path.join(tmpdir, "src", "enrich_internal_persons_with_ids.py"), "w", encoding="utf-8") as handle:
+                handle.write("print('placeholder')\n")
+
+            service.create_job(
+                job_id="job-001",
+                job_type=JobType.INTERNAL_PERSONS.value,
+                params={"facultyChoice": "all"},
+                created_at="2026-04-20T13:00:00Z",
+            )
+            mock_popen.return_value = FakeCompletedProcess(returncode=-9, stdout="", stderr="")
+
+            result = service.run_job("job-001")
+
+            self.assertEqual("failed", result["status"])
+            self.assertEqual(-9, result["exit_code"])
+            self.assertEqual("Process was killed by SIGKILL (9)", result["error_message"])
 
     @patch("app.services.jobs.subprocess.Popen")
     def test_job_service_run_job_sets_research_output_job_directory_in_env(self, mock_popen):
@@ -1428,6 +1619,33 @@ class AppStructureTests(unittest.TestCase):
                 command[-3:],
             )
 
+    def test_job_service_builds_external_persons_command_with_ricgraph_only_default(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            app = create_app()
+            app.config["BTP_DATA_DIR"] = os.path.join(tmpdir, "data")
+            init_db(app)
+
+            service = JobService(
+                app.extensions["btp_db"]["db_path"],
+                project_root=tmpdir,
+            )
+            definition = get_job_type_definition(JobType.EXTERNAL_PERSONS.value)
+
+            command = service._build_command(
+                definition,
+                {"facultyChoice": "uu faculty: faculteit rebo|organization_name"},
+                Path(tmpdir) / "src" / "enrich_pure_external_persons.py",
+            )
+
+            self.assertEqual(
+                [
+                    "uu faculty: faculteit rebo|organization_name",
+                    "yes",
+                    "no",
+                ],
+                command[-3:],
+            )
+
     def test_job_service_creates_external_orgs_in_job_scoped_artifact_dir(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             app = create_app()
@@ -1550,6 +1768,60 @@ class AppStructureTests(unittest.TestCase):
             service.delete_job("job-010")
 
             self.assertIsNone(service.get_job_change_set("job-010"))
+
+    def test_job_service_delete_job_allows_queued_jobs(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            app = create_app()
+            app.config["BTP_DATA_DIR"] = os.path.join(tmpdir, "data")
+            init_db(app)
+
+            service = JobService(
+                app.extensions["btp_db"]["db_path"],
+                project_root=tmpdir,
+            )
+            service.create_job(
+                job_id="job-queued",
+                job_type=JobType.INTERNAL_PERSONS.value,
+                status=JobStatus.QUEUED,
+                created_at="2026-04-20T13:00:00Z",
+            )
+
+            deleted = service.delete_job("job-queued")
+
+            self.assertTrue(deleted)
+            self.assertIsNone(service.get_job("job-queued"))
+
+    def test_job_service_cancel_job_marks_active_job_failed(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            app = create_app()
+            app.config["BTP_DATA_DIR"] = os.path.join(tmpdir, "data")
+            init_db(app)
+
+            service = JobService(
+                app.extensions["btp_db"]["db_path"],
+                project_root=tmpdir,
+            )
+            service.create_job(
+                job_id="job-running",
+                job_type=JobType.INTERNAL_PERSONS.value,
+                status=JobStatus.RUNNING,
+                created_at="2026-04-20T13:00:00Z",
+                started_at="2026-04-20T13:01:00Z",
+                log_path="logs/jobs/job-running.log",
+            )
+
+            with patch.object(service, "_find_active_job_pids", return_value=[1234]), patch.object(
+                service,
+                "_terminate_pid",
+            ) as terminate_pid:
+                cancelled = service.cancel_job("job-running")
+
+            self.assertEqual("failed", cancelled["status"])
+            self.assertEqual(-signal.SIGTERM, cancelled["exit_code"])
+            self.assertEqual("Job was cancelled by user", cancelled["error_message"])
+            terminate_pid.assert_called_once_with(1234)
+            with open(os.path.join(tmpdir, "logs", "jobs", "job-running.log"), "r", encoding="utf-8") as handle:
+                self.assertIn("Job was cancelled by user", handle.read())
 
     @patch("apply_updates_to_pure.session.put")
     def test_apply_process_internal_persons_normalizes_orcid_before_put(self, mock_put):

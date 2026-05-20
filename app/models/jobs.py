@@ -61,7 +61,6 @@ JOB_TYPE_REGISTRY: dict[JobType, JobTypeDefinition] = {
             ("use_openalex_fallback", "useOpenAlexFallback"),
         ),
         identity_columns=("Pure_UUID", "Alex_ID", "ORCID", "Name"),
-        fixed_args=("yes",),
     ),
     JobType.EXTERNAL_ORGS: JobTypeDefinition(
         job_type=JobType.EXTERNAL_ORGS,

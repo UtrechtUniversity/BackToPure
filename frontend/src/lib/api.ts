@@ -81,6 +81,12 @@ export const api = {
     });
   },
 
+  cancelJob(jobId: string): Promise<JobRecord> {
+    return request<JobRecord>(`/jobs/${jobId}/cancel`, {
+      method: "POST",
+    });
+  },
+
   applyJob(jobId: string): Promise<JobRecord> {
     return request<JobRecord>(`/jobs/${jobId}/apply`, {
       method: "POST",

@@ -64,6 +64,26 @@ describe("api client", () => {
     );
   });
 
+  it("posts to the cancel endpoint", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ id: "job-001", status: "failed" }),
+      }),
+    );
+
+    await api.cancelJob("job-001");
+
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/jobs/job-001/cancel",
+      expect.objectContaining({
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  });
+
   it("loads job artifacts", async () => {
     vi.stubGlobal(
       "fetch",

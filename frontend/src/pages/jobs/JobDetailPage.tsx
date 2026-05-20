@@ -5,8 +5,11 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ApiError, api } from "../../lib/api";
 import { StatusPill } from "../../components/StatusPill";
 import {
+  canCancelJobStatus,
+  canDeleteJobStatus,
   describeReadiness,
   formatBytes,
+  formatJobScope,
   formatJobStatus,
   formatTimestamp,
   getJobTypeGuide,
@@ -199,6 +202,7 @@ export function JobDetailPage() {
   const [reviewFilter, setReviewFilter] = useState<"all" | "selected" | "unselected">("all");
   const [reviewSelection, setReviewSelection] = useState<Record<number, boolean>>({});
   const [reviewScrollTop, setReviewScrollTop] = useState(0);
+  const [jobActionInProgress, setJobActionInProgress] = useState(false);
   const { jobId = "" } = useParams();
   const navigate = useNavigate();
   const deferredReviewSearch = useDeferredValue(reviewSearch);
@@ -209,23 +213,22 @@ export function JobDetailPage() {
     queryFn: () => api.getJob(jobId),
     enabled: Boolean(jobId),
     refetchInterval: (query) =>
-      query.state.data && isActiveJobStatus(query.state.data.status) ? 3000 : false,
+      jobActionInProgress || (query.state.data && isActiveJobStatus(query.state.data.status)) ? 3000 : false,
   });
+  const shouldPollJobLogs = jobActionInProgress || Boolean(jobQuery.data && isActiveJobStatus(jobQuery.data.status));
 
   const logsQuery = useQuery({
     queryKey: ["jobLogs", jobId],
     queryFn: () => api.getJobLogs(jobId),
     enabled: Boolean(jobId),
-    refetchInterval: () =>
-      jobQuery.data && isActiveJobStatus(jobQuery.data.status) ? 3000 : false,
+    refetchInterval: () => (shouldPollJobLogs ? 3000 : false),
   });
 
   const artifactsQuery = useQuery({
     queryKey: ["jobArtifacts", jobId],
     queryFn: () => api.getJobArtifacts(jobId),
     enabled: Boolean(jobId),
-    refetchInterval: () =>
-      jobQuery.data && isActiveJobStatus(jobQuery.data.status) ? 3000 : false,
+    refetchInterval: () => (shouldPollJobLogs ? 3000 : false),
   });
 
   const changeSetQuery = useQuery({
@@ -285,31 +288,63 @@ export function JobDetailPage() {
 
   const runJobMutation = useMutation({
     mutationFn: () => api.runJob(jobId),
+    onMutate: () => {
+      setJobActionInProgress(true);
+      void logsQuery.refetch();
+    },
     onSuccess: () => {
       void jobQuery.refetch();
       void logsQuery.refetch();
       void artifactsQuery.refetch();
     },
+    onSettled: () => {
+      setJobActionInProgress(false);
+    },
   });
 
   const applyJobMutation = useMutation({
     mutationFn: () => api.applyJob(jobId),
+    onMutate: () => {
+      setJobActionInProgress(true);
+      void logsQuery.refetch();
+    },
     onSuccess: () => {
       void jobQuery.refetch();
       void logsQuery.refetch();
       void artifactsQuery.refetch();
       void changeSetQuery.refetch();
     },
+    onSettled: () => {
+      setJobActionInProgress(false);
+    },
   });
 
   const rollbackJobMutation = useMutation({
     mutationFn: () => api.rollbackJob(jobId),
+    onMutate: () => {
+      setJobActionInProgress(true);
+      void rollbackLogsQuery.refetch();
+    },
     onSuccess: () => {
       void jobQuery.refetch();
       void logsQuery.refetch();
       void changeSetQuery.refetch();
       void rollbackJobQuery.refetch();
       void rollbackLogsQuery.refetch();
+    },
+    onSettled: () => {
+      setJobActionInProgress(false);
+    },
+  });
+
+  const cancelJobMutation = useMutation({
+    mutationFn: () => api.cancelJob(jobId),
+    onSuccess: () => {
+      setJobActionInProgress(false);
+      void jobQuery.refetch();
+      void logsQuery.refetch();
+      void artifactsQuery.refetch();
+      void changeSetQuery.refetch();
     },
   });
 
@@ -379,7 +414,8 @@ export function JobDetailPage() {
     job.job_type === "external_orgs" ||
     job.job_type === "research_outputs" ||
     job.job_type === "datasets";
-  const canDelete = !isActiveJobStatus(job.status);
+  const canDelete = canDeleteJobStatus(job.status);
+  const canCancel = canCancelJobStatus(job.status);
   const guide = getJobTypeGuide(job.job_type);
   const hasSelectedUpdates = job.results.ready_count > 0;
   const effectiveCanApply = job.canApply && hasSelectedUpdates;
@@ -505,25 +541,12 @@ export function JobDetailPage() {
           <h2>{job.id}</h2>
           <StatusPill status={job.status} />
         </div>
-        <p>{formatJobStatus(job.job_type)}</p>
+        <p>{formatJobStatus(job.job_type)} · {nextUserAction(job)}</p>
       </header>
-
-      <section className="panel workflow-banner">
-        <p className="eyebrow">What You Should Do</p>
-        <h3>{formatJobStatus(job.status)}</h3>
-        <p className="hero-copy">{nextUserAction(job)}</p>
-        <ol className="workflow-steps">
-          <li className={job.status !== "queued" ? "done" : "current"}>Run the job to generate review files.</li>
-          <li className={job.canOpen ? "current" : ""}>Review the CSV and JSON files carefully.</li>
-          <li className={job.status === "completed" ? "done" : job.canApply ? "current" : ""}>
-            Apply updates only after the review files look correct.
-          </li>
-        </ol>
-      </section>
 
       <div className="detail-grid">
         <section className="panel">
-          <h3>Summary</h3>
+          <h3>Run Summary</h3>
           <dl className="summary-grid">
             <div>
               <dt>Status</dt>
@@ -540,6 +563,10 @@ export function JobDetailPage() {
             <div>
               <dt>Finished</dt>
               <dd>{formatTimestamp(job.finished_at)}</dd>
+            </div>
+            <div>
+              <dt>Faculty</dt>
+              <dd>{formatJobScope(job)}</dd>
             </div>
             <div>
               <dt>Review Files Ready</dt>
@@ -561,7 +588,7 @@ export function JobDetailPage() {
 
           {job.status === "completed" && changeSet ? (
             <div className="info-strip compact">
-              <strong>Apply Outcome</strong>
+              <strong>Apply</strong>
               <span>
                 {appliedItems} updated successfully{applyFailedItems ? `, ${applyFailedItems} failed during apply` : "."}
               </span>
@@ -569,7 +596,7 @@ export function JobDetailPage() {
           ) : null}
           {job.status === "completed" && latestApplyError ? (
             <div className="info-strip compact">
-              <strong>Latest Apply Error</strong>
+              <strong>Latest Error</strong>
               <span>{latestApplyError}</span>
             </div>
           ) : null}
@@ -616,6 +643,20 @@ export function JobDetailPage() {
             <button className="secondary-action" type="button" onClick={() => void jobQuery.refetch()}>
               Refresh Job
             </button>
+            {canCancel ? (
+              <button
+                className="danger-action"
+                type="button"
+                onClick={() => {
+                  if (window.confirm("Stop this running job?")) {
+                    cancelJobMutation.mutate();
+                  }
+                }}
+                disabled={cancelJobMutation.isPending}
+              >
+                {cancelJobMutation.isPending ? "Stopping..." : "Stop Job"}
+              </button>
+            ) : null}
             {canDelete ? (
               <button
                 className="danger-action"
@@ -651,12 +692,19 @@ export function JobDetailPage() {
                   : "Could not delete the job."}
               </p>
             ) : null}
+            {cancelJobMutation.isError ? (
+              <p className="error-banner">
+                {cancelJobMutation.error instanceof ApiError
+                  ? cancelJobMutation.error.message
+                  : "Could not stop the job."}
+              </p>
+            ) : null}
             {job.error_message ? <p className="error-banner">{job.error_message}</p> : null}
           </div>
         </section>
 
         <section className="panel">
-          <h3>Parameters And Results</h3>
+          <h3>Results</h3>
           <div className="result-metrics">
             <article className="result-metric-card">
               <span>{job.results.found_label}</span>
@@ -678,12 +726,9 @@ export function JobDetailPage() {
             ) : null}
           </div>
           <div className="info-strip compact">
-                <strong>How to read this</strong>
-                <span>
-              These counts are derived from the review files for this specific job run, so they
-              reflect this run only.
-                </span>
-              </div>
+            <strong>This run only</strong>
+            <span>These counts come from the files generated for this job.</span>
+          </div>
           <ul className="guide-definition-list metric-definition-list">
             {guide.resultDefinitions.map((definition) => (
               <li key={definition.label}>
@@ -693,7 +738,7 @@ export function JobDetailPage() {
             ))}
           </ul>
           <div className="info-strip compact">
-            <strong>Expected review files</strong>
+            <strong>Review files</strong>
             <span>{guide.reviewFiles.join(" and ")}</span>
           </div>
           {job.job_type === "external_orgs" ? (
@@ -717,24 +762,29 @@ export function JobDetailPage() {
               ))}
             </ul>
           )}
+          {job.sourceConfig ? (
+            <div className="info-strip compact">
+              <strong>Sources</strong>
+              <span>
+                Pure: {job.sourceConfig.pureBaseUrl} · Ricgraph: {job.sourceConfig.ricgraphBaseUrl} · Scope:{" "}
+                {job.sourceConfig.facultyChoice ?? job.sourceConfig.facultyPrefix}
+              </span>
+            </div>
+          ) : null}
         </section>
 
         <section className="panel">
           <div className="panel-header">
             <div>
-              <h3>Review Files</h3>
+              <h3>Files</h3>
               <p className="hint">Stored in: {job.artifacts.directory}</p>
             </div>
             <button className="secondary-action" type="button" onClick={() => void artifactsQuery.refetch()}>
               Refresh Files
             </button>
           </div>
-          <div className="info-strip compact">
-            <strong>Review state</strong>
-            <span>{nextUserAction(job)}</span>
-          </div>
           <p className="hint">
-            Download these files and confirm the proposed changes before you click <strong>Apply Updates</strong>.
+            Download and check these files before applying updates.
           </p>
           {artifactsQuery.isLoading ? <p className="empty-state">Loading review files...</p> : null}
           {artifactsQuery.isError ? <p className="error-banner">Could not load the review files.</p> : null}
@@ -764,7 +814,7 @@ export function JobDetailPage() {
           <div className="panel-header">
             <div>
               <h3>Review Table</h3>
-              <p className="hint">Review the CSV here and update which rows should be applied.</p>
+              <p className="hint">Adjust which rows should be applied.</p>
             </div>
             <button className="secondary-action" type="button" onClick={() => void reviewTableQuery.refetch()}>
               Refresh Table
@@ -778,7 +828,7 @@ export function JobDetailPage() {
           {!reviewTableQuery.isLoading && !reviewTableQuery.isError && reviewTable ? (
             <>
               <div className="info-strip compact">
-                <strong>Loaded file</strong>
+                <strong>Loaded</strong>
                 <span>
                   {reviewTable.fileName} with {reviewTable.rowCount} rows
                 </span>
@@ -1036,7 +1086,7 @@ export function JobDetailPage() {
 
         {supportsRollback ? (
           <section className="panel">
-            <h3>Rollback Option</h3>
+            <h3>Rollback</h3>
             {changeSetQuery.isLoading ? <p className="empty-state">Loading rollback details...</p> : null}
             {!changeSetQuery.isLoading && !changeSet ? (
               <p className="empty-state">No rollback data is available for this job.</p>
