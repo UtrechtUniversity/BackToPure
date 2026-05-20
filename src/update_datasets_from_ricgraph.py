@@ -43,7 +43,8 @@ import pure_datasets as puda
 import pandas as pd
 import os
 import argparse
-from config import RIC_BASE_URL
+import enrich_pure_external_persons as enrich
+from config import FACULTY_PREFIX, RIC_BASE_URL
 from logging_config import setup_logging
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -77,7 +78,8 @@ def fetch_personroots(faculty_key):
     """Fetch person-root nodes for a given faculty."""
     try:
         params = {'key': faculty_key, 'max_nr_items': '9999'}
-        response = session.get('http://127.0.0.1:3030/api/get_all_personroot_nodes', params=params, timeout=30)
+        url = RIC_BASE_URL + 'get_all_personroot_nodes'
+        response = session.get(url, params=params, timeout=30)
 
         return response.json().get("results", [])
     except requests.RequestException as e:
@@ -89,10 +91,11 @@ def select_faculties(faculty_choice):
     logger = setup_logging('dataset', level=logging.INFO)
     logger.info("Script to update datasets in pure from ricgraph has started")
     params = {
-        'value': 'uu faculty',
+        'value': FACULTY_PREFIX,
     }
     try:
-        response = session.get('http://127.0.0.1:3030/api/organization/search', params=params, timeout=30)
+        url = RIC_BASE_URL + 'organization/search'
+        response = session.get(url, params=params, timeout=30)
         response.raise_for_status()
         data = response.json()
     except requests.RequestException as e:
@@ -100,9 +103,9 @@ def select_faculties(faculty_choice):
         return []
 
     if faculty_choice.lower() == 'all':
-        selected_faculties = [item['_key'] for item in data["results"]]
+        selected_faculties = [item['_key'] for item in data["results"] if enrich.is_primary_faculty_key(item.get('_key'))]
     else:
-        selected_faculties = [faculty_choice]
+        selected_faculties = [faculty_choice] if enrich.is_primary_faculty_key(faculty_choice) else []
 
     return selected_faculties
 
@@ -116,7 +119,8 @@ def select_persons_datasets(faculties, faculty_choice):
             'max_nr_items': '0',
         }
         data = []
-        response = session.get('http://127.0.0.1:3030/api/advanced_search', params=params, timeout=30)
+        url = RIC_BASE_URL + 'advanced_search'
+        response = session.get(url, params=params, timeout=30)
         datasets = response.json().get("results", [])
         for set in datasets:
             doi = set["_key"].split("|")[0]

@@ -39,11 +39,23 @@ from logging_config import setup_logging
 import requests
 import json
 import argparse
+import threading
 from datetime import datetime
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import urllib3
-from config import PURE_BASE_URL, PURE_API_KEY, EMAIL, RIC_BASE_URL, OPENALEXEX_ID_URI, ORCID_ID_URI, OPENALEX_HEADERS
+from config import (
+    CATEGORIES,
+    EMAIL,
+    FACULTY_PREFIX,
+    OPENALEXEX_ID_URI,
+    OPENALEX_HEADERS,
+    ORCID_ID_URI,
+    PURE_API_KEY,
+    PURE_BASE_URL,
+    RIC_BASE_URL,
+    is_primary_organization_key,
+)
 from typing import List, Dict
 import sys
 from urllib.parse import quote
@@ -69,6 +81,11 @@ session.mount("http://", adapter)
 # Disable only the single InsecureRequestWarning from urllib3 needed to use the InsecureRequestWarning
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 REQUEST_TIMEOUT = 30
+DOI_PATTERN = re.compile(r"^10\.\d{4,9}/\S+$", re.IGNORECASE)
+
+
+def is_primary_faculty_key(key):
+    return is_primary_organization_key(key)
 
 
 def _output_dir():
@@ -112,7 +129,43 @@ def extract_openalex_id(openalex):
 def normalize_doi(doi_value):
     if not doi_value:
         return None
-    return str(doi_value).replace("https://doi.org/", "").strip().lower()
+    normalized = str(doi_value).strip()
+    normalized = re.sub(r"^doi:\s*", "", normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r"^https?://(?:dx\.)?doi\.org/", "", normalized, flags=re.IGNORECASE)
+    normalized = normalized.strip().rstrip(".").lower()
+    if not DOI_PATTERN.match(normalized):
+        return None
+    return normalized
+
+
+def extract_researchoutput_doi(output):
+    key_value = output.get("_key", "")
+    candidates = [
+        output.get("doi"),
+        output.get("DOI"),
+        output.get("digital_object_identifier"),
+        output.get("external_id"),
+    ]
+    if key_value:
+        candidates.extend(str(key_value).split("|"))
+
+    for candidate in candidates:
+        normalized = normalize_doi(candidate)
+        if normalized:
+            return normalized
+    return None
+
+
+def extract_researchoutput_pure_uuid(output):
+    for key in ("pure_uuid", "uuid", "PURE_UUID", "pureId"):
+        value = output.get(key)
+        if value:
+            return str(value).strip()
+
+    url_other = output.get("url_other", "")
+    if "publications/" in url_other:
+        return url_other.rstrip("/").split("/")[-1]
+    return None
 
 def get_ro_from_openalex(item, openalexworks):
     normalized = normalize_doi(item)
@@ -168,6 +221,12 @@ def get_ro_from_pure(target_doi, pureworks):
                         return work  # Return the first matching work
 
     return None  # Return None if no match is found
+
+
+def get_ro_from_pure_uuid(target_uuid, pureworks):
+    if not target_uuid:
+        return None
+    return pureworks.get("by_uuid", {}).get(str(target_uuid).strip())
 
 
 def check_name_match(alex_name, pure_authors):
@@ -483,7 +542,7 @@ def select_faculties(faculty_choice):
     logger.info(f"start fetching itemsfor {faculty_choice}")
 
     params = {
-        'value': 'uu faculty',
+        'value': FACULTY_PREFIX,
     }
     url = RIC_BASE_URL + 'organization/search'
     try:
@@ -494,9 +553,9 @@ def select_faculties(faculty_choice):
         logger.error(f"Error fetching faculties from Ricgraph: {e}")
         return []
     if faculty_choice.lower() == 'all':
-        selected_faculties = [item['_key'] for item in data["results"]]
+        selected_faculties = [item['_key'] for item in data["results"] if is_primary_faculty_key(item.get('_key'))]
     else:
-        selected_faculties = [faculty_choice]
+        selected_faculties = [faculty_choice] if is_primary_faculty_key(faculty_choice) else []
 
     return selected_faculties
 
@@ -516,8 +575,7 @@ def fetch_personroots(faculty_key):
 
 def select_researchoutputs(persoonroot_key):
     """Fetch person IDs for a given person-ro    ot."""
-    # categories = CATEGORIES
-    categories =  ['journal article']
+    categories = [category.strip() for category in CATEGORIES.split(",") if category.strip()]
     all_results = []
 
     for categorie in categories:
@@ -553,9 +611,11 @@ def select_persons_researchoutput(selected_faculties):
         outputs = select_researchoutputs(personroot['_key'])
         result = []
         for output in outputs:
-            doi = output["_key"].split("|")[0]
-            pure_uuid = output.get("url_other", "").split("/")[-1] \
-                if "publications/" in output.get("url_other", "") else None
+            doi = extract_researchoutput_doi(output)
+            pure_uuid = extract_researchoutput_pure_uuid(output)
+            if not doi and not pure_uuid:
+                logger.debug(f"Skipping research output without DOI or Pure UUID: {output.get('_key')}")
+                continue
             result.append({
                 "doi": doi,
                 "pure_uuid": pure_uuid,
@@ -584,16 +644,34 @@ def select_persons_researchoutput(selected_faculties):
         except Exception as e:
             logging.error(f"Error fetching personroots for faculty {faculty}: {e}")
 
-    deduped_outputs = []
-    seen_dois = set()
+    deduped_by_key = {}
+    skipped_without_doi = 0
     for output in all_outputs:
-        doi = output.get("doi")
-        if not doi or doi in seen_dois:
+        doi = normalize_doi(output.get("doi"))
+        pure_uuid = output.get("pure_uuid")
+        output_key = doi or pure_uuid
+        if not output_key:
             continue
-        seen_dois.add(doi)
-        deduped_outputs.append(output)
 
-    logger.info(f"Total unique DOIs found in Ricgraph: {len(seen_dois)}")
+        existing = deduped_by_key.get(output_key)
+        if existing:
+            if not existing.get("pure_uuid") and pure_uuid:
+                deduped_by_key[output_key] = output
+            continue
+
+        if not doi:
+            skipped_without_doi += 1
+        deduped_by_key[output_key] = output
+
+    deduped_outputs = list(deduped_by_key.values())
+
+    unique_doi_count = sum(1 for output in deduped_outputs if output.get("doi"))
+    unique_uuid_count = sum(1 for output in deduped_outputs if output.get("pure_uuid"))
+    logger.info(
+        f"Total unique research outputs found in Ricgraph: {len(deduped_outputs)} "
+        f"({unique_doi_count} with DOI, {unique_uuid_count} with Pure UUID, "
+        f"{skipped_without_doi} Pure UUID-only)"
+    )
     return deduped_outputs
 
 
@@ -706,6 +784,22 @@ def collect_ricgraph_person_matches(outputs, max_workers=10):
     output_keys_with_complete_ids = set()
     total_person_nodes = 0
     missing_identifier_values = 0
+    completed_outputs = 0
+    person_detail_cache = {}
+    person_detail_cache_lock = threading.Lock()
+
+    def get_cached_person_details(person_key):
+        if not person_key:
+            return []
+        with person_detail_cache_lock:
+            cached_details = person_detail_cache.get(person_key)
+        if cached_details is not None:
+            return cached_details
+
+        details = fetch_ricgraph_person_details(person_key)
+        with person_detail_cache_lock:
+            person_detail_cache.setdefault(person_key, details)
+        return details
 
     def process_output(output):
         researchoutput_key = output.get("researchoutput_key")
@@ -717,11 +811,12 @@ def collect_ricgraph_person_matches(outputs, max_workers=10):
         output_has_usable_persons = False
         output_missing_identifier_values = 0
         for person_node in person_nodes:
-            details = fetch_ricgraph_person_details(person_node.get('_key'))
+            details = get_cached_person_details(person_node.get('_key'))
             parsed = parse_ricgraph_person_details(details)
             if parsed.get("Name") and (parsed.get("Alex_ID") or parsed.get("ORCID")):
                 parsed["doi"] = output.get("doi", "")
                 parsed["researchoutput_key"] = researchoutput_key
+                parsed["researchoutput_pure_uuid"] = output.get("pure_uuid", "")
                 output_matches.append(parsed)
                 output_has_usable_persons = True
             else:
@@ -757,6 +852,13 @@ def collect_ricgraph_person_matches(outputs, max_workers=10):
                 output_keys_with_person_nodes.add(output_key_with_person_nodes)
             if output_key_with_complete_ids:
                 output_keys_with_complete_ids.add(output_key_with_complete_ids)
+            completed_outputs += 1
+            if completed_outputs % 500 == 0 or completed_outputs == len(outputs):
+                logger.info(
+                    f"Ricgraph person harvest progress: {completed_outputs}/{len(outputs)} output(s), "
+                    f"{total_person_nodes} person node(s), {len(collected_matches)} candidate row(s), "
+                    f"{len(person_detail_cache)} unique person detail lookup(s)"
+                )
 
     logger.info(
         f"Ricgraph yielded {len(collected_matches)} external-person candidate row(s) "
@@ -775,25 +877,35 @@ def match_ricgraph_persons(ricgraph_persons, purejsons):
         return []
 
     matched_persons = []
-    persons_by_doi = {}
+    persons_by_output = {}
     missing_pure_articles = []
     for row in ricgraph_persons:
         doi = normalize_doi(row.get("doi"))
-        if not doi:
+        pure_uuid = row.get("researchoutput_pure_uuid")
+        if doi:
+            output_key = f"doi:{doi}"
+        elif pure_uuid:
+            output_key = f"uuid:{pure_uuid}"
+        else:
             continue
-        persons_by_doi.setdefault(doi, []).append(row)
+        persons_by_output.setdefault(output_key, []).append(row)
 
-    for doi, source_persons in persons_by_doi.items():
-        pure_article = get_ro_from_pure(doi, purejsons)
+    for output_key, source_persons in persons_by_output.items():
+        lookup_type, lookup_value = output_key.split(":", 1)
+        pure_article = (
+            get_ro_from_pure(lookup_value, purejsons)
+            if lookup_type == "doi"
+            else get_ro_from_pure_uuid(lookup_value, purejsons)
+        )
         if not pure_article:
-            missing_pure_articles.append(doi)
-            logger.info(f"Skipping DOI {doi}: not found in Pure")
+            missing_pure_articles.append(output_key)
+            logger.info(f"Skipping research output {output_key}: not found in Pure")
             continue
         matched_persons.extend(match_persons_to_pure(source_persons, pure_article, "ricgraph"))
 
     if missing_pure_articles:
         logger.info(
-            f"Ricgraph publication matching skipped {len(missing_pure_articles)} DOI(s) not found in Pure"
+            f"Ricgraph publication matching skipped {len(missing_pure_articles)} research output(s) not found in Pure"
         )
 
     return matched_persons
@@ -912,7 +1024,7 @@ def fetch_pure_researchoutput_by_doi(doi: str) -> List[Dict]:
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-def fetch_pure_researchoutputs(outputs: List[Dict], batch_size: int = 500) -> Dict:
+def fetch_pure_researchoutputs(outputs: List[Dict], batch_size: int = 500, allow_doi_fallback: bool = True) -> Dict:
     """
     Fetch research outputs from Pure using batched UUIDs when available and DOI search as fallback.
     Outputs without a Pure UUID are looked up by DOI. If a DOI is not found in Pure, it is skipped.
@@ -924,12 +1036,35 @@ def fetch_pure_researchoutputs(outputs: List[Dict], batch_size: int = 500) -> Di
     timeout = 60
     results = []
 
-    uuid_list = [entry["pure_uuid"] for entry in outputs if entry.get("pure_uuid")]
-    doi_list = [normalize_doi(entry.get("doi")) for entry in outputs if not entry.get("pure_uuid") and normalize_doi(entry.get("doi"))]
+    uuid_list = list(dict.fromkeys(entry["pure_uuid"] for entry in outputs if entry.get("pure_uuid")))
+    uuid_backed_dois = {
+        normalized_doi
+        for entry in outputs
+        if entry.get("pure_uuid")
+        for normalized_doi in [normalize_doi(entry.get("doi"))]
+        if normalized_doi
+    }
+    doi_list = []
+    if allow_doi_fallback:
+        doi_list = list(dict.fromkeys(
+            normalized_doi
+            for entry in outputs
+            if not entry.get("pure_uuid")
+            for normalized_doi in [normalize_doi(entry.get("doi"))]
+            if normalized_doi
+            if normalized_doi not in uuid_backed_dois
+        ))
 
     uuid_batches = [uuid_list[i:i + batch_size] for i in range(0, len(uuid_list), batch_size)]
     doi_batch_size = min(50, batch_size)
     doi_batches = [doi_list[i:i + doi_batch_size] for i in range(0, len(doi_list), doi_batch_size)]
+
+    logger.info(
+        f"Pure research output lookup plan: {len(uuid_list)} UUID(s), "
+        f"{len(doi_list)} DOI fallback lookup(s), "
+        f"{len(uuid_backed_dois)} DOI(s) already covered by UUID-backed records, "
+        f"DOI fallback {'enabled' if allow_doi_fallback else 'disabled'}"
+    )
 
     for idx, batch in enumerate(uuid_batches, start=1):
         logger.info(f"Fetching Pure research outputs batch {idx}/{len(uuid_batches)} with {len(batch)} UUIDs")
@@ -951,17 +1086,28 @@ def fetch_pure_researchoutputs(outputs: List[Dict], batch_size: int = 500) -> Di
             f"with {len(batch)} DOI(s)"
         )
         batch_results = []
+        seen_item_keys = set()
         for doi in batch:
             items = fetch_pure_researchoutput_by_doi(doi)
-            if items:
-                batch_results.extend(items)
-            else:
+            if not items:
                 logger.info(f"Pure DOI lookup returned 0 exact match(es) for {doi}")
-        logger.info(f"DOI batch {idx} returned {len(batch_results)} results")
+                continue
+            for item in items:
+                item_key = item.get("uuid") or item.get("pureId") or json.dumps(item, sort_keys=True)
+                if item_key in seen_item_keys:
+                    continue
+                seen_item_keys.add(item_key)
+                batch_results.append(item)
+
+        logger.info(f"DOI batch {idx} returned {len(batch_results)} exact result(s)")
         results.extend(batch_results)
 
     by_doi = {}
+    by_uuid = {}
     for work in results:
+        work_uuid = work.get("uuid") or work.get("pureId")
+        if work_uuid and str(work_uuid) not in by_uuid:
+            by_uuid[str(work_uuid)] = work
         for version in work.get('electronicVersions', []):
             version_doi = normalize_doi(version.get('doi'))
             if version_doi and version_doi not in by_doi:
@@ -971,7 +1117,12 @@ def fetch_pure_researchoutputs(outputs: List[Dict], batch_size: int = 500) -> Di
             if link_doi and link_doi not in by_doi:
                 by_doi[link_doi] = work
 
-    requested_dois = {normalize_doi(entry.get("doi")) for entry in outputs if normalize_doi(entry.get("doi"))}
+    requested_dois = {
+        normalized_doi
+        for entry in outputs
+        for normalized_doi in [normalize_doi(entry.get("doi"))]
+        if normalized_doi
+    }
     found_dois = set(by_doi.keys())
     missing_dois = sorted(requested_dois - found_dois)
     if missing_dois:
@@ -982,7 +1133,8 @@ def fetch_pure_researchoutputs(outputs: List[Dict], batch_size: int = 500) -> Di
 
     logger.info(f"Total research outputs fetched from Pure: {len(results)}")
     logger.info(f"Indexed {len(by_doi)} DOI(s) from Pure research outputs")
-    return {"results": results, "by_doi": by_doi}
+    logger.info(f"Indexed {len(by_uuid)} UUID(s) from Pure research outputs")
+    return {"results": results, "by_doi": by_doi, "by_uuid": by_uuid}
 
 
 
@@ -996,7 +1148,12 @@ from config import EMAIL  # You already have this in your project
 
 def fetch_openalex_works(dois):
     logger.info(f"Starting OpenAlex fetch for {len(dois)} DOI entries")
-    return fetch_openalex_works_cached(dois, batch_size=10, request_delay=1.5, force_refresh=False)
+    batch_size = int(os.getenv("OPENALEX_WORKS_BATCH_SIZE", "25"))
+    request_delay = float(os.getenv("OPENALEX_WORKS_REQUEST_DELAY", "1.0"))
+    logger.info(
+        f"OpenAlex works settings: batch_size={batch_size}, request_delay={request_delay}s"
+    )
+    return fetch_openalex_works_cached(dois, batch_size=batch_size, request_delay=request_delay, force_refresh=False)
 
 def match_all_persons(researchoutputs, openalexjsons, purejsons):
     all_persons = []
@@ -1094,7 +1251,7 @@ def consolidate_person_matches(persons):
         logger.warning(f"Excluded {len(conflicts)} Pure UUID(s) from update candidates because of conflicting ORCID/OpenAlex matches")
     return consolidated_list
 
-def main(faculty_choice, test_choice, use_openalex_fallback='yes'):
+def main(faculty_choice, test_choice, use_openalex_fallback='no'):
     logger.info("Script to update external persons in pure from ricgraph has started")
 
     logger.info("The script performs the following steps:\n"
@@ -1141,7 +1298,7 @@ def main(faculty_choice, test_choice, use_openalex_fallback='yes'):
     else:
         logger.info("OpenAlex fallback disabled; using Ricgraph-only external person identifiers")
 
-    dois = [entry["doi"] for entry in fallback_outputs if entry.get("doi")]
+    dois = [entry["doi"] for entry in fallback_outputs if normalize_doi(entry.get("doi"))]
     logger.info(f"Prepared {len(dois)} DOI(s) for OpenAlex matching")
 
     openalexjsons = {"results": [], "by_doi": {}}
@@ -1192,7 +1349,7 @@ if __name__ == '__main__':
         'use_openalex_fallback',
         type=str,
         nargs='?',
-        default='yes',
+        default='no',
         help='Use OpenAlex as fallback when Ricgraph lacks external person IDs ("yes" or "no")'
     )
     args = parser.parse_args()

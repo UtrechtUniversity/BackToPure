@@ -35,7 +35,15 @@ import requests
 import os
 import pure_researchoutputs as pure
 from logging_config import setup_logging
-from config import PURE_BASE_URL, PURE_API_KEY, PURE_HEADERS, RIC_BASE_URL, OPENALEX_HEADERS, OPENALEX_BASE_URL
+from config import (
+    FACULTY_PREFIX,
+    OPENALEX_BASE_URL,
+    OPENALEX_HEADERS,
+    PURE_API_KEY,
+    PURE_BASE_URL,
+    PURE_HEADERS,
+    RIC_BASE_URL,
+)
 import enrich_pure_external_persons as oa
 from datetime import datetime
 from requests.adapters import HTTPAdapter
@@ -82,16 +90,16 @@ def select_faculties(faculty_choice):
 
     logger.info("Script to update researchoutput in pure from ricgraph has started")
     params = {
-        'value': 'uu faculty',
+        'value': FACULTY_PREFIX,
     }
     url = RIC_BASE_URL + 'organization/search'
     response = session.get(url, params=params, timeout=30)
     data = response.json()
 
     if faculty_choice.lower() == 'all':
-        selected_faculties = [item['_key'] for item in data["results"]]
+        selected_faculties = [item['_key'] for item in data["results"] if oa.is_primary_faculty_key(item.get('_key'))]
     else:
-        selected_faculties = [faculty_choice]
+        selected_faculties = [faculty_choice] if oa.is_primary_faculty_key(faculty_choice) else []
 
     return selected_faculties
 

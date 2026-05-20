@@ -28,7 +28,6 @@
 # Copyright (c) 2024 David Grote Beverborg
 # ########################################################################
 
-from itertools import chain
 import time
 import csv
 import re
@@ -45,8 +44,16 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import urllib3
 import os
-from config import PURE_BASE_URL, PURE_API_KEY, PURE_HEADERS, RIC_BASE_URL, ROR_ID_URI, ORCID_ID_URI, OPENALEX_HEADERS
-from openalex_cache import fetch_openalex_institutions_cached
+from config import (
+    FACULTY_PREFIX,
+    OPENALEX_HEADERS,
+    ORCID_ID_URI,
+    PURE_API_KEY,
+    PURE_BASE_URL,
+    PURE_HEADERS,
+    RIC_BASE_URL,
+    ROR_ID_URI,
+)
 
 logger = setup_logging('btp', level=logging.INFO)
 
@@ -70,10 +77,160 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 FUZZY_MATCH_THRESHOLD = 0.88
 AMBIGUOUS_MATCH_GAP = 0.02
+OPENALEX_INSTITUTIONS_LOOKUP_PATH = "output/openalex_cache/openalex_institutions_snapshot_by_ror.json"
+EXTERNAL_ORG_UPDATE_COLUMNS = [
+    "to_be_updated",
+    "updated",
+    "uuid",
+    "pure_name",
+    "needs_ror_update",
+    "needs_geo_update",
+    "ror",
+    "openalex_id",
+    "matched_openalex_name",
+    "openalex_display_name",
+    "match_type",
+    "match_score",
+    "country",
+    "country_code",
+    "region",
+    "city",
+    "latitude",
+    "longitude",
+    "geonames_city_id",
+    "spatial_point",
+    "spatial_point_latitude",
+    "spatial_point_longitude",
+    "pure_address_field",
+    "pure_geo_point",
+]
 
 
 def resolve_output_dir():
     return os.environ.get("BTP_OUTPUT_DIR", "output/external_orgs")
+
+
+def resolve_openalex_institutions_lookup_path():
+    return os.environ.get("BTP_OPENALEX_INSTITUTIONS_LOOKUP", OPENALEX_INSTITUTIONS_LOOKUP_PATH)
+
+
+def write_external_org_outputs(rows_to_update, json_updates, ambiguous_matches, no_name_matches):
+    output_dir = resolve_output_dir()
+    os.makedirs(output_dir, exist_ok=True)
+
+    deduped_rows = dedupe_records_by_uuid(rows_to_update, uuid_keys=("uuid",))
+    deduped_json_updates = dedupe_records_by_uuid(json_updates)
+    duplicate_count = len(rows_to_update) - len(deduped_rows)
+    if duplicate_count > 0:
+        logger.info(f"Collapsed {duplicate_count} duplicate external org proposal row(s) to unique organisation UUIDs")
+
+    df = pd.DataFrame(deduped_rows, columns=EXTERNAL_ORG_UPDATE_COLUMNS)
+    df.to_csv(os.path.join(output_dir, "external_orgs_to_update.csv"), index=False)
+
+    with open(os.path.join(output_dir, "external_orgs_updates.json"), 'w') as json_file:
+        json.dump(deduped_json_updates, json_file, indent=4)
+
+    with open(os.path.join(output_dir, "external_orgs_ambiguous_matches.json"), 'w') as json_file:
+        json.dump(ambiguous_matches, json_file, indent=4)
+
+    with open(os.path.join(output_dir, "external_orgs_no_name_match.json"), 'w') as json_file:
+        json.dump(no_name_matches, json_file, indent=4)
+
+    with open(os.path.join(output_dir, 'output.csv'), mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerows([])
+
+    return deduped_rows, deduped_json_updates
+
+
+def normalize_ror(value):
+    if not value:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
+
+
+def load_json_file(path, default):
+    if not os.path.exists(path):
+        logger.warning(f"Lookup file not found: {path}")
+        return default
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning(f"Could not read lookup file {path}: {exc}")
+        return default
+    return payload
+
+
+def load_openalex_institutions_lookup():
+    lookup_path = resolve_openalex_institutions_lookup_path()
+    if not os.path.exists(lookup_path):
+        raise FileNotFoundError(
+            f"OpenAlex institution snapshot lookup is missing: {lookup_path}. "
+            "Run `.venv/bin/python src/snapshot_openalex_institutions.py --download` once "
+            "to download and compact the OpenAlex institutions snapshot, then rerun this job. "
+            "Use BTP_OPENALEX_INSTITUTIONS_LOOKUP to point to a different compact snapshot file."
+        )
+    by_ror = load_json_file(lookup_path, {})
+    if not isinstance(by_ror, dict):
+        by_ror = {}
+    logger.info(f"Loaded {len(by_ror)} local OpenAlex institution snapshot record(s)")
+    return by_ror
+
+
+def build_institution_name_index(institution_snapshot):
+    index = {}
+    for record in institution_snapshot.values():
+        if not isinstance(record, dict):
+            continue
+        names = [record.get("display_name")]
+        names.extend(record.get("display_name_alternatives") or [])
+        names.extend(record.get("display_name_acronyms") or [])
+        for name in names:
+            normalized = normalize_org_name(name)
+            if normalized and record not in index.setdefault(normalized, []):
+                index[normalized].append(record)
+    logger.info(f"Built local institution name index with {len(index)} name key(s)")
+    return index
+
+
+def snapshot_record_to_org(record, fallback_name=None):
+    record = record or {}
+    ids = record.get("ids") if isinstance(record.get("ids"), dict) else {}
+    return {
+        "openalex_id": ids.get("openalex") or record.get("id"),
+        "ror": ids.get("ror") or record.get("ror"),
+        "display_name": record.get("display_name") or fallback_name,
+        "display_name_alternatives": record.get("display_name_alternatives") or [],
+        "geo": record.get("geo") or {},
+    }
+
+
+def get_ext_orgdata_from_ricgraph(ricgraph_orgs, institution_name_index):
+    organization_details = []
+    seen_names = set()
+    for org in ricgraph_orgs:
+        org_name = org.get("value") or org.get("display_name")
+        normalized_name = normalize_org_name(org_name)
+        if not normalized_name or normalized_name in seen_names:
+            continue
+        seen_names.add(normalized_name)
+        snapshot_records = institution_name_index.get(normalized_name) or []
+        if snapshot_records:
+            for record in snapshot_records:
+                organization_details.append(snapshot_record_to_org(record, fallback_name=org_name))
+        else:
+            organization_details.append(
+                {
+                    "openalex_id": None,
+                    "ror": None,
+                    "display_name": org_name,
+                    "display_name_alternatives": [],
+                    "geo": {},
+                }
+            )
+    return organization_details
 
 
 def dedupe_records_by_uuid(records, uuid_keys=("uuid", "UUID")):
@@ -91,6 +248,16 @@ def dedupe_records_by_uuid(records, uuid_keys=("uuid", "UUID")):
             continue
         deduped[record_uuid] = record
     return list(deduped.values())
+
+
+def flatten_external_org_uuid_groups(uuid_groups):
+    flat_uuids = []
+    for item in uuid_groups:
+        if isinstance(item, (list, tuple, set)):
+            flat_uuids.extend(str(uuid) for uuid in item if uuid)
+        elif item:
+            flat_uuids.append(str(item))
+    return list(dict.fromkeys(flat_uuids))
 
 
 def normalize_org_name(name):
@@ -201,15 +368,15 @@ def build_pure_address_payload(geo_summary, existing_address=None):
     address = dict(existing_address)
 
     city = geo_summary.get("city")
-    if city:
+    if city and not address.get("city"):
         address["city"] = city
 
     country_ref = build_pure_country_ref(geo_summary)
-    if country_ref:
+    if country_ref and not address.get("country"):
         address["country"] = country_ref
 
     point = build_pure_geopoint(geo_summary)
-    if point:
+    if point and not (address.get("geoLocation") or {}).get("point"):
         geo_location = dict(address.get("geoLocation") or {})
         geo_location["point"] = point
         address["geoLocation"] = geo_location
@@ -278,6 +445,28 @@ def score_openalex_candidate(pure_name, openalex_org):
         "pure_normalized_name": pure_normalized,
     }
 
+
+def _openalex_candidate_identity(scored_candidate):
+    openalex_org = scored_candidate.get("openalex_org") or {}
+    return (
+        openalex_org.get("ror")
+        or openalex_org.get("openalex_id")
+        or normalize_org_name(openalex_org.get("display_name"))
+    )
+
+
+def dedupe_scored_candidates(scored_candidates):
+    deduped = {}
+    for candidate in scored_candidates:
+        identity = _openalex_candidate_identity(candidate)
+        if not identity:
+            continue
+        previous = deduped.get(identity)
+        if previous is None or candidate["score"] > previous["score"]:
+            deduped[identity] = candidate
+    return sorted(deduped.values(), key=lambda item: item["score"], reverse=True)
+
+
 def match_organizations(pure_orgs, openalex_orgs):
     orgs_to_update = []
     orgs_with_ror_in_pure = []
@@ -294,7 +483,7 @@ def match_organizations(pure_orgs, openalex_orgs):
                     **candidate_score,
                 })
 
-        scored_candidates.sort(key=lambda item: item["score"], reverse=True)
+        scored_candidates = dedupe_scored_candidates(scored_candidates)
 
         if not scored_candidates:
             orgs_with_no_name_match.append(pure_org)
@@ -361,74 +550,13 @@ def match_organizations(pure_orgs, openalex_orgs):
         elif _has_geo_payload(match_metadata['geo_summary']):
             orgs_to_update.append(match_metadata)
             logger.info(
-                f"Queued Pure org '{pure_org['name']}' for update with ROR {openalex_org['ror']} "
+                f"Prepared update proposal for Pure org '{pure_org['name']}' with ROR {openalex_org['ror']} "
                 f"(match={best_candidate['match_type']}, score={best_candidate['score']:.4f})"
             )
 
     orgs_with_ror_in_pure = list({org['uuid']: org for org in orgs_with_ror_in_pure}.values())
 
     return orgs_to_update, orgs_with_ror_in_pure, orgs_with_no_name_match, orgs_with_ambiguous_match
-
-def match_orgs_oa_pure(oa_article, pure_article, article_orgs):
-    # Initialize a dictionary to store unique institutions
-    oa_unique_institutions = {}
-    oa_ids = []
-    uuids =[]
-    # Iterate over the authorships to extract institutions
-    if oa_article['authorships'] is not None:
-        for authorship in oa_article['authorships']:
-            institutions = authorship.get('institutions', [])
-            for institution in institutions:
-                inst_id = institution.get('id')
-                display_name = institution.get('display_name')
-                ror = institution.get('ror')
-
-                oa_ids.append(ror)
-
-                # Check if the institution is already added using its OpenAlex ID
-                if inst_id and inst_id not in oa_unique_institutions:
-                    oa_unique_institutions[inst_id] = {
-                        'openalex_id': inst_id,
-                        'display_name': display_name,
-                        'ror': ror
-                    }
-
-    # Initialize a set to store unique external organization UUIDs
-    external_organization_uuids = set()
-
-    contributors = pure_article.get('contributors', [])
-
-    if not contributors:
-        logger.info("No contributors found in the item.")
-    else:
-
-        # Loop through each contributor
-        for contributor in contributors:
-            # Check for external organizations associated with the contributor
-            external_orgs = contributor.get('externalOrganizations', [])
-            for ext_org in external_orgs:
-                uuid = ext_org.get('uuid')
-                if uuid:
-                    external_organization_uuids.add(uuid)
-
-    # Extract from top-level 'externalOrganizations' section
-    top_level_external_orgs = pure_article.get('externalOrganizations', [])
-    for ext_org in top_level_external_orgs:
-        uuid = ext_org.get('uuid')
-        if uuid:
-            external_organization_uuids.add(uuid)
-
-    # Convert set to a list
-    external_organization_uuids = list(external_organization_uuids)
-    data_entry = {
-        'doi': oa_article['doi'],
-        'external_organization_uuids': external_organization_uuids,
-        'unique_institutions': oa_unique_institutions
-    }
-    article_orgs.append(data_entry)
-    uuids.append(external_organization_uuids)
-
-    return article_orgs, uuids, oa_ids
 
 def identifier_exists(identifiers, new_id, id_type_uri):
 
@@ -484,9 +612,10 @@ def update_externalorg_pure(orgs, test_choice, update):
         needs_ror_update = bool(new_ror and not _has_identifier(data['identifiers'], new_ror['id'], ROR_ID_URI))
 
         if needs_ror_update or needs_geo_update:
+            auto_select = str(row.get('match_type') or '').startswith('exact_')
             # Mark as "to be updated"
             rows_to_update.append({
-                'to_be_updated': 'X',
+                'to_be_updated': 'X' if auto_select else '',
                 'updated': ' ',
                 'uuid': row['uuid'],
                 'pure_name': row.get('pure_name'),
@@ -586,15 +715,15 @@ def select_faculties(faculty_choice, test_choice):
     logging.info(f"start fetching person-roots for {faculty_choice}")
     logging.info(f"Test run =  {test_choice}")
     params = {
-        'value': 'uu faculty',
+        'value': FACULTY_PREFIX,
     }
     url = RIC_BASE_URL + 'organization/search'
     response = requests.get(url, params=params)
     data = response.json()
     if faculty_choice.lower() == 'all':
-        selected_faculties = [item['_key'] for item in data["results"]]
+        selected_faculties = [item['_key'] for item in data["results"] if enrich.is_primary_faculty_key(item.get('_key'))]
     else:
-        selected_faculties = [faculty_choice]
+        selected_faculties = [faculty_choice] if enrich.is_primary_faculty_key(faculty_choice) else []
 
     return selected_faculties
 
@@ -609,6 +738,18 @@ def fetch_personroots(faculty_key):
     except requests.RequestException as e:
         logging.error(f"Error fetching person-roots for faculty {faculty_key}: {e}")
         return []
+
+
+def fetch_ricgraph_organization_neighbors(personroot_key):
+    try:
+        params = {'key': personroot_key, 'category_want': 'organization', 'max_nr_items': '0'}
+        response = session.get(RIC_BASE_URL + 'get_all_neighbor_nodes', params=params, timeout=30)
+        response.raise_for_status()
+        return response.json().get("results", [])
+    except requests.RequestException as e:
+        logging.error(f"Error fetching organization neighbors for person-root {personroot_key}: {e}")
+        return []
+
 
 def select_researchoutputs(persoonroot_key):
     """Fetch person IDs for a given person-ro    ot."""
@@ -654,41 +795,81 @@ def select_persons_researchoutput(selected_faculties):
     return new_data
 
 
-def mainproces(doi, pure, open_alex, article_orgs):
-    logging.debug(f"start fetching organizations for {doi}")
-    uuids = []
-    oa_ids = []
-    oa_article = enrich.get_ro_from_openalex(doi, open_alex)
-    pure_article = enrich.get_ro_from_pure(doi, pure)
-    if oa_article and pure_article:
-        article_orgs, uuids, oa_ids = match_orgs_oa_pure(oa_article, pure_article, article_orgs)
+def extract_external_organization_uuids(pure_article):
+    external_organization_uuids = set()
+    if not pure_article:
+        return []
 
-    return article_orgs, uuids, oa_ids
+    for contributor in pure_article.get('contributors', []) or []:
+        for ext_org in contributor.get('externalOrganizations', []) or []:
+            uuid = ext_org.get('uuid')
+            if uuid:
+                external_organization_uuids.add(uuid)
 
-# Function to chunk a list into smaller parts
-def chunk_list(data, chunk_size):
-    for i in range(0, len(data), chunk_size):
-        yield data[i:i + chunk_size]
+    for ext_org in pure_article.get('externalOrganizations', []) or []:
+        uuid = ext_org.get('uuid')
+        if uuid:
+            external_organization_uuids.add(uuid)
 
-# Function to get institution data from OpenAlex API using a session
-def fetch_openalex_rors(rors, chunk_size=20):
-    logger.debug("start fetching organizations in open alex")
-    flattened_rors = []
-    for item in rors:
-        if isinstance(item, list):
-            flattened_rors.extend(ror for ror in item if ror)
-        elif item:
-            flattened_rors.append(item)
-    all_results = fetch_openalex_institutions_cached(
-        flattened_rors,
-        chunk_size=chunk_size,
-        request_delay=1.0,
-        force_refresh=False
+    return list(external_organization_uuids)
+
+
+def collect_ricgraph_article_orgs(researchoutputs, purejsons):
+    article_orgs = []
+    all_external_org_uuid_groups = []
+    organization_cache = {}
+    total_person_nodes = 0
+    total_org_nodes = 0
+
+    for idx, output in enumerate(researchoutputs, start=1):
+        doi = output.get("doi")
+        pure_uuid = output.get("pure_uuid")
+        researchoutput_key = output.get("researchoutput_key") or (f"{doi}|doi" if doi else "")
+        pure_article = (
+            enrich.get_ro_from_pure_uuid(pure_uuid, purejsons)
+            if pure_uuid
+            else enrich.get_ro_from_pure(doi, purejsons)
+        )
+        external_organization_uuids = extract_external_organization_uuids(pure_article)
+        if not researchoutput_key or not external_organization_uuids:
+            continue
+
+        person_nodes = enrich.fetch_ricgraph_persons_for_output(researchoutput_key)
+        total_person_nodes += len(person_nodes)
+        orgs_by_key = {}
+        for person_node in person_nodes:
+            person_key = person_node.get("_key")
+            if not person_key:
+                continue
+            if person_key not in organization_cache:
+                organization_cache[person_key] = fetch_ricgraph_organization_neighbors(person_key)
+            for org_node in organization_cache[person_key]:
+                org_key = org_node.get("_key")
+                if org_key:
+                    orgs_by_key[org_key] = org_node
+
+        total_org_nodes += len(orgs_by_key)
+        article_orgs.append(
+            {
+                "doi": doi,
+                "pure_uuid": pure_uuid,
+                "external_organization_uuids": external_organization_uuids,
+                "ricgraph_organizations": list(orgs_by_key.values()),
+            }
+        )
+        all_external_org_uuid_groups.append(external_organization_uuids)
+
+        if idx % 500 == 0 or idx == len(researchoutputs):
+            logger.info(
+                f"Ricgraph organisation harvest progress: {idx}/{len(researchoutputs)} output(s), "
+                f"{total_person_nodes} person node(s), {total_org_nodes} organisation node link(s)"
+            )
+
+    logger.info(
+        f"Collected Ricgraph organisations for {len(article_orgs)} publication(s), "
+        f"{total_person_nodes} person node(s), {total_org_nodes} organisation node link(s)"
     )
-    logger.debug(f"Fetched {len(all_results.get('results', []))} unique institutions from OpenAlex")
-    logger.debug("end fetching organizations in open alex")
-    return all_results
-
+    return article_orgs, all_external_org_uuid_groups
 
 def fetch_pure_extorgs(uuids):
     logger.info(f"start fetching external orgs from pure")
@@ -699,14 +880,9 @@ def fetch_pure_extorgs(uuids):
         for i in range(0, len(lst), n):
             yield lst[i:i + n]
 
-    # Define batch size for testing
     batch_size = 10
 
-    # Fully flatten list of lists of UUIDs
-    uuids = list(chain.from_iterable(u for u in uuids if isinstance(u, list)))
-    # Flatten the list
-    flat_uuids = [uuid for sublist in uuids for uuid in sublist]
-    flat_uuids = list(dict.fromkeys(flat_uuids))
+    flat_uuids = flatten_external_org_uuid_groups(uuids)
     if not flat_uuids:
         logger.info("No external organization UUIDs found to fetch from Pure")
         return {"results": []}
@@ -720,12 +896,12 @@ def fetch_pure_extorgs(uuids):
     total_items = 0
     # Loop over each batch and make a request
     for batch_index, batch in enumerate(batches):
-        pipe_separated_dois = "|".join(batch)
+        pipe_separated_uuids = "|".join(batch)
         logger.info(
-            f"Finding ext orgs for batch {batch_index + 1}/{len(batches)}, {batch_size} DOIs per batch.")
+            f"Finding ext orgs for batch {batch_index + 1}/{len(batches)}, {len(batch)} UUID(s).")
         json_data = {
             'size': 100,  # Set size to batch size
-            'searchString': pipe_separated_dois,
+            'searchString': pipe_separated_uuids,
         }
         try:
             # Make the API request using the pre-configured session
@@ -815,152 +991,77 @@ def get_ext_orgdata_pure(external_organization_uuids, pure_org_data, pure_org_in
     return organization_details
 
 
-def get_ext_orgdata_openalex(oa_unique_institutions, oa_orgsjsons, openalex_org_index=None):
-    organization_details = []
-
-    def get_result_by_id(data, target_uuid):
-        # Iterate through all results
-        for result in data.get('results', []):
-            # Check if the uuid matches the target uuid
-            if result.get('id') == target_uuid:
-                return result
-        return None
-    if openalex_org_index is None:
-        openalex_org_index = {result.get('id'): result for result in oa_orgsjsons.get('results', []) if result.get('id')}
-
-    for institute in oa_unique_institutions:
-        data = openalex_org_index.get(institute)
-        if data is None:
-            data = get_result_by_id(oa_orgsjsons, institute)
-
-
-        if data:
-
-            # Extract the required fields
-            openalex_id = data['ids'].get('openalex')
-            ror = data['ids'].get('ror')
-            display_name = data.get('display_name')
-            display_name_alternatives = data.get('display_name_alternatives', [])
-            geo = data.get('geo', {})
-
-            # Create a list with the extracted information
-            extracted_info = {
-                "openalex_id": openalex_id,
-                "ror": ror,
-                "display_name": display_name,
-                "display_name_alternatives": display_name_alternatives,
-                "geo": geo
-            }
-
-            # Append the extracted information to the results list
-            organization_details.append(extracted_info)
-
-    return organization_details
-
-
 def main(faculty_choice, test_choice):
     logger.info("Script to update external organisations in pure from ricgraph has started")
 
     faculties = select_faculties(faculty_choice, test_choice)
-
+    logger.info(f"Selected {len(faculties)} faculty key(s)")
+    institution_snapshot = load_openalex_institutions_lookup()
+    institution_name_index = build_institution_name_index(institution_snapshot)
     researchoutputs = enrich.select_persons_researchoutput(faculties)
 
-    purejsons = enrich.fetch_pure_researchoutputs(researchoutputs)
-    dois = [entry["doi"] for entry in researchoutputs if entry.get("doi")]
-    openalexjsons = enrich.fetch_openalex_works(dois)
-    rorsuiids =[]
-    update = 0
-    article_orgs = []
-    # Initialize sets for unique UUIDs and unique institutions
-    uuids = []
-    oa_ids = []
-    orgs = []
-
-    for doi in dois:
-        orgs_out, new_uuids, new_oa_ids = mainproces(doi, purejsons, openalexjsons, article_orgs)
-        for org in orgs_out:
-            if org not in orgs:
-                orgs.append(org)
-
-        uuids.append(new_uuids)
-        oa_ids.append(new_oa_ids)
+    purejsons = enrich.fetch_pure_researchoutputs(researchoutputs, allow_doi_fallback=False)
+    article_orgs, uuids = collect_ricgraph_article_orgs(researchoutputs, purejsons)
 
     pure_orgsjsons = fetch_pure_extorgs(uuids)
-    notupdate = 0
-
-    openalex_orgjsons = fetch_openalex_rors(oa_ids)
+    unique_external_org_uuids = flatten_external_org_uuid_groups(uuids)
+    logger.info(
+        f"External org funnel: {len(researchoutputs)} Ricgraph research output selection row(s), "
+        f"{len(purejsons.get('results', []))} Pure research output(s), "
+        f"{len(article_orgs)} publication(s) with Ricgraph organisations, "
+        f"{sum(len(article['external_organization_uuids']) for article in article_orgs)} external org link(s), "
+        f"{len(unique_external_org_uuids)} unique external org UUID(s), "
+        f"{len(pure_orgsjsons.get('results', []))} Pure external org record(s) fetched"
+    )
     pure_org_index = {result.get('uuid'): result for result in pure_orgsjsons.get('results', []) if result.get('uuid')}
-    openalex_org_index = {result.get('id'): result for result in openalex_orgjsons.get('results', []) if result.get('id')}
     all_rows_toupdate = []
-    all_jsons_update =[]
-
-    all_orgs_to_update = []
+    all_jsons_update = []
     all_orgs_with_ror = []
     all_no_name_match = []
     all_ambiguous_matches = []
 
-    count = 0
-    for article in article_orgs:
-         count += 1
-         if count % 25 == 0:
+    for count, article in enumerate(article_orgs, start=1):
+        if count % 25 == 0:
             logger.info(f"Processed {str(count)} batch")
-         pure_org_details = get_ext_orgdata_pure(article['external_organization_uuids'], pure_orgsjsons, pure_org_index)
-         oa_org_details = get_ext_orgdata_openalex(article['unique_institutions'], openalex_orgjsons, openalex_org_index)
+        pure_org_details = get_ext_orgdata_pure(article['external_organization_uuids'], pure_orgsjsons, pure_org_index)
+        snapshot_org_details = get_ext_orgdata_from_ricgraph(
+            article['ricgraph_organizations'],
+            institution_name_index,
+        )
 
-         orgs_to_update, orgs_with_ror_in_pure, orgs_with_no_name_match, orgs_with_ambiguous_match = match_organizations(
-             pure_org_details,
-             oa_org_details
-         )
-         all_orgs_to_update.extend(orgs_to_update)
-         all_orgs_with_ror.extend(orgs_with_ror_in_pure)
-         all_no_name_match.extend(orgs_with_no_name_match)
-         all_ambiguous_matches.extend(orgs_with_ambiguous_match)
+        orgs_to_update, orgs_with_ror_in_pure, orgs_with_no_name_match, orgs_with_ambiguous_match = match_organizations(
+            pure_org_details,
+            snapshot_org_details
+        )
+        all_orgs_with_ror.extend(orgs_with_ror_in_pure)
+        all_no_name_match.extend(orgs_with_no_name_match)
+        all_ambiguous_matches.extend(orgs_with_ambiguous_match)
 
-         update, inpure, rows_to_update, json_updates  = update_externalorg_pure(orgs_to_update, test_choice, update)
-         all_rows_toupdate.extend(rows_to_update)
-         all_jsons_update.extend(json_updates)
+        _update, _inpure, rows_to_update, json_updates = update_externalorg_pure(orgs_to_update, test_choice, 0)
+        all_rows_toupdate.extend(rows_to_update)
+        all_jsons_update.extend(json_updates)
 
-         if inpure == True:
-             notupdate = notupdate  +1
-
-
-    # Save the DataFrame
-    # Directory to save the output files
-    output_dir = resolve_output_dir()
-    os.makedirs(output_dir, exist_ok=True)
-    deduped_rows = dedupe_records_by_uuid(all_rows_toupdate, uuid_keys=("uuid",))
-    deduped_json_updates = dedupe_records_by_uuid(all_jsons_update)
-    duplicate_count = len(all_rows_toupdate) - len(deduped_rows)
-    if duplicate_count > 0:
-        logger.info(f"Collapsed {duplicate_count} duplicate external org proposal row(s) to unique organisation UUIDs")
-
-    df = pd.DataFrame(deduped_rows)
-    df.to_csv(os.path.join(output_dir, "external_orgs_to_update.csv"), index=False)
-
-    # Save the big JSON file
-    with open(os.path.join(output_dir, "external_orgs_updates.json"), 'w') as json_file:
-        json.dump(deduped_json_updates, json_file, indent=4)
-
-    with open(os.path.join(output_dir, "external_orgs_ambiguous_matches.json"), 'w') as json_file:
-        json.dump(all_ambiguous_matches, json_file, indent=4)
-
-    with open(os.path.join(output_dir, "external_orgs_no_name_match.json"), 'w') as json_file:
-        json.dump(all_no_name_match, json_file, indent=4)
+    deduped_rows, _deduped_json_updates = write_external_org_outputs(
+        all_rows_toupdate,
+        all_jsons_update,
+        all_ambiguous_matches,
+        all_no_name_match,
+    )
 
     logger.info(
         f"Total external orgs processed: {sum(len(article['external_organization_uuids']) for article in article_orgs)}")
-
+    exact_proposals = sum(1 for row in deduped_rows if str(row.get('match_type') or '').startswith('exact_'))
+    fuzzy_proposals = sum(1 for row in deduped_rows if str(row.get('match_type') or '').startswith('fuzzy_'))
+    logger.info(
+        f"External org funnel results: {exact_proposals} exact proposal(s), {fuzzy_proposals} fuzzy proposal(s), "
+        f"{len({row.get('uuid') for row in all_orgs_with_ror if row.get('uuid')})} unique org(s) already with ROR, "
+        f"{len({row.get('uuid') for row in all_no_name_match if row.get('uuid')})} unique no-name-match org(s), "
+        f"{len({row.get('uuid') for row in all_ambiguous_matches if row.get('uuid')})} unique ambiguous org(s)"
+    )
     logger.info(f"nr of ext orgs that can be updated: {len(deduped_rows)}")
     logger.info(f"nr of ext orgs that already have a ROR in Pure: {len(all_orgs_with_ror)}")
-    logger.info(f"nr of ext orgs with no name match in OpenAlex: {len(all_no_name_match)}")
-    logger.info(f"nr of ext orgs with ambiguous OpenAlex matches: {len(all_ambiguous_matches)}")
-
-    unique_rorsuiids = list(set(rorsuiids))
-    with open(os.path.join(output_dir, 'output.csv'), mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerows(unique_rorsuiids)
-
-
+    logger.info(f"nr of ext orgs with no name match in institution snapshot: {len(all_no_name_match)}")
+    logger.info(f"nr of ext orgs with ambiguous institution snapshot matches: {len(all_ambiguous_matches)}")
 
 # ########################################################################
 # MAIN

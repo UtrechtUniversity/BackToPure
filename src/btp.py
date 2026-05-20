@@ -2,10 +2,22 @@ import logging
 import sys
 from logging_config import setup_logging
 import requests
-from config import PURE_BASE_URL, PURE_API_KEY, PURE_HEADERS, RIC_BASE_URL, ID_URI, FACULTY_PREFIX
+from config import (
+    FACULTY_PREFIX,
+    ID_URI,
+    PURE_API_KEY,
+    PURE_BASE_URL,
+    PURE_HEADERS,
+    RIC_BASE_URL,
+    is_primary_organization_key,
+)
 
 logger = setup_logging('btp', level=logging.INFO)
 # logger.handlers[0].stream.flush = lambda: sys.stdout.flush()
+
+def is_primary_faculty_key(key):
+    return is_primary_organization_key(key)
+
 
 def checks_before_start(faculty):
 
@@ -54,8 +66,8 @@ def select_faculties(faculty_choice):
 
     # Extract faculties or use the provided choice
     if faculty_choice.lower() == 'all':
-        selected_faculties = [item.get('_key') for item in data.get("results", [])]
+        selected_faculties = [item.get('_key') for item in data.get("results", []) if is_primary_faculty_key(item.get('_key'))]
     else:
-        selected_faculties = [faculty_choice]
+        selected_faculties = [faculty_choice] if is_primary_faculty_key(faculty_choice) else []
 
     return selected_faculties
