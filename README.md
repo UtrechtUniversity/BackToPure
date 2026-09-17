@@ -23,24 +23,29 @@ The application orchestrates a series of Python scripts to fetch, process, and u
 
 ### System Requirements
 - **OS:** Windows, macOS, or Linux
-- **Python:** Version 3.7 or higher
+- **Python:** Version 3.10 or higher
+- **Node.js:** Version 20 or higher for the React frontend
 - **Virtual Environment:** Recommended to use `venv`
 
 ### Dependencies
-To install the required Python packages, run:
+To install the backend runtime packages, run:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Ensure the following dependencies are listed in `requirements.txt`:
-- Flask
-- pandas
-- requests
-- configparser
-- logging
-- tenacity (for retry logic)
-- urllib3
+For backend development and tests, use:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+For the frontend, install packages from `frontend/`:
+
+```bash
+cd frontend
+npm ci
+```
 
 ### Access to Ricgraph
 To use BackToPure, **access to Ricgraph** is mandatory. Ricgraph is a data storage and query system used to manage research-related data and link it to external systems. The application fetches data about faculties, researchers, and outputs directly from Ricgraph's API. Ensure that you have API access for querying Ricgraph.
@@ -51,20 +56,22 @@ To use BackToPure, **access to Ricgraph** is mandatory. Ricgraph is a data stora
 
 ```
 BackToPure/
-├── app.py (creates Flask app)
-├── BackToPure.py (main entry point)
-├── src/ (contains scripts for enrichment and updates)
+├── BackToPure.py (Flask app entry point)
+├── app/ (Flask app package, routes, services, templates, static assets)
+├── src/ (workflow scripts and Pure/Ricgraph/OpenAlex helpers)
 │   ├── enrich_internal_persons_with_ids.py
 │   ├── enrich_pure_external_persons.py
 │   ├── enrich_pure_external_orgs.py
 │   ├── update_researchoutput_from_ricgraph.py
 │   ├── update_datasets_from_ricgraph.py
-│   └── apply_updates_to_pure.py
-├── templates/ (HTML templates for pages)
-├── static/ (static files such as CSS and JavaScript)
-├── config.py (configuration variables)
-├── routes.py (Flask routes)
-└── requirements.txt (list of dependencies)
+│   ├── apply_updates_to_pure.py
+│   ├── config.py
+│   └── config.example.ini
+├── frontend/ (React/Vite UI)
+├── tests/ (backend tests)
+├── docs/ (plans and implementation notes)
+├── requirements.txt (backend runtime dependencies)
+└── requirements-dev.txt (backend test dependencies)
 ```
 
 ---
@@ -86,30 +93,121 @@ source .venv/bin/activate  # Linux/macOS
 
 ### 3. Install Dependencies
 ```bash
-pip install -r requirements.txt
+pip install -e ".[dev]"
+cd frontend
+npm ci
+cd ..
+```
+
+If you prefer requirements files, this still works:
+
+```bash
+pip install -r requirements-dev.txt
 ```
 
 ### 4. Configure the Application
-Edit `config.py` to set the following variables:
-- `PURE_BASE_URL`: Base URL of the Pure API
-- `PURE_API_KEY`: API key for Pure
-- `RIC_BASE_URL`: Base URL of the Ricgraph API
-- `FACULTY_PREFIX`: Prefix for faculties in Ricgraph
+Create a private local config file from the example:
 
-Ensure `src/config.ini` is updated with relevant API settings if needed.
+```bash
+cp src/config.example.ini src/config.ini
+```
+
+Then edit `src/config.ini` with your Pure, Ricgraph, and OpenAlex settings. This file is intentionally ignored by git because it contains local URLs and API keys.
+
+The Ricgraph organization scope is configurable. For UU this normally looks like:
+
+```ini
+[RICGRAPH-API]
+BaseURL = https://explorer.ricgraph.eu/api/
+FacultyPrefix = uu faculty
+PrimaryOrganizationPrefixes = uu faculty:
+ExcludedOrganizationPrefixes = uu faculty research:
+```
+
+For another organization, set `FacultyPrefix` to the value used for Ricgraph organization search, set `PrimaryOrganizationPrefixes` to the organization key prefix that should appear in the dropdown, and set `ExcludedOrganizationPrefixes` to any related trees that should never be selected for jobs.
+
+You can also point the app at a private config file elsewhere:
+
+```bash
+export BTP_CONFIG_PATH=/path/to/config.ini
+```
+
+For production, set a private Flask secret:
+
+```bash
+export BTP_SECRET_KEY='replace-with-a-long-random-value'
+```
+
+Before running jobs against a real Pure tenant, validate the local Pure URI/source configuration:
+
+```bash
+.venv/bin/python src/doctor.py --config-only
+```
+
+This check is read-only. It catches missing or placeholder Pure source/type values such as ORCID, OpenAlex, ROR, dataset roles, dataset type, and default organization settings.
+
+For broader local setup checks, including imports, frontend build, runtime paths, OpenAlex snapshot, and optional Pure/Ricgraph reachability:
+
+```bash
+.venv/bin/python src/doctor.py
+```
+
+Use `--skip-network` when you only want local checks.
+
+External organization jobs require the OpenAlex institution snapshot lookup. Build or refresh it with:
+
+```bash
+.venv/bin/python src/snapshot_openalex_institutions.py --download
+```
+
+Optional runtime path overrides:
+
+```bash
+export BTP_RUNTIME_ROOT=/var/lib/back-to-pure
+export BTP_DATA_DIR=/var/lib/back-to-pure/data
+export BTP_LOGS_DIR=/var/log/back-to-pure/jobs
+export BTP_FRONTEND_DIST=/opt/back-to-pure/frontend/dist
+```
 
 ---
 
 ## Usage Guide
 
-### 1. Start the Flask Application
+### 1. Start the Flask Application Locally
 ```bash
-python BackToPure.py
+python3 BackToPure.py
 ```
-The application will run on `http://localhost:5001`.
+The backend runs on `http://127.0.0.1:5002` by default.
+
+You can override the local host, port, and debug mode:
+
+```bash
+BTP_HOST=0.0.0.0 BTP_PORT=5002 FLASK_DEBUG=1 python3 BackToPure.py
+```
+
+The same app can also be started with Flask's CLI:
+
+```bash
+flask --app BackToPure run --port 5002
+```
+
+For production, do not use the Flask debug server. Install the production extra and run a WSGI server:
+
+```bash
+pip install -e ".[prod]"
+gunicorn --bind 0.0.0.0:5002 --workers 2 --timeout 300 BackToPure:app
+```
 
 ### 2. Navigate to the Dashboard
-- Open your web browser and go to `http://localhost:5001`
+- Legacy Flask UI: open `http://127.0.0.1:5002`
+- React UI: build the frontend first, then open `http://127.0.0.1:5002/app`
+
+```bash
+cd frontend
+npm run build
+cd ..
+python3 BackToPure.py
+```
 
 ### 3. Enrich and Update Records
 - **Internal Persons:** Select the "Enrich Internal Persons" option and choose the desired faculty.
@@ -124,8 +222,69 @@ The application will run on `http://localhost:5001`.
 
 ---
 
+## Tests
+
+Run backend tests from the repository root:
+
+```bash
+python3 -m pytest -q
+```
+
+Run Python formatting and lint checks:
+
+```bash
+python3 -m ruff check --select I,F app tests BackToPure.py
+```
+
+Run frontend tests from `frontend/`:
+
+```bash
+cd frontend
+npm test
+```
+
+Build the frontend:
+
+```bash
+cd frontend
+npm run build
+```
+
+The CI workflow runs:
+
+- backend editable install with `.[dev]`
+- `ruff check --select I,F app tests BackToPure.py`
+- backend pytest
+- frontend `npm test`
+- frontend `npm run build`
+
+Generated outputs such as `data/`, `logs/`, `output/`, and `frontend/dist/` are ignored by git.
+
+For local development, the editable install keeps the `app/` package and the flat workflow modules from `src/` importable without manually setting `PYTHONPATH`.
+
+## Runtime Operations
+
+Production runtime state should live outside the git checkout. Use `BTP_RUNTIME_ROOT` or the more specific `BTP_DATA_DIR`, `BTP_LOGS_DIR`, and `BTP_FRONTEND_DIST` variables to place writable state and built frontend assets in stable paths.
+
+Operational details, retention guidance, and the recommended deployment layout are documented in [docs/runtime-operations.md](docs/runtime-operations.md).
+
+For a new organization setting up BackToPure from a fresh clone, follow [docs/first-run-setup.md](docs/first-run-setup.md).
+
+The expected Ricgraph routes and data shapes are documented in [docs/ricgraph-api-contract.md](docs/ricgraph-api-contract.md).
+
+Optional Ricgraph route-shape smoke tests can be run against a local or remote endpoint:
+
+```bash
+BTP_RICGRAPH_TEST_BASE_URL=https://explorer.ricgraph.eu/api/ \
+  .venv/bin/python -m pytest tests/test_ricgraph_smoke.py -q
+```
+
+---
+
 ## Troubleshooting
-- **Error: "Script path does not exist"**: Ensure all scripts are located in the `src/` directory.
+- **Error: "configuration file ... does not exist"**: Copy `src/config.example.ini` to `src/config.ini` or set `BTP_CONFIG_PATH`.
+- **Error: "Script path does not exist"**: Ensure all scripts are located in the `src/` directory and start the backend from the repository root.
+- **React app returns "Frontend build not found"**: Run `npm run build` inside `frontend/`.
 - **Connection Issues:** Check if Ricgraph and Pure APIs are accessible.
 - **Permission Denied:** Run the application with elevated permissions if required.
 
@@ -161,4 +320,3 @@ SOFTWARE.
 
 ## Contribution
 Feel free to open issues and submit pull requests to improve the project.
-

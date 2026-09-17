@@ -1,19 +1,8 @@
-# packagees
+# Third-party dependencies only (no Python stdlib modules)
 Flask
 requests
 pandas
-configparser
-logging
 urllib3
 tenacity
-argparse
-json
-datetime
-subprocess
-re
-os
-sys
-csv
-math
-concurrent.futures
-typing
+python-dateutil
+nameparser

@@ -43,8 +43,11 @@ import pure_datasets as puda
 import pandas as pd
 import os
 import argparse
-from config import RIC_BASE_URL
+import enrich_pure_external_persons as enrich
+from config import FACULTY_PREFIX, RIC_BASE_URL
 from logging_config import setup_logging
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 logger = setup_logging('dataset', level=logging.INFO)
 import json
@@ -56,6 +59,15 @@ import json
 # - check pure for presence of these datasets
 # - create datasets in pure
 
+session = requests.Session()
+retry_strategy = Retry(
+    total=5,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["GET", "POST"],
+    backoff_factor=1,
+)
+session.mount("https://", HTTPAdapter(max_retries=retry_strategy))
+session.mount("http://", HTTPAdapter(max_retries=retry_strategy))
 
 def print_faculty_list(faculty_list):
     for idx, faculty in enumerate(faculty_list, start=1):
@@ -66,7 +78,8 @@ def fetch_personroots(faculty_key):
     """Fetch person-root nodes for a given faculty."""
     try:
         params = {'key': faculty_key, 'max_nr_items': '9999'}
-        response = requests.get('http://127.0.0.1:3030/api/get_all_personroot_nodes', params=params)
+        url = RIC_BASE_URL + 'get_all_personroot_nodes'
+        response = session.get(url, params=params, timeout=30)
 
         return response.json().get("results", [])
     except requests.RequestException as e:
@@ -78,20 +91,27 @@ def select_faculties(faculty_choice):
     logger = setup_logging('dataset', level=logging.INFO)
     logger.info("Script to update datasets in pure from ricgraph has started")
     params = {
-        'value': 'uu faculty',
+        'value': FACULTY_PREFIX,
     }
-    response = requests.get('http://127.0.0.1:3030/api/organization/search', params=params)
-    data = response.json()
+    try:
+        url = RIC_BASE_URL + 'organization/search'
+        response = session.get(url, params=params, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+    except requests.RequestException as e:
+        logger.error(f"Error fetching faculties from Ricgraph: {e}")
+        return []
 
     if faculty_choice.lower() == 'all':
-        selected_faculties = [item['_key'] for item in data["results"]]
+        selected_faculties = [item['_key'] for item in data["results"] if enrich.is_primary_faculty_key(item.get('_key'))]
     else:
-        selected_faculties = [faculty_choice]
+        selected_faculties = [faculty_choice] if enrich.is_primary_faculty_key(faculty_choice) else []
 
     return selected_faculties
 
 def select_persons_datasets(faculties, faculty_choice):
     persons = []
+    data = []
     if faculty_choice == 'all':
 
         params = {
@@ -99,7 +119,8 @@ def select_persons_datasets(faculties, faculty_choice):
             'max_nr_items': '0',
         }
         data = []
-        response = requests.get('http://127.0.0.1:3030/api/advanced_search', params=params)
+        url = RIC_BASE_URL + 'advanced_search'
+        response = session.get(url, params=params, timeout=30)
         datasets = response.json().get("results", [])
         for set in datasets:
             doi = set["_key"].split("|")[0]
@@ -117,6 +138,7 @@ def select_persons_datasets(faculties, faculty_choice):
                     for set in datasets:
                         doi = set["_key"].split("|")[0]
                         data.append(doi)
+    data = list(dict.fromkeys(data))
     logger.info("datasets found in ricgraph: " + str(len(data)))
     return data
 
@@ -127,7 +149,7 @@ def select_datasets(persoonroot_key):
     try:
         params = {'key': persoonroot_key, 'category_want': 'data set'}
         url = RIC_BASE_URL + 'get_all_neighbor_nodes'
-        response = requests.get(url, params=params)
+        response = session.get(url, params=params, timeout=30)
 
         return response.json().get("results", [])
     except requests.RequestException as e:
@@ -151,8 +173,6 @@ def df_to_pure(df, created, ignored, no_internal):
         if _ % 10 == 0:  # Print progress every 5 iterations
 
             logger.info(f"Processing: {_}")
-            # print(f"Processing: {_}", flush=True)
-            time.sleep(0.1)  # Simulate work
 
         already_in_pure = puda.find_dataset(None, row['doi'])
         if already_in_pure:
@@ -188,7 +208,7 @@ def df_to_pure(df, created, ignored, no_internal):
             else:
                 no_internal += 1
 
-    output_dir = 'output/datasets'
+    output_dir = os.environ.get('BTP_OUTPUT_DIR', 'output/datasets')
     os.makedirs(output_dir, exist_ok=True)  # Ensure the output directory exists
     output_file = os.path.join(output_dir, 'datasets_to_be_updated.json')
     try:
@@ -212,8 +232,11 @@ def df_to_pure(df, created, ignored, no_internal):
 
 
 def main(faculty_choice):
-    print("test")
+    logger.debug("Starting datasets import flow")
     faculties = select_faculties(faculty_choice)
+    if not faculties:
+        logger.error("No faculties found or Ricgraph unavailable; stopping dataset import.")
+        return
     datasets = select_persons_datasets(faculties, faculty_choice)
 
     df = datacite_utils.get_df_from_datacite(datasets)

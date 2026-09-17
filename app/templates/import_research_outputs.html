@@ -60,6 +60,33 @@
     </div>
 
     <script>
+        function renderActionButtons(canOpen, canApply) {
+            const lookAtFileContainer = document.getElementById('look-at-file-container');
+            let html = '';
+
+            if (canOpen) {
+                html += '<button id="look-at-file-button" style="margin-top: 20px; padding: 10px; font-size: 16px; background-color: #007bff; color: white;">Look at the Updated File</button>';
+            }
+            if (canApply) {
+                html += '<button id="apply-update-button" style="margin-left: 10px; padding: 10px; font-size: 16px; background-color: #28a745; color: white;">Apply Update to Pure</button>';
+            }
+
+            lookAtFileContainer.innerHTML = html;
+        }
+
+        function refreshUpdateStatus() {
+            fetch('/update_status?source=import_research_outputs')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        renderActionButtons(data.can_open, data.can_apply);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching update status:', error);
+                });
+        }
+
         // Fetch faculties and populate the dropdown
         document.addEventListener("DOMContentLoaded", function() {
             fetch('/faculties')
@@ -100,6 +127,7 @@
                     errorOption.textContent = 'Cannot connect to ricgraph';
                     select.appendChild(errorOption);
                 });
+            refreshUpdateStatus();
         });
 
         // Handle form submission and stream output
@@ -120,9 +148,7 @@
                 function read() {
                     reader.read().then(({ done, value }) => {
                         if (done) {
-                            // Add "Look at the Updated File" button once streaming is complete
-                            const lookAtFileContainer = document.getElementById('look-at-file-container');
-                            lookAtFileContainer.innerHTML = '<button id="look-at-file-button" style="margin-top: 20px; padding: 10px; font-size: 16px; background-color: #007bff; color: white;">Look at the Updated File</button>';
+                            refreshUpdateStatus();
                             return;
                         }
                         outputDiv.innerHTML += decoder.decode(value, { stream: true }).replace(/\n/g, '<br>');
@@ -146,9 +172,7 @@
                     .then(data => {
                         if (data.status === 'success') {
                             alert('Directory opened successfully.');
-                            // Add the Apply Update to Pure button next to Look at the Updated File button
-                            const lookAtFileContainer = document.getElementById('look-at-file-container');
-                            lookAtFileContainer.innerHTML += '<button id="apply-update-button" style="margin-left: 10px; padding: 10px; font-size: 16px; background-color: #28a745; color: white;">Apply Update to Pure</button>';
+                            refreshUpdateStatus();
                         } else {
                             alert('Failed to open directory: ' + data.message);
                         }

@@ -62,15 +62,21 @@
 # ########################################################################
 
 
-import sys
 import os
+import sys
+from pathlib import Path
 
 # Add the src directory to the Python path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+SRC_DIR = Path(__file__).resolve().parent / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 from app import create_app
 
 app = create_app()
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    debug = os.environ.get("FLASK_DEBUG", "0").lower() in {"1", "true", "yes", "on"}
+    host = os.environ.get("BTP_HOST", "127.0.0.1")
+    port = int(os.environ.get("BTP_PORT", "5002"))
+    app.run(host=host, port=port, debug=debug)
