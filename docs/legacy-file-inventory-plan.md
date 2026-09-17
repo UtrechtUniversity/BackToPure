@@ -1,6 +1,6 @@
 # Legacy File Inventory and Cleanup Plan
 
-Last updated: 2026-05-20
+Last updated: 2026-09-17
 
 This document tracks the file-by-file production cleanup. Phase 1 is an inventory only: flag files by current use and legacy risk, without deleting anything. Later phases can remove or archive files once the current app is tested.
 
@@ -20,7 +20,7 @@ This document tracks the file-by-file production cleanup. Phase 1 is an inventor
 - [x] Check references to old Flask assets and legacy scripts.
 - [x] Check tracked repository files with `git ls-files`.
 - [x] Flag unused and legacy candidates across the whole project, not only Flask.
-- [ ] Decide which legacy reachable routes should redirect to `/app`.
+- [x] Decide which legacy reachable routes should redirect to `/app`. Done: the seven page routes redirect, the machine-facing routes were removed.
 - [ ] Decide whether likely unused scripts should move to `legacy/` first or be deleted after testing.
 - [ ] Clean generated local artifacts from the working tree if any are accidentally tracked.
 
@@ -51,21 +51,27 @@ This document tracks the file-by-file production cleanup. Phase 1 is an inventor
 | `frontend/src/**/*.test.tsx`, `frontend/src/**/*.test.ts`, `frontend/src/test/*` | Active | Frontend test support. |
 | `frontend/package.json`, `package-lock.json`, `tsconfig*.json`, `vite.config.ts` | Active | Frontend build and test config. |
 
-## Legacy Flask UI
+## Legacy Flask UI (removed)
 
-These files are old UI, but still reachable through Flask routes today. They should not be deleted until routes are redirected or removed and tests are updated.
+The old Flask UI was removed. `app/templates/` and `app/static/css/style.css` are deleted.
 
-| File | Status | Notes |
-| --- | --- | --- |
-| `app/templates/home.html` | Legacy but reachable | Served by `/` and `/home`. Candidate: redirect both to `/app`. |
-| `app/templates/enrich_internal_persons.html` | Legacy but reachable | Old form for internal persons workflow. |
-| `app/templates/enrich_external_persons.html` | Legacy but reachable | Old form for external persons workflow. |
-| `app/templates/enrich_external_orgs.html` | Legacy but reachable | Old form for external organizations workflow. |
-| `app/templates/import_research_outputs.html` | Legacy but reachable | Old form for research output workflow. |
-| `app/templates/import_datasets.html` | Legacy but reachable | Old form for datasets workflow. |
-| `app/static/css/style.css` | Legacy but reachable | Referenced only by old Flask templates. |
-| `app/static/images/BACK-TO-Pure-7-1-2024.gif` | Active asset + legacy asset | Used by old Flask templates and by the current React shell, so keep for now. |
-| `app/routes.py` legacy workflow routes | Legacy but reachable | `LegacyWorkflow`, `/run_*`, `/faculties`, `/open_directory`, `/update_status`, and `/run_apply_updates_to_pure` support the old UI. |
+Human-facing pages redirect `302` to `/app`, because colleagues have them bookmarked:
+`/`, `/home`, `/enrich_internal_persons_with_ids`, `/enrich_external_persons`,
+`/enrich_external_orgs`, `/import_research_outputs`, `/import_datasets`.
+
+Machine-facing routes were deleted outright — they were only ever called by the old
+forms, never typed by a person: the five `/run_*` workflow routes, `/faculties`
+(a duplicate of `/api/faculties`), `/update_status`, `/run_apply_updates_to_pure`
+and `/open_directory`.
+
+`/open_directory` has no `/api` replacement by design. It resolved a directory from the
+`Referer` header and launched `xdg-open` on the machine running Flask, which only ever
+worked when the server was the user's own desktop. The React UI serves artifacts over
+HTTP instead, via `/api/jobs/<job_id>/artifacts` and
+`/api/jobs/<job_id>/artifacts/<artifact_name>`.
+
+`app/static/images/BACK-TO-Pure-7-1-2024.gif` is kept: `frontend/src/components/AppShell.tsx`
+references it.
 
 ## Active Job Scripts
 

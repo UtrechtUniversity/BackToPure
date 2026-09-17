@@ -1,32 +1,27 @@
-import logging
-import os
-import subprocess
-import sys
-from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 
 import requests
-from flask import Response, current_app, jsonify, render_template, request, send_from_directory
+from flask import current_app, jsonify, redirect, request, send_from_directory
 
-from app.models import JobType, get_job_type_definition
 from app.services import JobService
 from config import FACULTY_PREFIX, RIC_BASE_URL, is_primary_organization_key
 
+# Paths served by the old Flask UI. The UI is gone, but people have these
+# bookmarked, so they redirect to the React app rather than 404.
+_LEGACY_REDIRECTS = (
+    ('/', 'index'),
+    ('/home', 'home'),
+    ('/enrich_internal_persons_with_ids', 'enrich_internal_persons'),
+    ('/enrich_external_persons', 'enrich_external_persons'),
+    ('/enrich_external_orgs', 'enrich_external_orgs'),
+    ('/import_research_outputs', 'import_research_outputs'),
+    ('/import_datasets', 'import_datasets'),
+)
 
-@dataclass(frozen=True)
-class LegacyWorkflow:
-    job_type: JobType
-    page_route: str
-    page_endpoint: str
-    template_name: str
-    run_route: str
-    run_endpoint: str
-    source_tokens: tuple[str, ...]
-    cli_arg_spec: tuple[object, ...]
-    form_defaults: dict[str, str] | None = None
-    template_context: dict[str, str] | None = None
-    failure_label: str | None = None
+
+def _redirect_to_frontend():
+    return redirect('/app', code=302)
 
 
 def _job_service() -> JobService:
@@ -74,207 +69,6 @@ def _is_primary_faculty_key(key):
     return is_primary_organization_key(key)
 
 
-LEGACY_WORKFLOWS = (
-    LegacyWorkflow(
-        job_type=JobType.INTERNAL_PERSONS,
-        page_route="/enrich_internal_persons_with_ids",
-        page_endpoint="enrich_internal_persons",
-        template_name="enrich_internal_persons.html",
-        run_route="/run_enrich_internal_persons",
-        run_endpoint="run_enrich_internal_persons",
-        source_tokens=("enrich_internal_persons_with_ids",),
-        cli_arg_spec=(("faculty_choice",),),
-        failure_label="internal persons",
-    ),
-    LegacyWorkflow(
-        job_type=JobType.EXTERNAL_PERSONS,
-        page_route="/enrich_external_persons",
-        page_endpoint="enrich_external_persons",
-        template_name="enrich_external_persons.html",
-        run_route="/run_enrich_external_persons",
-        run_endpoint="run_enrich_pure_external_persons",
-        source_tokens=("enrich_external_persons",),
-        cli_arg_spec=(("faculty_choice",), "yes", ("use_openalex_fallback",)),
-        form_defaults={"use_openalex_fallback": "no"},
-        failure_label="external persons",
-    ),
-    LegacyWorkflow(
-        job_type=JobType.EXTERNAL_ORGS,
-        page_route="/enrich_external_orgs",
-        page_endpoint="enrich_external_orgs",
-        template_name="enrich_external_orgs.html",
-        run_route="/run_enrich_pure_external_orgs",
-        run_endpoint="run_enrich_pure_external_orgs",
-        source_tokens=("enrich_external_orgs",),
-        cli_arg_spec=(("faculty_choice",),),
-        template_context={"feature": "Enrich External Organisations"},
-        failure_label="external orgs",
-    ),
-    LegacyWorkflow(
-        job_type=JobType.RESEARCH_OUTPUTS,
-        page_route="/import_research_outputs",
-        page_endpoint="import_research_outputs",
-        template_name="import_research_outputs.html",
-        run_route="/run_import_research_outputs",
-        run_endpoint="run_import_research_outputs",
-        source_tokens=("import_research_output", "import_research_outputs"),
-        cli_arg_spec=(("faculty_choice",),),
-        failure_label="research outputs",
-    ),
-    LegacyWorkflow(
-        job_type=JobType.DATASETS,
-        page_route="/import_datasets",
-        page_endpoint="import_datasets",
-        template_name="import_datasets.html",
-        run_route="/run_import_datasets",
-        run_endpoint="run_import_datasets",
-        source_tokens=("import_datasets",),
-        cli_arg_spec=(("faculty_choice",),),
-        failure_label="datasets",
-    ),
-)
-
-
-def _workflow_definition(workflow: LegacyWorkflow):
-    return get_job_type_definition(workflow.job_type)
-
-
-def _workflow_requirements(workflow: LegacyWorkflow):
-    definition = _workflow_definition(workflow)
-    requirements = {}
-    if definition.required_csv:
-        requirements["csv"] = list(definition.required_csv)
-    if definition.required_csv_prefixes:
-        requirements["csv_prefix"] = list(definition.required_csv_prefixes)
-    if definition.required_json:
-        requirements["json"] = list(definition.required_json)
-    return requirements
-
-
-def _resolve_legacy_workflow(source: str) -> LegacyWorkflow | None:
-    for workflow in LEGACY_WORKFLOWS:
-        if any(token in source for token in workflow.source_tokens):
-            return workflow
-    return None
-
-
-def _resolve_output_target(source: str):
-    workflow = _resolve_legacy_workflow(source)
-    if workflow is None:
-        return None, None
-    return _workflow_definition(workflow).artifact_dir, _workflow_requirements(workflow)
-
-
-def _resolve_runtime_output_target(source: str):
-    artifact_dir, requirements = _resolve_output_target(source)
-    if artifact_dir is None:
-        return None, requirements
-    return _runtime_root() / artifact_dir, requirements
-
-
-def _has_named_files(directory_path: str, filenames):
-    return any(os.path.isfile(os.path.join(directory_path, filename)) for filename in filenames)
-
-
-def _has_prefixed_files(directory_path: str, prefixes, suffix):
-    try:
-        entries = os.listdir(directory_path)
-    except FileNotFoundError:
-        return False
-    return any(
-        entry.endswith(suffix) and any(entry.startswith(prefix) for prefix in prefixes)
-        for entry in entries
-    )
-
-
-def _script_python():
-    venv_python = os.path.join(os.getcwd(), '.venv', 'bin', 'python')
-    if os.path.isfile(venv_python) and os.access(venv_python, os.X_OK):
-        return venv_python
-    return sys.executable
-
-
-def _python_command(*args):
-    return [_script_python(), *args]
-
-
-def _script_path(script_path: str) -> Path:
-    return Path(current_app.config.get("BTP_PROJECT_ROOT", Path(current_app.root_path).parent)) / script_path
-
-
-def _stream_process(command, *, env=None, failure_label: str):
-    try:
-        process = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-            env=env,
-        )
-    except FileNotFoundError as exc:
-        yield f"Error: could not start Python interpreter: {exc}\n"
-        return
-
-    assert process.stdout is not None
-    for line in iter(process.stdout.readline, ''):
-        logging.debug(line.rstrip())
-        yield line
-
-    process.stdout.close()
-    process.wait()
-    if process.returncode != 0:
-        yield f"Error: {failure_label} script exited with code {process.returncode}\n"
-
-
-def _workflow_cli_args(workflow: LegacyWorkflow, form_data):
-    args = []
-    defaults = workflow.form_defaults or {}
-    for item in workflow.cli_arg_spec:
-        if isinstance(item, str):
-            args.append(item)
-            continue
-        value = None
-        for key in item:
-            value = form_data.get(key)
-            if value is not None:
-                break
-        if value is None:
-            for key in item:
-                if key in defaults:
-                    value = defaults[key]
-                    break
-        args.append("" if value is None else value)
-    return args
-
-
-def _render_workflow_page(workflow: LegacyWorkflow, **context):
-    page_context = dict(workflow.template_context or {})
-    page_context.update(context)
-    return render_template(workflow.template_name, **page_context)
-
-
-def _legacy_page_view(workflow: LegacyWorkflow):
-    def view():
-        return _render_workflow_page(workflow)
-
-    return view
-
-
-def _legacy_run_view(workflow: LegacyWorkflow):
-    def view():
-        script_path = _script_path(_workflow_definition(workflow).script_path)
-        if not script_path.exists():
-            return _render_workflow_page(workflow, message=f"Script path does not exist: {script_path}")
-
-        command = _python_command("-u", str(script_path), *_workflow_cli_args(workflow, request.form))
-        return Response(
-            _stream_process(command, failure_label=workflow.failure_label or workflow.page_endpoint),
-            mimetype='text/plain',
-        )
-
-    return view
-
 def init_app(app):
     @app.route('/app')
     @app.route('/app/')
@@ -294,20 +88,14 @@ def init_app(app):
 
         return send_from_directory(dist_dir, 'index.html')
 
-    @app.route('/')
-    def index():
-        return render_template('home.html')  # Ensure this points to your home page template
-
-    @app.route('/faculties')
-
-    def get_faculties():
-        try:
-            faculty_options = _fetch_faculties()
-        except requests.exceptions.RequestException:
-            # Return a JSON response indicating an error, with status code 500
-            return jsonify({'error': 'Cannot connect to ricgraph'}), 500
-
-        return jsonify(faculty_options)
+    # The legacy Flask UI was removed; these paths are kept as redirects so
+    # existing bookmarks land on the React app instead of a 404.
+    for legacy_path, legacy_endpoint in _LEGACY_REDIRECTS:
+        app.add_url_rule(
+            legacy_path,
+            endpoint=legacy_endpoint,
+            view_func=_redirect_to_frontend,
+        )
 
     @app.route('/api/faculties')
     def api_get_faculties():
@@ -521,105 +309,3 @@ def init_app(app):
 
         _job, artifact_path = resolved
         return send_from_directory(artifact_path.parent, artifact_path.name, as_attachment=True)
-
-    for workflow in LEGACY_WORKFLOWS:
-        app.add_url_rule(
-            workflow.page_route,
-            endpoint=workflow.page_endpoint,
-            view_func=_legacy_page_view(workflow),
-        )
-        app.add_url_rule(
-            workflow.run_route,
-            endpoint=workflow.run_endpoint,
-            view_func=_legacy_run_view(workflow),
-            methods=['POST'],
-        )
-
-    @app.route('/home')
-    def home():
-        return render_template('home.html')
-
-
-    @app.route('/open_directory', methods=['POST'])
-
-    def open_directory():
-        # Adjust this path to your target directory
-        referer = request.headers.get('Referer', 'unknown')
-        logging.debug(f"open_directory called from referer: {referer}")
-        # directory_path = 'output'
-        # Step 2: Execute specific logic based on the Referer
-        directory_path, _ = _resolve_runtime_output_target(referer)
-
-        try:
-            if not directory_path:
-                return jsonify({'status': 'error', 'message': f'Unknown source page: {referer}'}), 400
-            directory_path.mkdir(parents=True, exist_ok=True)
-            # Open the directory using the appropriate command for each OS
-            if os.name == 'nt':  # Windows
-                subprocess.Popen(['explorer', str(directory_path)])
-            elif os.name == 'posix':  # macOS and Linux
-                # Use xdg-open for Linux systems
-                subprocess.Popen(['xdg-open', str(directory_path)])
-            else:
-                return jsonify({'status': 'error', 'message': 'Unsupported OS'}), 500
-
-            return jsonify({'status': 'success'}), 200
-        except Exception as e:
-            return jsonify({'status': 'error', 'message': str(e)}), 500
-
-    @app.route('/update_status', methods=['GET'])
-    def update_status():
-        source = request.args.get('source', '')
-        directory_path, required_files = _resolve_runtime_output_target(source)
-
-        if not directory_path:
-            return jsonify({'status': 'error', 'message': f'Unknown source: {source}'}), 400
-
-        if not directory_path.exists():
-            return jsonify({
-                'status': 'success',
-                'can_open': False,
-                'can_apply': False,
-            })
-
-        if required_files:
-            csv_ok = False
-            json_ok = False
-            if 'csv' in required_files:
-                csv_ok = _has_named_files(str(directory_path), required_files['csv'])
-            if 'csv_prefix' in required_files:
-                csv_ok = csv_ok or _has_prefixed_files(str(directory_path), required_files['csv_prefix'], '.csv')
-            if 'json' in required_files:
-                json_ok = _has_named_files(str(directory_path), required_files['json'])
-            return jsonify({
-                'status': 'success',
-                'can_open': csv_ok or json_ok,
-                'can_apply': csv_ok and json_ok,
-            })
-
-        files_present = any(directory_path.iterdir())
-        return jsonify({
-            'status': 'success',
-            'can_open': files_present,
-            'can_apply': files_present,
-        })
-
-    @app.route('/run_apply_updates_to_pure', methods=['POST'])
-    def run_apply_updates_to_pure():
-        referer = request.headers.get('Referer', 'unknown')
-        script_path = _script_path('src/apply_updates_to_pure.py')
-        logging.debug(f"Checking if script exists at path: {script_path}")
-        if not script_path.exists():
-            logging.error(f"Script path does not exist: {script_path}")
-            return jsonify({'status': 'error', 'message': f'Script path does not exist: {script_path}'}), 404
-
-        env = os.environ.copy()
-        env['REFERER_PAGE'] = referer
-        output_dir, _ = _resolve_runtime_output_target(referer)
-        if output_dir is not None:
-            env['BTP_OUTPUT_DIR'] = str(output_dir)
-        command = _python_command('-u', str(script_path))
-        return Response(
-            _stream_process(command, env=env, failure_label='apply updates'),
-            mimetype='text/plain',
-        )

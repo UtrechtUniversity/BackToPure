@@ -56,25 +56,6 @@ class RouteHelperTests(unittest.TestCase):
             result,
         )
 
-    def test_resolve_output_target_maps_known_sources(self):
-        directory, required = routes._resolve_output_target("import_research_outputs")
-        self.assertEqual("output/research_output", directory)
-        self.assertEqual(["to_be_updated.csv"], required["csv"])
-        self.assertEqual(["output_to_be_updated.json"], required["json"])
-
-    def test_resolve_output_target_rejects_unknown_source(self):
-        directory, required = routes._resolve_output_target("unknown")
-        self.assertIsNone(directory)
-        self.assertIsNone(required)
-
-    def test_has_prefixed_files_detects_matching_entries(self):
-        with patch("app.routes.os.listdir", return_value=["personstobeupdated_20260420.csv", "other.txt"]):
-            self.assertTrue(routes._has_prefixed_files("/tmp/ignored", ["personstobeupdated_"], ".csv"))
-
-    def test_has_named_files_detects_expected_file(self):
-        with patch("app.routes.os.path.isfile", side_effect=lambda path: path.endswith("a.json")):
-            self.assertTrue(routes._has_named_files("/tmp/ignored", ["a.json", "b.json"]))
-
 
 class FlaskRouteTests(unittest.TestCase):
     def setUp(self):
@@ -90,6 +71,34 @@ class FlaskRouteTests(unittest.TestCase):
 
     def tearDown(self):
         self.tempdir.cleanup()
+
+    def test_legacy_paths_redirect_to_frontend(self):
+        for path in (
+            "/",
+            "/home",
+            "/enrich_internal_persons_with_ids",
+            "/enrich_external_persons",
+            "/enrich_external_orgs",
+            "/import_research_outputs",
+            "/import_datasets",
+        ):
+            with self.subTest(path=path):
+                result = self.client.get(path)
+
+                self.assertEqual(302, result.status_code)
+                self.assertEqual("/app", result.headers["Location"])
+
+    def test_removed_legacy_endpoints_are_gone(self):
+        for path in (
+            "/faculties",
+            "/update_status",
+            "/run_apply_updates_to_pure",
+            "/open_directory",
+            "/run_enrich_internal_persons",
+            "/run_import_datasets",
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(404, self.client.get(path).status_code)
 
     def test_frontend_app_returns_503_when_dist_missing(self):
         result = self.client.get("/app")
@@ -117,49 +126,6 @@ class FlaskRouteTests(unittest.TestCase):
         with self.client.get("/app/assets/app.js") as asset_result:
             self.assertEqual(200, asset_result.status_code)
             self.assertIn("console.log('asset');", asset_result.get_data(as_text=True))
-
-    def test_update_status_uses_runtime_root_for_legacy_output_detection(self):
-        runtime_root = os.path.join(self.tempdir.name, "runtime")
-        output_dir = os.path.join(runtime_root, "output", "research_output")
-        os.makedirs(output_dir, exist_ok=True)
-        self.app.config["BTP_RUNTIME_ROOT"] = runtime_root
-
-        with open(os.path.join(output_dir, "to_be_updated.csv"), "w", encoding="utf-8") as handle:
-            handle.write("doi,to_be_updated\n1,x\n")
-        with open(os.path.join(output_dir, "output_to_be_updated.json"), "w", encoding="utf-8") as handle:
-            handle.write("{}")
-
-        result = self.client.get("/update_status?source=import_research_outputs")
-
-        self.assertEqual(200, result.status_code)
-        self.assertEqual(
-            {"status": "success", "can_open": True, "can_apply": True},
-            result.get_json(),
-        )
-
-    @patch("app.routes.requests.get")
-    def test_faculties_returns_options(self, mock_get):
-        response = MagicMock()
-        response.json.return_value = {
-            "results": [{"_key": "uu faculty: science|organization_name", "value": "Science"}]
-        }
-        response.raise_for_status.return_value = None
-        mock_get.return_value = response
-
-        result = self.client.get("/faculties")
-
-        self.assertEqual(200, result.status_code)
-        self.assertEqual(
-            [{"value": "uu faculty: science|organization_name", "label": "Science"}],
-            result.get_json(),
-        )
-
-    @patch("app.routes.requests.get", side_effect=RequestException("down"))
-    def test_faculties_returns_error_when_ricgraph_unavailable(self, _mock_get):
-        result = self.client.get("/faculties")
-
-        self.assertEqual(500, result.status_code)
-        self.assertEqual({"error": "Cannot connect to ricgraph"}, result.get_json())
 
     @patch("app.routes.requests.get")
     def test_api_faculties_returns_items(self, mock_get):
@@ -1039,85 +1005,3 @@ class FlaskRouteTests(unittest.TestCase):
         change_set_result = self.client.get("/api/jobs/job-rollback-source/change-set")
         self.assertEqual(200, change_set_result.status_code)
         self.assertEqual("rolled_back", change_set_result.get_json()["status"])
-
-    def test_update_status_rejects_unknown_source(self):
-        result = self.client.get("/update_status?source=unknown")
-
-        self.assertEqual(400, result.status_code)
-        self.assertEqual("error", result.get_json()["status"])
-
-    @patch("pathlib.Path.exists", return_value=False)
-    def test_update_status_returns_false_when_output_missing(self, _exists):
-        result = self.client.get("/update_status?source=import_datasets")
-
-        self.assertEqual(200, result.status_code)
-        self.assertEqual(
-            {"status": "success", "can_open": False, "can_apply": False},
-            result.get_json(),
-        )
-
-    @patch("app.routes._has_named_files")
-    @patch("pathlib.Path.exists", return_value=True)
-    def test_update_status_reports_ready_apply_state(self, _exists, mock_has_named_files):
-        mock_has_named_files.side_effect = [True, True]
-
-        result = self.client.get("/update_status?source=import_datasets")
-
-        self.assertEqual(200, result.status_code)
-        self.assertEqual(
-            {"status": "success", "can_open": True, "can_apply": True},
-            result.get_json(),
-        )
-
-    @patch("app.routes.Path.exists", return_value=True)
-    @patch("app.routes.subprocess.Popen")
-    def test_run_endpoints_stream_subprocess_output(self, mock_popen, _exists):
-        mock_popen.side_effect = lambda *args, **kwargs: FakeProcess(stdout_lines=["line 1\n", "line 2\n"])
-
-        cases = [
-            ("/run_enrich_internal_persons", {"faculty_choice": "all"}, "src/enrich_internal_persons_with_ids.py"),
-            ("/run_enrich_external_persons", {"faculty_choice": "all", "use_openalex_fallback": "yes"}, "src/enrich_pure_external_persons.py"),
-            ("/run_enrich_pure_external_orgs", {"faculty_choice": "all"}, "src/enrich_pure_external_orgs.py"),
-            ("/run_import_research_outputs", {"faculty_choice": "all"}, "src/update_researchoutput_from_ricgraph.py"),
-            ("/run_import_datasets", {"faculty_choice": "all"}, "src/update_datasets_from_ricgraph.py"),
-        ]
-
-        for url, data, script_path in cases:
-            with self.subTest(url=url):
-                result = self.client.post(url, data=data)
-                body = result.get_data(as_text=True)
-
-                self.assertEqual(200, result.status_code)
-                self.assertIn("line 1", body)
-                self.assertIn("line 2", body)
-                command = mock_popen.call_args[0][0]
-                self.assertTrue(any(str(item).endswith(script_path) for item in command))
-
-    @patch("app.routes.Path.exists", return_value=True)
-    @patch("app.routes.subprocess.Popen")
-    def test_run_apply_updates_streams_output(self, mock_popen, _exists):
-        mock_popen.return_value = FakeProcess(stdout_lines=["apply ok\n"])
-
-        result = self.client.post(
-            "/run_apply_updates_to_pure",
-            headers={"Referer": "http://localhost/import_datasets"},
-        )
-
-        body = result.get_data(as_text=True)
-
-        self.assertEqual(200, result.status_code)
-        self.assertIn("apply ok", body)
-        self.assertEqual("http://localhost/import_datasets", mock_popen.call_args.kwargs["env"]["REFERER_PAGE"])
-
-    @patch("app.routes.Path.exists", return_value=False)
-    def test_run_apply_updates_returns_404_when_script_missing(self, _exists):
-        result = self.client.post("/run_apply_updates_to_pure")
-
-        self.assertEqual(404, result.status_code)
-        self.assertEqual("error", result.get_json()["status"])
-
-    def test_open_directory_rejects_unknown_source(self):
-        result = self.client.post("/open_directory", headers={"Referer": "http://localhost/unknown"})
-
-        self.assertEqual(400, result.status_code)
-        self.assertEqual("error", result.get_json()["status"])
