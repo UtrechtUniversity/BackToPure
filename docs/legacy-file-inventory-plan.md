@@ -21,8 +21,8 @@ This document tracks the file-by-file production cleanup. Phase 1 is an inventor
 - [x] Check tracked repository files with `git ls-files`.
 - [x] Flag unused and legacy candidates across the whole project, not only Flask.
 - [x] Decide which legacy reachable routes should redirect to `/app`. Done: the seven page routes redirect, the machine-facing routes were removed.
-- [ ] Decide whether likely unused scripts should move to `legacy/` first or be deleted after testing.
-- [ ] Clean generated local artifacts from the working tree if any are accidentally tracked.
+- [x] Decide whether likely unused scripts should move to `legacy/` first or be deleted after testing. Done: moved to `legacy/` rather than deleted, so a manual workflow depending on one can surface first. See `legacy/README.md`.
+- [x] Clean generated local artifacts from the working tree if any are accidentally tracked. Done: no generated file is tracked any more.
 
 ## Active Application Core
 
@@ -117,9 +117,9 @@ These files had no current inbound import, route, or job-registry usage in the P
 
 | File | Status | Recommendation |
 | --- | --- | --- |
-| `src/personsperpublication.py` | Likely unused legacy | Move to `legacy/` or delete after confirming no manual workflow depends on it. |
-| `src/pure_api_utils.py` | Likely unused legacy | Looks like older Pure helper code duplicated by current `pure_*` modules. Move/delete after comparing any still-useful functions. |
-| `src/merge_external_orgs.py` | Needs review | Treat as legacy unless we decide to keep a supported external-org merge command. |
+| `legacy/personsperpublication.py` | Moved to `legacy/` | Was `src/personsperpublication.py`. No inbound import, route, or job-registry entry. Delete if nothing needs it after a release or two. |
+| `legacy/pure_api_utils.py` | Moved to `legacy/` | Was `src/pure_api_utils.py`. Older Pure helper code, superseded by the current `src/pure_*` modules. |
+| `src/merge_external_orgs.py` | Needs review, left in place | Not moved. It received recent work (a `main()` guard and output-directory routing), and whether a supported external-org merge command should exist is still open. |
 
 ## Documentation Files
 
