@@ -5,11 +5,12 @@ import requests
 from config import (
     FACULTY_PREFIX,
     ID_URI,
+    is_primary_organization_key,
     PURE_API_KEY,
     PURE_BASE_URL,
     PURE_HEADERS,
+    resolve_faculty_selection,
     RIC_BASE_URL,
-    is_primary_organization_key,
 )
 
 logger = setup_logging('btp', level=logging.INFO)
@@ -65,9 +66,7 @@ def select_faculties(faculty_choice):
         raise SystemExit("Failed to decode JSON from response.")
 
     # Extract faculties or use the provided choice
-    if faculty_choice.lower() == 'all':
-        selected_faculties = [item.get('_key') for item in data.get("results", []) if is_primary_faculty_key(item.get('_key'))]
-    else:
-        selected_faculties = [faculty_choice] if is_primary_faculty_key(faculty_choice) else []
-
-    return selected_faculties
+    return resolve_faculty_selection(
+        faculty_choice,
+        [item.get('_key') for item in data.get("results", [])],
+    )

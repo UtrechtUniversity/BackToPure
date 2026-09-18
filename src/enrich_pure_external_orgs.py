@@ -53,6 +53,7 @@ from config import (
     PURE_API_KEY,
     PURE_BASE_URL,
     PURE_HEADERS,
+    resolve_faculty_selection,
     RIC_BASE_URL,
     ROR_ID_URI,
 )
@@ -751,12 +752,10 @@ def select_faculties(faculty_choice, test_choice):
     url = RIC_BASE_URL + 'organization/search'
     response = requests.get(url, params=params)
     data = response.json()
-    if faculty_choice.lower() == 'all':
-        selected_faculties = [item['_key'] for item in data["results"] if enrich.is_primary_faculty_key(item.get('_key'))]
-    else:
-        selected_faculties = [faculty_choice] if enrich.is_primary_faculty_key(faculty_choice) else []
-
-    return selected_faculties
+    return resolve_faculty_selection(
+        faculty_choice,
+        [item.get('_key') for item in data.get("results", [])],
+    )
 
 def fetch_personroots(faculty_key):
     """Fetch person-root nodes for a given faculty."""

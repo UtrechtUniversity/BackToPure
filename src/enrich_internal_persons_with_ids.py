@@ -360,8 +360,13 @@ def update_persons(person_df, datatotal):
     logger.info(f"if not, please remove the 'X' for that row in the column 'to_be_updated'")
 
 
-def main(faculty_choice):
+def main(faculty_choice, test_choice='yes'):
     logger.info(f"Script enrich persons has started")
+    # test_choice reaches main() but nothing in this script acts on it yet:
+    # the harvest only writes review files. Logged so the value is visible
+    # rather than silently discarded, as it was before.
+    logger.info(f"Run mode: test_choice={test_choice} (this harvest writes review files only)")
+
 
     logger.info("The script performs the following steps:\n"
                  "1. **Person Root Node Retrieval**: Retrieves all person-root nodes from Ricgraph for the selected faculty and fetches the associated person IDs.\n"
@@ -397,4 +402,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    main(args.faculty_choice)
+    main(args.faculty_choice, args.test_choice)

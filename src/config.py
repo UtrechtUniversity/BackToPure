@@ -149,6 +149,32 @@ def is_primary_organization_key(key: str | None) -> bool:
     return not _starts_with_any(key, EXCLUDED_ORGANIZATION_PREFIXES)
 
 
+def resolve_faculty_selection(faculty_choice: str, available_keys) -> list[str]:
+    """Resolve a faculty choice against the keys Ricgraph actually returned.
+
+    ``is_primary_organization_key`` only checks the *shape* of a key, so a
+    well-formed but non-existent choice used to pass straight through and every
+    downstream stage then reported zero rows - a silently empty run that reads
+    exactly like "nothing to do". Validate against the real list instead.
+
+    Matching is case-insensitive and returns the canonical key.
+    """
+    primary = [key for key in available_keys if is_primary_organization_key(key)]
+
+    if isinstance(faculty_choice, str) and faculty_choice.lower() == "all":
+        return primary
+
+    by_lowercase = {key.lower(): key for key in primary}
+    canonical = by_lowercase.get(faculty_choice.lower()) if isinstance(faculty_choice, str) else None
+    if canonical:
+        return [canonical]
+
+    raise ValueError(
+        f"Unknown faculty key {faculty_choice!r}. "
+        f"Ricgraph returned {len(primary)} faculty key(s): {', '.join(sorted(primary)) or '(none)'}"
+    )
+
+
 def is_excluded_organization_key(key: str | None) -> bool:
     return isinstance(key, str) and _starts_with_any(key, EXCLUDED_ORGANIZATION_PREFIXES)
 

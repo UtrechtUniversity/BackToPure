@@ -178,13 +178,41 @@ class InternalPersonsTests(unittest.TestCase):
 
     @patch("enrich_pure_external_persons.session.get")
     def test_external_select_faculties_rejects_direct_research_organisation(self, mock_get):
+        """An excluded or unknown key must fail loudly: silently returning no
+        faculties produces a run that reports zero rows and looks successful."""
         response = MagicMock()
         response.json.return_value = {"results": []}
         mock_get.return_value = response
 
-        result = select_external_person_faculties("uu faculty research: faculteit test|organization_name")
+        with self.assertRaises(ValueError):
+            select_external_person_faculties("uu faculty research: faculteit test|organization_name")
 
-        self.assertEqual([], result)
+    @patch("enrich_pure_external_persons.session.get")
+    def test_external_select_faculties_rejects_unknown_but_well_formed_key(self, mock_get):
+        """'geosciences' is well-formed but does not exist; the real key is
+        'faculteit geowetenschappen'. This shipped as a default and returned 0."""
+        response = MagicMock()
+        response.json.return_value = {
+            "results": [{"_key": "uu faculty: faculteit geowetenschappen|organization_name"}]
+        }
+        mock_get.return_value = response
+
+        with self.assertRaises(ValueError) as ctx:
+            select_external_person_faculties("uu faculty: geosciences|organization_name")
+
+        self.assertIn("faculteit geowetenschappen", str(ctx.exception))
+
+    @patch("enrich_pure_external_persons.session.get")
+    def test_external_select_faculties_matches_case_insensitively(self, mock_get):
+        response = MagicMock()
+        response.json.return_value = {
+            "results": [{"_key": "uu faculty: faculteit geowetenschappen|organization_name"}]
+        }
+        mock_get.return_value = response
+
+        result = select_external_person_faculties("UU FACULTY: Faculteit Geowetenschappen|organization_name")
+
+        self.assertEqual(["uu faculty: faculteit geowetenschappen|organization_name"], result)
 
     def test_external_doi_normalization_rejects_ricgraph_uuid_keys(self):
         self.assertEqual("10.1234/alpha", normalize_doi("https://doi.org/10.1234/Alpha."))
