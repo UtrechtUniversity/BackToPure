@@ -576,11 +576,11 @@ class InternalPersonsTests(unittest.TestCase):
         <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
             <IsTruncated>true</IsTruncated>
             <Contents>
-                <Key>data/institutions/updated_date=2026-05-01/part_000.gz</Key>
+                <Key>data/jsonl/institutions/updated_date=2026-05-01/part_000.gz</Key>
                 <Size>123</Size>
             </Contents>
             <Contents>
-                <Key>data/institutions/manifest</Key>
+                <Key>data/jsonl/institutions/manifest</Key>
                 <Size>10</Size>
             </Contents>
             <NextContinuationToken>token-1</NextContinuationToken>
@@ -590,8 +590,8 @@ class InternalPersonsTests(unittest.TestCase):
 
         self.assertEqual(
             [
-                {"key": "data/institutions/updated_date=2026-05-01/part_000.gz", "size": 123},
-                {"key": "data/institutions/manifest", "size": 10},
+                {"key": "data/jsonl/institutions/updated_date=2026-05-01/part_000.gz", "size": 123},
+                {"key": "data/jsonl/institutions/manifest", "size": 10},
             ],
             keys,
         )
@@ -599,7 +599,7 @@ class InternalPersonsTests(unittest.TestCase):
 
     def test_openalex_snapshot_downloader_skips_unchanged_files(self):
         item = {
-            "key": "data/institutions/updated_date=2026-05-01/part_000.gz",
+            "key": "data/jsonl/institutions/updated_date=2026-05-01/part_000.gz",
             "size": 4,
         }
         with tempfile.TemporaryDirectory() as tmpdir:

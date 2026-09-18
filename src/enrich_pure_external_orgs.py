@@ -29,6 +29,7 @@
 # ########################################################################
 
 import time
+from contextlib import contextmanager
 import csv
 import re
 import difflib
@@ -56,6 +57,24 @@ from config import (
 )
 
 logger = setup_logging('btp', level=logging.INFO)
+
+
+@contextmanager
+def phase_timer(label, timings=None):
+    """Log how long a named phase of the harvest takes.
+
+    Timings are also collected in ``timings`` (a list of ``(label, seconds)``
+    tuples) so the run can end with a single summary line.
+    """
+    start = time.perf_counter()
+    logger.info(f"Phase start: {label}")
+    try:
+        yield
+    finally:
+        elapsed = time.perf_counter() - start
+        if timings is not None:
+            timings.append((label, elapsed))
+        logger.info(f"Phase done: {label} in {elapsed:.1f}s")
 
 
 headers = {
@@ -994,16 +1013,28 @@ def get_ext_orgdata_pure(external_organization_uuids, pure_org_data, pure_org_in
 def main(faculty_choice, test_choice):
     logger.info("Script to update external organisations in pure from ricgraph has started")
 
-    faculties = select_faculties(faculty_choice, test_choice)
+    timings = []
+    run_start = time.perf_counter()
+
+    with phase_timer("select faculties", timings):
+        faculties = select_faculties(faculty_choice, test_choice)
     logger.info(f"Selected {len(faculties)} faculty key(s)")
-    institution_snapshot = load_openalex_institutions_lookup()
-    institution_name_index = build_institution_name_index(institution_snapshot)
-    researchoutputs = enrich.select_persons_researchoutput(faculties)
 
-    purejsons = enrich.fetch_pure_researchoutputs(researchoutputs, allow_doi_fallback=False)
-    article_orgs, uuids = collect_ricgraph_article_orgs(researchoutputs, purejsons)
+    with phase_timer("load OpenAlex institution snapshot", timings):
+        institution_snapshot = load_openalex_institutions_lookup()
+        institution_name_index = build_institution_name_index(institution_snapshot)
 
-    pure_orgsjsons = fetch_pure_extorgs(uuids)
+    with phase_timer("select research outputs from Ricgraph", timings):
+        researchoutputs = enrich.select_persons_researchoutput(faculties)
+
+    with phase_timer("fetch research outputs from Pure", timings):
+        purejsons = enrich.fetch_pure_researchoutputs(researchoutputs, allow_doi_fallback=False)
+
+    with phase_timer("collect Ricgraph organisations per publication", timings):
+        article_orgs, uuids = collect_ricgraph_article_orgs(researchoutputs, purejsons)
+
+    with phase_timer("fetch external orgs from Pure", timings):
+        pure_orgsjsons = fetch_pure_extorgs(uuids)
     unique_external_org_uuids = flatten_external_org_uuid_groups(uuids)
     logger.info(
         f"External org funnel: {len(researchoutputs)} Ricgraph research output selection row(s), "
@@ -1020,9 +1051,14 @@ def main(faculty_choice, test_choice):
     all_no_name_match = []
     all_ambiguous_matches = []
 
+    match_start = time.perf_counter()
+    logger.info(f"Phase start: match organisations for {len(article_orgs)} publication(s)")
     for count, article in enumerate(article_orgs, start=1):
         if count % 25 == 0:
-            logger.info(f"Processed {str(count)} batch")
+            logger.info(
+                f"Processed {count}/{len(article_orgs)} publication(s) "
+                f"in {time.perf_counter() - match_start:.1f}s"
+            )
         pure_org_details = get_ext_orgdata_pure(article['external_organization_uuids'], pure_orgsjsons, pure_org_index)
         snapshot_org_details = get_ext_orgdata_from_ricgraph(
             article['ricgraph_organizations'],
@@ -1041,12 +1077,17 @@ def main(faculty_choice, test_choice):
         all_rows_toupdate.extend(rows_to_update)
         all_jsons_update.extend(json_updates)
 
-    deduped_rows, _deduped_json_updates = write_external_org_outputs(
-        all_rows_toupdate,
-        all_jsons_update,
-        all_ambiguous_matches,
-        all_no_name_match,
-    )
+    match_elapsed = time.perf_counter() - match_start
+    timings.append(("match organisations", match_elapsed))
+    logger.info(f"Phase done: match organisations in {match_elapsed:.1f}s")
+
+    with phase_timer("write review output files", timings):
+        deduped_rows, _deduped_json_updates = write_external_org_outputs(
+            all_rows_toupdate,
+            all_jsons_update,
+            all_ambiguous_matches,
+            all_no_name_match,
+        )
 
     logger.info(
         f"Total external orgs processed: {sum(len(article['external_organization_uuids']) for article in article_orgs)}")
@@ -1062,6 +1103,11 @@ def main(faculty_choice, test_choice):
     logger.info(f"nr of ext orgs that already have a ROR in Pure: {len(all_orgs_with_ror)}")
     logger.info(f"nr of ext orgs with no name match in institution snapshot: {len(all_no_name_match)}")
     logger.info(f"nr of ext orgs with ambiguous institution snapshot matches: {len(all_ambiguous_matches)}")
+
+    total_elapsed = time.perf_counter() - run_start
+    breakdown = ", ".join(f"{label} {seconds:.1f}s" for label, seconds in timings)
+    logger.info(f"Phase timings: {breakdown}")
+    logger.info(f"Total run time: {total_elapsed:.1f}s")
 
 # ########################################################################
 # MAIN
