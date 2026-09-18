@@ -29,6 +29,7 @@
 # ########################################################################
 
 import time
+import copy
 from contextlib import contextmanager
 import csv
 import re
@@ -583,7 +584,7 @@ def identifier_exists(identifiers, new_id, id_type_uri):
         if 'type' in identifier and identifier['type']['uri'] == id_type_uri and identifier['id'] == new_id:
             return True
     return False
-def update_externalorg_pure(orgs, test_choice, update):
+def update_externalorg_pure(orgs, test_choice, update, org_index=None):
     inpure = False
     # Initialize a list to store rows for the DataFrame
     rows_to_update = []
@@ -591,22 +592,33 @@ def update_externalorg_pure(orgs, test_choice, update):
     # Initialize a list to store JSON objects
     json_updates = []
 
+    org_index = org_index or {}
+
     for row in orgs:
         url = PURE_BASE_URL + 'external-organizations/' + row['uuid']
-        try:
-            response = session.get(url, headers=headers, verify=False, timeout=30)
-        except requests.exceptions.RequestException as exc:
-            logger.error(f"Failed to fetch external organization {row['uuid']}: {exc}")
-            continue
-        logging.debug(f"get org data {row['uuid']}. responsecode = {response.status_code}")
-        if response.status_code != 200:
-            logger.error(f"Failed to fetch external organization {row['uuid']}: status {response.status_code}")
-            continue
-        try:
-            data = response.json()  # Parse JSON response
-        except ValueError:
-            logger.error(f"Invalid JSON response while fetching external organization {row['uuid']}")
-            continue
+        cached = org_index.get(row['uuid'])
+        if cached is not None:
+            # The bulk external-organizations/search fetch already returned the
+            # full record, so reuse it instead of re-requesting the same UUID
+            # once per publication it appears in. Copy it: the payload below is
+            # mutated and handed to the apply step, and the same org recurs
+            # across publications.
+            data = copy.deepcopy(cached)
+        else:
+            try:
+                response = session.get(url, headers=headers, verify=False, timeout=30)
+            except requests.exceptions.RequestException as exc:
+                logger.error(f"Failed to fetch external organization {row['uuid']}: {exc}")
+                continue
+            logger.debug(f"get org data {row['uuid']}. responsecode = {response.status_code}")
+            if response.status_code != 200:
+                logger.error(f"Failed to fetch external organization {row['uuid']}: status {response.status_code}")
+                continue
+            try:
+                data = response.json()  # Parse JSON response
+            except ValueError:
+                logger.error(f"Invalid JSON response while fetching external organization {row['uuid']}")
+                continue
         address_field = 'contactAddress' if 'contactAddress' in data else 'address'
         existing_address = data.get(address_field) or {}
         desired_address = build_pure_address_payload(row.get('geo_summary'), existing_address)
@@ -899,6 +911,9 @@ def fetch_pure_extorgs(uuids):
         for i in range(0, len(lst), n):
             yield lst[i:i + n]
 
+    # Pure's search endpoint silently truncates searchString at ~517 characters
+    # (14 pipe-separated UUIDs): larger batches still return HTTP 200 but only
+    # match the first 14, so do not raise this without re-testing the endpoint.
     batch_size = 10
 
     flat_uuids = flatten_external_org_uuid_groups(uuids)
@@ -1073,7 +1088,9 @@ def main(faculty_choice, test_choice):
         all_no_name_match.extend(orgs_with_no_name_match)
         all_ambiguous_matches.extend(orgs_with_ambiguous_match)
 
-        _update, _inpure, rows_to_update, json_updates = update_externalorg_pure(orgs_to_update, test_choice, 0)
+        _update, _inpure, rows_to_update, json_updates = update_externalorg_pure(
+            orgs_to_update, test_choice, 0, org_index=pure_org_index
+        )
         all_rows_toupdate.extend(rows_to_update)
         all_jsons_update.extend(json_updates)
 

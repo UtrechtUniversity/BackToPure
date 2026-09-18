@@ -724,3 +724,58 @@ class InternalPersonsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ExternalOrgCachedFetchTests(unittest.TestCase):
+    """The bulk external-organizations/search fetch already returns full records,
+    so the per-row update must not re-request them one UUID at a time."""
+
+    def _row(self):
+        return {
+            "uuid": "org-1",
+            "ror": "https://ror.org/04pp8hn57",
+            "pure_name": "Utrecht University",
+            "match_type": "exact_display_name",
+            "match_score": 1.0,
+            "geo_summary": {},
+        }
+
+    def test_update_uses_cached_record_without_refetching(self):
+        org_index = {"org-1": {"uuid": "org-1", "identifiers": [], "address": {}}}
+
+        with patch.object(external_orgs.session, "get") as session_get:
+            _update, _inpure, rows, json_updates = external_orgs.update_externalorg_pure(
+                [self._row()], "yes", 0, org_index=org_index
+            )
+
+        session_get.assert_not_called()
+        self.assertEqual(1, len(rows))
+        self.assertTrue(rows[0]["needs_ror_update"])
+        self.assertEqual(1, len(json_updates))
+
+    def test_update_does_not_mutate_the_shared_index(self):
+        """The same org recurs across publications, so the cached record must be
+        copied before the ROR identifier is appended to it."""
+        org_index = {"org-1": {"uuid": "org-1", "identifiers": [], "address": {}}}
+
+        with patch.object(external_orgs.session, "get"):
+            external_orgs.update_externalorg_pure([self._row()], "yes", 0, org_index=org_index)
+            _u, _i, rows, _j = external_orgs.update_externalorg_pure(
+                [self._row()], "yes", 0, org_index=org_index
+            )
+
+        self.assertEqual([], org_index["org-1"]["identifiers"])
+        self.assertTrue(rows[0]["needs_ror_update"], "second pass must still see a missing ROR")
+
+    def test_update_falls_back_to_the_network_on_a_cache_miss(self):
+        response = MagicMock()
+        response.status_code = 200
+        response.json.return_value = {"uuid": "org-1", "identifiers": [], "address": {}}
+
+        with patch.object(external_orgs.session, "get", return_value=response) as session_get:
+            _u, _i, rows, _j = external_orgs.update_externalorg_pure(
+                [self._row()], "yes", 0, org_index={}
+            )
+
+        session_get.assert_called_once()
+        self.assertEqual(1, len(rows))
