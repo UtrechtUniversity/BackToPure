@@ -624,11 +624,11 @@ def select_persons_researchoutput(selected_faculties):
         return result
 
     for faculty in selected_faculties:
-        logging.info(f"Processing faculty: {faculty}")
+        logger.info(f"Processing faculty: {faculty}")
         try:
             personroots = fetch_personroots(faculty)
             if not personroots:
-                logging.warning(f"No personroots found for faculty {faculty}")
+                logger.warning(f"No personroots found for faculty {faculty}")
                 continue
 
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -639,10 +639,10 @@ def select_persons_researchoutput(selected_faculties):
                         outputs = future.result()
                         all_outputs.extend(outputs)
                     except Exception as e:
-                        logging.error(f"Error processing personroot: {e}")
+                        logger.error(f"Error processing personroot: {e}")
 
         except Exception as e:
-            logging.error(f"Error fetching personroots for faculty {faculty}: {e}")
+            logger.error(f"Error fetching personroots for faculty {faculty}: {e}")
 
     deduped_by_key = {}
     skipped_without_doi = 0
@@ -1066,6 +1066,7 @@ def fetch_pure_researchoutputs(outputs: List[Dict], batch_size: int = 500, allow
         f"DOI fallback {'enabled' if allow_doi_fallback else 'disabled'}"
     )
 
+    failed_uuid_batches = 0
     for idx, batch in enumerate(uuid_batches, start=1):
         logger.info(f"Fetching Pure research outputs batch {idx}/{len(uuid_batches)} with {len(batch)} UUIDs")
         json_data = {"uuids": batch, "size": batch_size, "offset": 0}
@@ -1077,8 +1078,20 @@ def fetch_pure_researchoutputs(outputs: List[Dict], batch_size: int = 500, allow
             logger.info(f"UUID batch {idx} returned {len(items)} results")
             results.extend(items)
         except Exception as e:
+            failed_uuid_batches += 1
             logger.error(f"Failed to fetch UUID batch {idx}: {e}")
         time.sleep(0.1)
+
+    if uuid_batches and failed_uuid_batches == len(uuid_batches):
+        # Every request failed, so this is a systemic problem (auth, network,
+        # Pure being down) rather than "Pure holds none of these records".
+        # Returning an empty result set here reads downstream as a clean run
+        # with nothing to update, which is a silently wrong answer.
+        raise RuntimeError(
+            f"All {len(uuid_batches)} Pure research output batch(es) failed; "
+            "refusing to continue with an empty result set. Check the Pure API "
+            "key and that PURE_BASE_URL is reachable, then rerun."
+        )
 
     for idx, batch in enumerate(doi_batches, start=1):
         logger.info(

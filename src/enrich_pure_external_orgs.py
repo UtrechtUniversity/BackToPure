@@ -743,8 +743,8 @@ def update_externalorg_pure(orgs, test_choice, update, org_index=None):
 
 
 def select_faculties(faculty_choice, test_choice):
-    logging.info(f"start fetching person-roots for {faculty_choice}")
-    logging.info(f"Test run =  {test_choice}")
+    logger.info(f"start fetching person-roots for {faculty_choice}")
+    logger.info(f"Test run =  {test_choice}")
     params = {
         'value': FACULTY_PREFIX,
     }
@@ -767,7 +767,7 @@ def fetch_personroots(faculty_key):
         # response.raise_for_status()
         return response.json().get("results", [])
     except requests.RequestException as e:
-        logging.error(f"Error fetching person-roots for faculty {faculty_key}: {e}")
+        logger.error(f"Error fetching person-roots for faculty {faculty_key}: {e}")
         return []
 
 
@@ -778,7 +778,7 @@ def fetch_ricgraph_organization_neighbors(personroot_key):
         response.raise_for_status()
         return response.json().get("results", [])
     except requests.RequestException as e:
-        logging.error(f"Error fetching organization neighbors for person-root {personroot_key}: {e}")
+        logger.error(f"Error fetching organization neighbors for person-root {personroot_key}: {e}")
         return []
 
 
@@ -794,7 +794,7 @@ def select_researchoutputs(persoonroot_key):
         return response.json().get("results", [])
 
     except requests.RequestException as e:
-        logging.error(f"Error fetching person IDs for person-root {persoonroot_key}: {e}")
+        logger.error(f"Error fetching person IDs for person-root {persoonroot_key}: {e}")
         return []
 
 
@@ -803,7 +803,7 @@ def select_persons_researchoutput(selected_faculties):
     new_data = []
 
     for faculty in selected_faculties:
-        logging.info(f"Processing faculty: {faculty}")
+        logger.info(f"Processing faculty: {faculty}")
         personroots = fetch_personroots(faculty)
         for personroot in personroots:
             if not personroot['_key'] == None:
@@ -822,7 +822,7 @@ def select_persons_researchoutput(selected_faculties):
 
 
     num_elements = len(new_data)
-    logging.info(f"total research output with external persons selected:  {num_elements}")
+    logger.info(f"total research output with external persons selected:  {num_elements}")
     return new_data
 
 
