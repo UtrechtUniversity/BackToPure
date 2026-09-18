@@ -2976,3 +2976,34 @@ class AppStructureTests(unittest.TestCase):
             self.assertEqual("rolled_back", change_set["status"])
             self.assertEqual("rolled_back", change_set["items"][0]["rollback_status"])
             self.assertEqual(f"{PURE_BASE_URL}data-sets/ds-uuid-1", mock_delete.call_args.args[0])
+
+
+class DissertationsAreNotImportedTests(unittest.TestCase):
+    """Dissertations are no longer imported from Ricgraph/OpenAlex."""
+
+    def _row(self, output_type):
+        return {
+            "type": output_type,
+            "title": "A Thesis",
+            "journal_issn": "1234-5678",
+            "supervisors": [{"name": "Someone", "first_name": "Some", "last_name": "One", "ids": {}, "role": "sv"}],
+            "publication_date": "2026-01-01",
+        }
+
+    def test_dissertation_is_rejected_with_a_reason(self):
+        row, error, reason = pure_researchoutputs.unique_fields_per_type(self._row("dissertation"))
+
+        self.assertTrue(error)
+        self.assertEqual("dissertations are not imported", reason)
+
+    @patch("pure_researchoutputs.create_external_person")
+    @patch("pure_researchoutputs.get_supervisors")
+    def test_dissertation_does_not_touch_the_supervisor_write_path(
+        self, mock_get_supervisors, mock_create_external_person
+    ):
+        """get_supervisors() POSTs to Pure to create external persons, so a
+        review-only harvest must never reach it."""
+        pure_researchoutputs.unique_fields_per_type(self._row("dissertation"))
+
+        mock_get_supervisors.assert_not_called()
+        mock_create_external_person.assert_not_called()

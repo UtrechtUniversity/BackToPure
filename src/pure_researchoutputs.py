@@ -680,16 +680,13 @@ def unique_fields_per_type(row):
             logger.debug(f"No ISSN for {row['title']}")
 
     elif row['type'] == 'dissertation':
-        # Process dissertation type
-        # NOTE: these three lines use '==' where assignment was meant, so the
-        # dissertation branch is inert. Deliberately left as-is for now:
-        # get_supervisors() POSTs to Pure to create external persons, so making
-        # this an assignment would turn a review-only harvest into one that
-        # writes. Fix together with gating that write path on test_choice.
-        row['award_data'] == '2'
-        row['supervisors'] == get_supervisors(row['supervisors'], row['publication_date'])
-        row['parsed_supervisors'] == format_supervisors(row['supervisors'])
-        pass
+        # Dissertations are no longer imported from Ricgraph/OpenAlex.
+        # The old branch was inert anyway (it used '==' where assignment was
+        # meant) and its get_supervisors() call POSTed to Pure to create
+        # external persons, which a review-only harvest must never do.
+        error = True
+        reason = 'dissertations are not imported'
+        logger.debug(f"Skipping dissertation {row.get('title')}")
     elif row['type'] == 'book':
         # Process book type
         pass
