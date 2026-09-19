@@ -16,9 +16,11 @@ logger = setup_logging("btp")
 DEFAULT_SNAPSHOT_DIR = Path("data/openalex-snapshot/institutions")
 DEFAULT_OUTPUT_PATH = Path("output/openalex_cache/openalex_institutions_snapshot_by_ror.json")
 DEFAULT_STATE_PATH = Path("output/openalex_cache/openalex_institutions_snapshot_state.json")
-S3_INSTITUTIONS_PREFIX = "s3://openalex/data/institutions"
+S3_INSTITUTIONS_PREFIX = "s3://openalex/data/jsonl/institutions"
 S3_BUCKET_URL = "https://openalex.s3.amazonaws.com"
-S3_INSTITUTIONS_KEY_PREFIX = "data/institutions/"
+# OpenAlex moved the snapshot under data/jsonl/ in 2026; the pre-move layout
+# is still served read-only at legacy-data/institutions/.
+S3_INSTITUTIONS_KEY_PREFIX = "data/jsonl/institutions/"
 DOWNLOAD_CHUNK_SIZE = 1024 * 1024
 
 
@@ -102,6 +104,12 @@ def build_institution_lookup(snapshot_dir, output_path=DEFAULT_OUTPUT_PATH, stat
         with_ror += 1
         if processed % 100000 == 0:
             logger.info(f"Processed {processed} institution record(s), {len(lookup)} unique ROR(s)")
+
+    if not lookup:
+        raise RuntimeError(
+            f"No institution records with a ROR were found in {snapshot_dir}. "
+            "Refusing to write an empty lookup, which would make external-org harvests match nothing."
+        )
 
     write_json(output_path, lookup)
     write_json(
@@ -205,6 +213,12 @@ def download_institutions_snapshot(snapshot_dir=DEFAULT_SNAPSHOT_DIR, delete=Fal
             if path not in expected_paths:
                 logger.info(f"Deleting stale snapshot file {path}")
                 path.unlink()
+
+    if not expected_paths:
+        raise RuntimeError(
+            f"No institution snapshot files found under {S3_BUCKET_URL}/{S3_INSTITUTIONS_KEY_PREFIX}. "
+            "The OpenAlex bucket layout may have changed again; check the available prefixes before rerunning."
+        )
 
     logger.info(f"OpenAlex institutions snapshot download complete: {downloaded} downloaded, {skipped} unchanged")
 
