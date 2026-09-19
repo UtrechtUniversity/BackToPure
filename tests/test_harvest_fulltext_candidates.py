@@ -58,7 +58,7 @@ class ExamineOutputTests(unittest.TestCase):
 
     def test_html_landing_page_is_reported_not_dropped(self):
         with patch.object(hfc, "fetch_openalex_work", return_value=self._work()), patch.object(
-            hfc, "preflight", return_value=MagicMock(ok=False, detail="URL resolves to HTML landing/challenge page, not a PDF file.")
+            hfc, "preflight", return_value=MagicMock(ok=False, detail="URL resolves to HTML landing/challenge page, not a PDF file.", http_status=None)
         ):
             row = hfc.examine_output(self.ENTRY, MagicMock(), MagicMock())
 
@@ -131,11 +131,26 @@ class FetchOpenalexWorkTests(unittest.TestCase):
             hfc.fetch_openalex_work("10.1/a", session)
 
 
+def _oa_work(version="publishedVersion"):
+    return {
+        "doi": "https://doi.org/10.1/a",
+        "best_oa_location": {
+            "pdf_url": "https://publisher.org/a.pdf",
+            "version": version,
+            "license": "cc-by",
+            "is_oa": True,
+        },
+    }
+
+
 class MainFlowTests(unittest.TestCase):
-    def test_run_where_every_fetch_fails_raises(self):
-        """A run that validated nothing must not report zero coverage as a result."""
+    def test_run_where_every_fetch_fails_with_a_transport_error_raises(self):
+        """A run that validated nothing for transport reasons must not report zero coverage as a result."""
         rows = [
-            {"to_be_updated": "", "validation": "rejected", "reason": "HTTP 500 while fetching candidate."}
+            {
+                "to_be_updated": "", "validation": "rejected",
+                "reason": "HTTP 500 while fetching candidate.", "transport_failure": True,
+            }
             for _ in range(3)
         ]
 
@@ -147,7 +162,10 @@ class MainFlowTests(unittest.TestCase):
     def test_mixed_results_do_not_raise(self):
         rows = [
             {"to_be_updated": "X", "validation": "ok", "reason": ""},
-            {"to_be_updated": "", "validation": "rejected", "reason": "HTTP 500 while fetching candidate."},
+            {
+                "to_be_updated": "", "validation": "rejected",
+                "reason": "HTTP 500 while fetching candidate.", "transport_failure": True,
+            },
         ]
 
         hfc.guard_against_total_failure(rows)
@@ -173,3 +191,56 @@ class MainFlowTests(unittest.TestCase):
 
         with self.assertRaises(RuntimeError):
             hfc.guard_against_total_failure(rows)
+
+    def test_all_paywalled_or_landing_page_rejections_do_not_raise(self):
+        """A healthy run whose honest answer is 'nothing attachable' must not abort."""
+        with patch.object(hfc, "fetch_openalex_work", return_value=_oa_work()):
+            with patch.object(
+                hfc, "preflight",
+                return_value=MagicMock(ok=False, detail="HTTP 403 indicates protected access.", http_status=403),
+            ):
+                rows = [
+                    hfc.examine_output(
+                        {"doi": f"10.1/{i}", "pure_uuid": f"u{i}", "title": "t"},
+                        MagicMock(), MagicMock(),
+                    )
+                    for i in range(24)
+                ]
+
+        self.assertTrue(all(row["validation"] == "rejected" for row in rows))
+        self.assertFalse(any(row.get("transport_failure") for row in rows))
+        # Must not raise.
+        hfc.guard_against_total_failure(rows)
+
+    def test_five_hundred_from_candidate_host_is_a_transport_failure(self):
+        with patch.object(hfc, "fetch_openalex_work", return_value=_oa_work()):
+            with patch.object(
+                hfc, "preflight",
+                return_value=MagicMock(ok=False, detail="HTTP 503: source did not provide an accessible file.", http_status=503),
+            ):
+                row = hfc.examine_output({"doi": "10.1/x", "pure_uuid": "u", "title": "t"}, MagicMock(), MagicMock())
+
+        self.assertTrue(row.get("transport_failure"))
+
+    def test_review_file_is_written_even_when_the_guard_then_raises(self):
+        """The evidence must survive an abort: write_review_file must run before the guard raises."""
+        rows = [
+            {
+                "to_be_updated": "", "validation": "rejected",
+                "reason": "HTTP 500 while fetching candidate.", "transport_failure": True,
+            }
+        ]
+        calls = []
+
+        with patch.object(hfc.enrich, "select_faculties", return_value=["fac"]), \
+             patch.object(hfc.enrich, "select_persons_researchoutput", return_value=[{"doi": "10.1/x", "pure_uuid": "u", "title": "t"}]), \
+             patch.object(hfc.enrich, "fetch_pure_researchoutputs", return_value={"by_uuid": {}}), \
+             patch.object(hfc, "examine_output", return_value=rows[0]), \
+             patch.object(hfc, "write_review_file", side_effect=lambda r: calls.append(list(r))) as mock_write, \
+             patch.object(hfc, "default_registry", return_value=MagicMock()):
+            with self.assertRaises(RuntimeError):
+                hfc.main("all")
+
+        mock_write.assert_called_once()
+        self.assertEqual(1, len(calls[0]))
+        self.assertTrue(calls[0][0].get("transport_failure"))

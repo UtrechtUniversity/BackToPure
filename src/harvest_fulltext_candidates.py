@@ -10,6 +10,7 @@ This writes a review file. It uploads nothing.
 import argparse
 import logging
 import os
+import re
 
 import pandas as pd
 import requests
@@ -37,6 +38,26 @@ REVIEW_COLUMNS = [
 
 class OpenAlexLookupError(Exception):
     """The OpenAlex lookup itself failed (network/HTTP/parse error), not a genuine absence."""
+
+
+_HTTP_STATUS_RE = re.compile(r"HTTP (\d{3})")
+
+
+def _is_transport_failure_from_download_error(exc):
+    """Tell a broken run apart from a legitimate per-record verdict.
+
+    A ValueError with an embedded HTTP status is a real answer from the
+    candidate host: 4xx (403 paywalled, 404 gone, etc.) is about that record,
+    not the run. A 5xx, or anything that is not even a ValueError (a raw
+    connection error, timeout, ...), is transport-level -- the run itself is
+    what's broken.
+    """
+    if isinstance(exc, ValueError):
+        match = _HTTP_STATUS_RE.search(str(exc))
+        if match:
+            return int(match.group(1)) >= 500
+        return False
+    return True
 
 
 def _output_dir():
@@ -97,7 +118,7 @@ def examine_output(entry, session, registry):
     try:
         work = fetch_openalex_work(entry.get('doi'), session)
     except OpenAlexLookupError as exc:
-        return _row(entry, validation='rejected', reason=str(exc))
+        return _row(entry, validation='rejected', reason=str(exc), transport_failure=True)
     candidates = published_version_only(candidates_from_openalex_work(work))
     if not candidates:
         any_candidate = candidates_from_openalex_work(work)
@@ -122,6 +143,11 @@ def examine_output(entry, session, registry):
     if not checked.ok:
         row['validation'] = 'rejected'
         row['reason'] = checked.detail
+        # A 4xx (401/403/404/other) or an HTML landing page is a real answer
+        # about this record. Only a 5xx from the candidate host means the
+        # host itself is failing, which is transport-level.
+        if getattr(checked, 'http_status', None) is not None and checked.http_status >= 500:
+            row['transport_failure'] = True
         return row
 
     try:
@@ -129,6 +155,8 @@ def examine_output(entry, session, registry):
     except Exception as exc:
         row['validation'] = 'rejected'
         row['reason'] = str(exc)
+        if _is_transport_failure_from_download_error(exc):
+            row['transport_failure'] = True
         return row
 
     row['validation'] = 'ok'
@@ -138,17 +166,22 @@ def examine_output(entry, session, registry):
 
 
 def guard_against_total_failure(rows):
-    """A run where every attempted fetch failed is systemic, not a finding.
+    """A run that is itself broken must not report zero coverage as a finding.
 
-    Same rule as the harvests: reporting zero coverage after 100% network
-    failure is a silently wrong answer.
+    A per-record verdict -- 403 (paywalled), 404, an HTML landing page -- is
+    a legitimate answer about that record, not evidence the run failed, and
+    must not trip this guard even when every single record comes back that
+    way. What must trip it is every attempted record failing for a
+    transport-level reason: an OpenAlex lookup failure, a connection error, a
+    timeout, or a 5xx from the candidate host. That pattern means the run
+    itself, not the records, is broken.
     """
     attempted = [row for row in rows if row.get('validation')]
-    if attempted and all(row.get('validation') == 'rejected' for row in attempted):
+    if attempted and all(row.get('transport_failure') for row in attempted):
         raise RuntimeError(
-            f"Every attempted candidate fetch failed ({len(attempted)} of {len(attempted)}); "
-            "refusing to report zero coverage. Check network access and the per-host rate "
-            "limits, then rerun."
+            f"Every attempted candidate fetch failed with a transport-level error "
+            f"({len(attempted)} of {len(attempted)}); refusing to report zero coverage. "
+            "Check network access and the per-host rate limits, then rerun."
         )
 
 
@@ -193,8 +226,10 @@ def main(faculty_choice, test_choice='yes'):
                 continue
             rows.append(examine_output(entry, session, registry))
 
-    guard_against_total_failure(rows)
+    # Write the evidence before the guard can raise: if the run turns out to
+    # be broken, the operator still needs the per-row reasons to diagnose it.
     write_review_file(rows)
+    guard_against_total_failure(rows)
 
     attachable = sum(1 for row in rows if row.get('to_be_updated') == 'X')
     logger.info(
