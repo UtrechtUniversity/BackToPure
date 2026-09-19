@@ -102,8 +102,8 @@ JOB_TYPE_REGISTRY: dict[JobType, JobTypeDefinition] = {
         artifact_dir="output/full_text",
         entity_label_plural="full texts",
         required_csv=("to_be_updated.csv",),
-        allowed_params=("faculty_choice", "facultyChoice"),
-        cli_param_aliases=(("faculty_choice", "facultyChoice"),),
+        allowed_params=("faculty_choice", "facultyChoice", "version_policy", "versionPolicy"),
+        cli_param_aliases=(("faculty_choice", "facultyChoice"), ("version_policy", "versionPolicy")),
         identity_columns=("doi",),
     ),
 }

@@ -157,3 +157,74 @@ class OpenAlexCandidateTests(unittest.TestCase):
 
     def test_published_version_only_drops_candidates_with_no_version(self):
         self.assertEqual([], fc.published_version_only([{"url": "https://a.org/x", "version": None}]))
+
+
+class VersionPolicyTests(unittest.TestCase):
+    """Which versions may be deposited is a repository policy decision."""
+
+    def _candidates(self):
+        return [
+            {"url": "https://a.org/pub.pdf", "version": "publishedVersion"},
+            {"url": "https://b.org/acc.pdf", "version": "acceptedVersion"},
+            {"url": "https://c.org/sub.pdf", "version": "submittedVersion"},
+            {"url": "https://d.org/none.pdf", "version": None},
+        ]
+
+    def test_default_policy_is_published_only(self):
+        self.assertEqual("published", fc.DEFAULT_VERSION_POLICY)
+        kept = fc.filter_by_version_policy(self._candidates())
+        self.assertEqual(["publishedVersion"], [c["version"] for c in kept])
+
+    def test_published_accepted_admits_accepted_but_not_preprints(self):
+        kept = fc.filter_by_version_policy(self._candidates(), "published_accepted")
+        self.assertEqual(["publishedVersion", "acceptedVersion"], [c["version"] for c in kept])
+
+    def test_any_admits_all_three_but_still_not_a_missing_version(self):
+        kept = fc.filter_by_version_policy(self._candidates(), "any")
+        self.assertEqual(
+            ["publishedVersion", "acceptedVersion", "submittedVersion"],
+            [c["version"] for c in kept],
+        )
+
+    def test_unknown_policy_raises_rather_than_falling_back_to_permissive(self):
+        with self.assertRaises(ValueError) as ctx:
+            fc.filter_by_version_policy(self._candidates(), "everything")
+        self.assertIn("Unknown version policy", str(ctx.exception))
+
+    def test_published_outranks_accepted_which_outranks_submitted(self):
+        ranked = sorted(self._candidates(), key=fc.ranking_key)
+        self.assertEqual("publishedVersion", ranked[0]["version"])
+        self.assertEqual("acceptedVersion", ranked[1]["version"])
+        self.assertEqual("submittedVersion", ranked[2]["version"])
+
+    def test_best_version_wins_even_when_a_weaker_one_looks_better_otherwise(self):
+        """Under a permissive policy a paper offering both must still yield the
+        publisher version, not a preprint that happens to be a direct PDF."""
+        candidates = [
+            {"url": "https://c.org/sub.pdf", "version": "submittedVersion",
+             "link_type": "pdf", "format": "pdf", "access_status": "open"},
+            {"url": "https://a.org/pub", "version": "publishedVersion",
+             "link_type": "publisher_landing", "format": None, "access_status": "unknown"},
+        ]
+        ranked = sorted(candidates, key=fc.ranking_key)
+        self.assertEqual("publishedVersion", ranked[0]["version"])
+
+    def test_pure_version_type_labels_each_version_truthfully(self):
+        cases = {
+            "publishedVersion": ("publishersversion", "Final published version"),
+            "acceptedVersion": ("authorsversion", "Accepted author manuscript"),
+            "submittedVersion": ("preprint", "Submitted manuscript"),
+        }
+        for version, (suffix, term) in cases.items():
+            with self.subTest(version=version):
+                uri, got_term = fc.pure_version_type_for(version)
+                self.assertTrue(uri.endswith(suffix), uri)
+                self.assertEqual(term, got_term)
+
+    def test_pure_version_type_refuses_an_unknown_version(self):
+        with self.assertRaises(ValueError):
+            fc.pure_version_type_for("somethingElse")
+
+    def test_published_version_only_still_means_published_only(self):
+        kept = fc.published_version_only(self._candidates())
+        self.assertEqual(["publishedVersion"], [c["version"] for c in kept])

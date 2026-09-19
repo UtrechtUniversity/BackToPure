@@ -3268,3 +3268,18 @@ class FullTextJobTypeTests(unittest.TestCase):
             after = service.get_job("job-ft-1")
             self.assertEqual(JobStatus.NEEDS_REVIEW.value, after["status"])
             self.assertIsNone(after.get("finished_at"))
+
+
+class FullTextVersionPolicyParamTests(unittest.TestCase):
+    def test_version_policy_is_an_allowed_param(self):
+        from app.models.jobs import JobType, get_job_type_definition
+
+        definition = get_job_type_definition(JobType.FULL_TEXT.value)
+        self.assertIn("version_policy", definition.allowed_params)
+        self.assertIn("versionPolicy", definition.allowed_params)
+
+    def test_version_policy_has_a_camel_case_alias(self):
+        from app.models.jobs import JobType, get_job_type_definition
+
+        definition = get_job_type_definition(JobType.FULL_TEXT.value)
+        self.assertIn(("version_policy", "versionPolicy"), definition.cli_param_aliases)

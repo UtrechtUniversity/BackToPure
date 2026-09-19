@@ -59,6 +59,7 @@ def format_rank(fmt):
 
 def ranking_key(candidate):
     return (
+        -version_rank(candidate.get("version")),
         -access_rank(candidate.get("access_status")),
         -link_type_rank(candidate.get("link_type")),
         -format_rank(candidate.get("format")),
@@ -149,6 +150,67 @@ def infer_pdf_filename(url, content_disposition):
 
 
 PUBLISHED_VERSION = "publishedVersion"
+ACCEPTED_VERSION = "acceptedVersion"
+SUBMITTED_VERSION = "submittedVersion"
+
+# Version policy: which versions of a paper may be deposited into Pure.
+# 'published' is the default because depositing an accepted manuscript or a
+# preprint is a repository policy decision, not a technical one.
+VERSION_POLICIES = {
+    "published": (PUBLISHED_VERSION,),
+    "published_accepted": (PUBLISHED_VERSION, ACCEPTED_VERSION),
+    "any": (PUBLISHED_VERSION, ACCEPTED_VERSION, SUBMITTED_VERSION),
+}
+DEFAULT_VERSION_POLICY = "published"
+
+# Pure's own version types, read from research-outputs/allowed-electronic-version-version-types.
+# Every deposited file must carry the label that is true of it: labelling an
+# accepted manuscript as the final published version is the bug issue #6 names.
+PURE_VERSION_TYPES = {
+    PUBLISHED_VERSION: (
+        "/dk/atira/pure/researchoutput/electronicversion/versiontype/publishersversion",
+        "Final published version",
+    ),
+    ACCEPTED_VERSION: (
+        "/dk/atira/pure/researchoutput/electronicversion/versiontype/authorsversion",
+        "Accepted author manuscript",
+    ),
+    SUBMITTED_VERSION: (
+        "/dk/atira/pure/researchoutput/electronicversion/versiontype/preprint",
+        "Submitted manuscript",
+    ),
+}
+
+
+def version_rank(version):
+    """Published beats accepted beats submitted.
+
+    Used in ranking so that a paper offering several versions yields its best
+    one, whatever the policy allows.
+    """
+    order = {PUBLISHED_VERSION: 3, ACCEPTED_VERSION: 2, SUBMITTED_VERSION: 1}
+    return order.get(version, 0)
+
+
+def versions_allowed_by(policy):
+    """The versions a policy permits, or raise for an unknown policy.
+
+    Raising matters: a typo must not silently fall back to the permissive end.
+    """
+    try:
+        return VERSION_POLICIES[policy]
+    except KeyError:
+        raise ValueError(
+            f"Unknown version policy {policy!r}. Valid values: {', '.join(sorted(VERSION_POLICIES))}"
+        ) from None
+
+
+def pure_version_type_for(version):
+    """(uri, term) for Pure's electronic-version version type."""
+    try:
+        return PURE_VERSION_TYPES[version]
+    except KeyError:
+        raise ValueError(f"No Pure version type for {version!r}") from None
 
 
 def _location_candidates(location, note):
@@ -191,6 +253,12 @@ def candidates_from_openalex_work(work):
     for location in work.get("locations") or []:
         candidates.extend(_location_candidates(location, "locations"))
     return sorted(dedupe_candidates(candidates), key=ranking_key)
+
+
+def filter_by_version_policy(candidates, policy=DEFAULT_VERSION_POLICY):
+    """Keep only candidates whose version the policy allows."""
+    allowed = versions_allowed_by(policy)
+    return [c for c in candidates if c.get("version") in allowed]
 
 
 def published_version_only(candidates):

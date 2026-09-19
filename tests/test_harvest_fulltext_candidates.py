@@ -47,7 +47,11 @@ class ExamineOutputTests(unittest.TestCase):
             row = hfc.examine_output(self.ENTRY, MagicMock(), MagicMock())
 
         self.assertEqual("", row["to_be_updated"])
-        self.assertIn("published version", row["reason"])
+        # The reason must name both what was rejected and what would be allowed,
+        # since this column is what a librarian reads when deciding the policy.
+        self.assertIn("acceptedVersion", row["reason"])
+        self.assertIn("publishedVersion", row["reason"])
+        self.assertIn("published", row["reason"])
 
     def test_no_oa_location_is_reported_with_a_reason(self):
         with patch.object(hfc, "fetch_openalex_work", return_value={"doi": "https://doi.org/10.1/a"}):

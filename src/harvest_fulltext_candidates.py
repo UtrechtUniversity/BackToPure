@@ -20,7 +20,10 @@ from enrich_pure_external_orgs import phase_timer
 from fulltext_candidates import (
     candidates_from_openalex_work,
     confidence_for,
+    DEFAULT_VERSION_POLICY,
+    filter_by_version_policy,
     published_version_only,
+    versions_allowed_by,
 )
 from fulltext_fetch import CandidateFetchError, download_and_validate, preflight
 from fulltext_ratelimit import default_registry
@@ -109,20 +112,27 @@ def fetch_openalex_work(doi, session=None):
         raise OpenAlexLookupError("OpenAlex lookup failed: could not parse response") from exc
 
 
-def examine_output(entry, session, registry):
+def examine_output(entry, session, registry, version_policy=DEFAULT_VERSION_POLICY):
     """Build one review row for one publication. Never returns None."""
     try:
         work = fetch_openalex_work(entry.get('doi'), session)
     except OpenAlexLookupError as exc:
         return _row(entry, validation='rejected', reason=str(exc), transport_failure=True)
-    candidates = published_version_only(candidates_from_openalex_work(work))
+    all_candidates = candidates_from_openalex_work(work)
+    candidates = filter_by_version_policy(all_candidates, version_policy)
     if not candidates:
-        any_candidate = candidates_from_openalex_work(work)
-        reason = (
-            'not the published version; policy is publisher version only'
-            if any_candidate
-            else 'no open access location in OpenAlex'
-        )
+        if all_candidates:
+            # Name what was rejected and what would have accepted it: this
+            # column is what a librarian reads when deciding whether to widen
+            # the policy.
+            found = sorted({c.get('version') or 'unknown version' for c in all_candidates})
+            allowed = ', '.join(versions_allowed_by(version_policy))
+            reason = (
+                f"not an allowed version (policy '{version_policy}' allows {allowed}); "
+                f"candidate is {', '.join(found)}"
+            )
+        else:
+            reason = 'no open access location in OpenAlex'
         return _row(entry, reason=reason)
 
     candidate = candidates[0]
@@ -191,8 +201,10 @@ def write_review_file(rows):
     return path
 
 
-def main(faculty_choice, test_choice='yes'):
+def main(faculty_choice, test_choice='yes', version_policy=DEFAULT_VERSION_POLICY):
     logger.info("Script to report attachable open access full texts has started")
+    versions_allowed_by(version_policy)  # fail fast on a bad policy, before any network work
+    logger.info(f"Version policy: {version_policy} (allows {', '.join(versions_allowed_by(version_policy))})")
     logger.info(f"Run mode: test_choice={test_choice} (this harvest writes a review file only)")
     timings = []
 
@@ -221,7 +233,7 @@ def main(faculty_choice, test_choice='yes'):
                 skipped_with_file += 1
                 rows.append(_row(entry, reason='Pure already holds a file for this output'))
                 continue
-            rows.append(examine_output(entry, session, registry))
+            rows.append(examine_output(entry, session, registry, version_policy))
 
     # Write the evidence before the guard can raise: if the run turns out to
     # be broken, the operator still needs the per-row reasons to diagnose it.
@@ -242,7 +254,9 @@ if __name__ == '__main__':
     parser.add_argument('faculty_choice', type=str, nargs='?',
                         default='uu faculty: faculteit geowetenschappen|organization_name',
                         help='Faculty choice or "all"')
+    parser.add_argument('version_policy', type=str, nargs='?', default=DEFAULT_VERSION_POLICY,
+                        help="Which versions may be deposited: published (default), published_accepted, or any")
     parser.add_argument('test_choice', type=str, nargs='?', default='yes',
                         help='Run in test mode ("yes" or "no")')
     args = parser.parse_args()
-    main(args.faculty_choice, args.test_choice)
+    main(args.faculty_choice, args.test_choice, args.version_policy)
