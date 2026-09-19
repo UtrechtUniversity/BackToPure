@@ -48,13 +48,14 @@ from config import (
     CATEGORIES,
     EMAIL,
     FACULTY_PREFIX,
-    OPENALEXEX_ID_URI,
+    is_primary_organization_key,
     OPENALEX_HEADERS,
+    OPENALEXEX_ID_URI,
     ORCID_ID_URI,
     PURE_API_KEY,
     PURE_BASE_URL,
+    resolve_faculty_selection,
     RIC_BASE_URL,
-    is_primary_organization_key,
 )
 from typing import List, Dict
 import sys
@@ -552,12 +553,10 @@ def select_faculties(faculty_choice):
     except requests.RequestException as e:
         logger.error(f"Error fetching faculties from Ricgraph: {e}")
         return []
-    if faculty_choice.lower() == 'all':
-        selected_faculties = [item['_key'] for item in data["results"] if is_primary_faculty_key(item.get('_key'))]
-    else:
-        selected_faculties = [faculty_choice] if is_primary_faculty_key(faculty_choice) else []
-
-    return selected_faculties
+    return resolve_faculty_selection(
+        faculty_choice,
+        [item.get('_key') for item in data.get("results", [])],
+    )
 
 def fetch_personroots(faculty_key):
     """Fetch person-root nodes for a given faculty."""
@@ -1354,8 +1353,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Update external persons from Ricgraph')
     parser.add_argument('faculty_choice', type=str, nargs='?',
-                        # default='uu faculty: information & technology services|organization_name',
-                        default='uu faculty: geosciences|organization_name',
+                        default='uu faculty: faculteit geowetenschappen|organization_name',
                         help='Faculty choice or "all"')
     parser.add_argument('test_choice', type=str, nargs='?', default='yes', help='Run in test mode ("yes" or "no")')
     parser.add_argument(

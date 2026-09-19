@@ -349,11 +349,17 @@ def construct_research_output_json(row):
         "identifiers": [
             # Include any identifiers as required
         ],
-        "journalAssociation": {
-            "journal": {"systemName": "Journal", "uuid": row['journal']}
-        },
         "systemName": "ResearchOutput"
     }
+
+    # Only articles get a journal UUID assigned (see unique_fields_per_type).
+    # Reading row['journal'] unconditionally raised KeyError for every book,
+    # conference proceeding and dissertation, which a broad except swallowed:
+    # 43% of one faculty's outputs never reached the review file.
+    if row.get('journal'):
+        research_output["journalAssociation"] = {
+            "journal": {"systemName": "Journal", "uuid": row['journal']}
+        }
 
     # Conditionally add 'externalOrganizations' if 'ext_organization_uuids' exists and is not empty
     if 'formatted_ext_organizations' in row and row['formatted_ext_organizations']:
@@ -675,6 +681,11 @@ def unique_fields_per_type(row):
 
     elif row['type'] == 'dissertation':
         # Process dissertation type
+        # NOTE: these three lines use '==' where assignment was meant, so the
+        # dissertation branch is inert. Deliberately left as-is for now:
+        # get_supervisors() POSTs to Pure to create external persons, so making
+        # this an assignment would turn a review-only harvest into one that
+        # writes. Fix together with gating that write path on test_choice.
         row['award_data'] == '2'
         row['supervisors'] == get_supervisors(row['supervisors'], row['publication_date'])
         row['parsed_supervisors'] == format_supervisors(row['supervisors'])
@@ -813,7 +824,7 @@ def df_to_pure(df):
                 inpure += 1
                 logger.debug(f"already in pure {row['doi']}.")
         except Exception as e:
-            logger.info(f"Error processing row {index}: {e}")
+            logger.error(f"Error processing row {index} ({row.get('doi')}): {e!r}", exc_info=True)
             error += 1
 
     # Save the collected research outputs to a JSON file

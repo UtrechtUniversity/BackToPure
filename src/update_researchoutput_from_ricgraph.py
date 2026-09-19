@@ -42,6 +42,7 @@ from config import (
     PURE_API_KEY,
     PURE_BASE_URL,
     PURE_HEADERS,
+    resolve_faculty_selection,
     RIC_BASE_URL,
 )
 import enrich_pure_external_persons as oa
@@ -96,12 +97,10 @@ def select_faculties(faculty_choice):
     response = session.get(url, params=params, timeout=30)
     data = response.json()
 
-    if faculty_choice.lower() == 'all':
-        selected_faculties = [item['_key'] for item in data["results"] if oa.is_primary_faculty_key(item.get('_key'))]
-    else:
-        selected_faculties = [faculty_choice] if oa.is_primary_faculty_key(faculty_choice) else []
-
-    return selected_faculties
+    return resolve_faculty_selection(
+        faculty_choice,
+        [item.get('_key') for item in data.get("results", [])],
+    )
 
 
 
@@ -176,7 +175,7 @@ def back_to_pure(all_openalex_data):
 
 
 
-def main(faculty_choice):
+def main(faculty_choice, test_choice='yes'):
     logger.info(
         "Process overview:\n"
         "1. Start from internal persons in the selected faculty (via Ricgraph).\n"
@@ -187,6 +186,11 @@ def main(faculty_choice):
         "6. Export results to a file for review and possible update.\n\n"
         "Note: For large faculties, it may take some time before log messages appear."
     )
+
+    # test_choice reaches main() but nothing in this script acts on it yet:
+    # the harvest only writes review files. Logged so the value is visible
+    # rather than silently discarded, as it was before.
+    logger.info(f"Run mode: test_choice={test_choice} (this harvest writes review files only)")
 
     faculties = select_faculties(faculty_choice)
     researchoutputs, duplicates, all_data = select_persons_researchoutput(faculties)
@@ -213,4 +217,4 @@ if __name__ == '__main__':
     parser.add_argument('test_choice', type=str, nargs='?', default='yes', help='Run in test mode ("yes" or "no")')
 
     args = parser.parse_args()
-    main(args.faculty_choice)
+    main(args.faculty_choice, args.test_choice)

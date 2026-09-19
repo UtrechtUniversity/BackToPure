@@ -44,7 +44,7 @@ import pandas as pd
 import os
 import argparse
 import enrich_pure_external_persons as enrich
-from config import FACULTY_PREFIX, RIC_BASE_URL
+from config import FACULTY_PREFIX, RIC_BASE_URL, resolve_faculty_selection
 from logging_config import setup_logging
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -102,12 +102,10 @@ def select_faculties(faculty_choice):
         logger.error(f"Error fetching faculties from Ricgraph: {e}")
         return []
 
-    if faculty_choice.lower() == 'all':
-        selected_faculties = [item['_key'] for item in data["results"] if enrich.is_primary_faculty_key(item.get('_key'))]
-    else:
-        selected_faculties = [faculty_choice] if enrich.is_primary_faculty_key(faculty_choice) else []
-
-    return selected_faculties
+    return resolve_faculty_selection(
+        faculty_choice,
+        [item.get('_key') for item in data.get("results", [])],
+    )
 
 def select_persons_datasets(faculties, faculty_choice):
     persons = []
@@ -231,8 +229,13 @@ def df_to_pure(df, created, ignored, no_internal):
     return created, ignored, no_internal
 
 
-def main(faculty_choice):
+def main(faculty_choice, test_choice='yes'):
     logger.debug("Starting datasets import flow")
+    # test_choice reaches main() but nothing in this script acts on it yet:
+    # the harvest only writes review files. Logged so the value is visible
+    # rather than silently discarded, as it was before.
+    logger.info(f"Run mode: test_choice={test_choice} (this harvest writes review files only)")
+
     faculties = select_faculties(faculty_choice)
     if not faculties:
         logger.error("No faculties found or Ricgraph unavailable; stopping dataset import.")
@@ -266,4 +269,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    main(args.faculty_choice)
+    main(args.faculty_choice, args.test_choice)
