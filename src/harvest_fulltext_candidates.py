@@ -10,7 +10,6 @@ This writes a review file. It uploads nothing.
 import argparse
 import logging
 import os
-import re
 
 import pandas as pd
 import requests
@@ -23,7 +22,7 @@ from fulltext_candidates import (
     confidence_for,
     published_version_only,
 )
-from fulltext_fetch import download_and_validate, preflight
+from fulltext_fetch import CandidateFetchError, download_and_validate, preflight
 from fulltext_ratelimit import default_registry
 from logging_config import setup_logging
 
@@ -40,22 +39,19 @@ class OpenAlexLookupError(Exception):
     """The OpenAlex lookup itself failed (network/HTTP/parse error), not a genuine absence."""
 
 
-_HTTP_STATUS_RE = re.compile(r"HTTP (\d{3})")
-
-
 def _is_transport_failure_from_download_error(exc):
     """Tell a broken run apart from a legitimate per-record verdict.
 
-    A ValueError with an embedded HTTP status is a real answer from the
-    candidate host: 4xx (403 paywalled, 404 gone, etc.) is about that record,
-    not the run. A 5xx, or anything that is not even a ValueError (a raw
-    connection error, timeout, ...), is transport-level -- the run itself is
-    what's broken.
+    A CandidateFetchError carries a structured transport_failure flag set by
+    fulltext_fetch (true for a 429 or a 5xx from the candidate host, false for
+    an ordinary 4xx like 403 paywalled or 404 gone -- a real answer about that
+    record, not the run). Any other exception -- a raw connection error,
+    timeout, or anything not even a ValueError -- is transport-level: the run
+    itself is what's broken.
     """
+    if isinstance(exc, CandidateFetchError):
+        return exc.transport_failure
     if isinstance(exc, ValueError):
-        match = _HTTP_STATUS_RE.search(str(exc))
-        if match:
-            return int(match.group(1)) >= 500
         return False
     return True
 
@@ -144,9 +140,10 @@ def examine_output(entry, session, registry):
         row['validation'] = 'rejected'
         row['reason'] = checked.detail
         # A 4xx (401/403/404/other) or an HTML landing page is a real answer
-        # about this record. Only a 5xx from the candidate host means the
-        # host itself is failing, which is transport-level.
-        if getattr(checked, 'http_status', None) is not None and checked.http_status >= 500:
+        # about this record. A 429 (rate limited) or a 5xx from the candidate
+        # host means the host itself is failing/throttling, which is
+        # transport-level -- see PreflightResult.transport_failure.
+        if getattr(checked, 'transport_failure', False):
             row['transport_failure'] = True
         return row
 

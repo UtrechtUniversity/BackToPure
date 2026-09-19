@@ -58,7 +58,10 @@ class ExamineOutputTests(unittest.TestCase):
 
     def test_html_landing_page_is_reported_not_dropped(self):
         with patch.object(hfc, "fetch_openalex_work", return_value=self._work()), patch.object(
-            hfc, "preflight", return_value=MagicMock(ok=False, detail="URL resolves to HTML landing/challenge page, not a PDF file.", http_status=None)
+            hfc, "preflight", return_value=MagicMock(
+                ok=False, detail="URL resolves to HTML landing/challenge page, not a PDF file.",
+                http_status=None, transport_failure=False,
+            )
         ):
             row = hfc.examine_output(self.ENTRY, MagicMock(), MagicMock())
 
@@ -67,7 +70,7 @@ class ExamineOutputTests(unittest.TestCase):
 
     def test_download_failure_is_reported_not_dropped(self):
         with patch.object(hfc, "fetch_openalex_work", return_value=self._work()), patch.object(
-            hfc, "preflight", return_value=MagicMock(ok=True, detail="ok")
+            hfc, "preflight", return_value=MagicMock(ok=True, detail="ok", transport_failure=False)
         ), patch.object(hfc, "download_and_validate", side_effect=ValueError("HTTP 404 while fetching candidate.")):
             row = hfc.examine_output(self.ENTRY, MagicMock(), MagicMock())
 
@@ -197,7 +200,10 @@ class MainFlowTests(unittest.TestCase):
         with patch.object(hfc, "fetch_openalex_work", return_value=_oa_work()):
             with patch.object(
                 hfc, "preflight",
-                return_value=MagicMock(ok=False, detail="HTTP 403 indicates protected access.", http_status=403),
+                return_value=MagicMock(
+                    ok=False, detail="HTTP 403 indicates protected access.",
+                    http_status=403, transport_failure=False,
+                ),
             ):
                 rows = [
                     hfc.examine_output(
@@ -216,11 +222,65 @@ class MainFlowTests(unittest.TestCase):
         with patch.object(hfc, "fetch_openalex_work", return_value=_oa_work()):
             with patch.object(
                 hfc, "preflight",
-                return_value=MagicMock(ok=False, detail="HTTP 503: source did not provide an accessible file.", http_status=503),
+                return_value=MagicMock(
+                    ok=False, detail="HTTP 503: source did not provide an accessible file.",
+                    http_status=503, transport_failure=True,
+                ),
             ):
                 row = hfc.examine_output({"doi": "10.1/x", "pure_uuid": "u", "title": "t"}, MagicMock(), MagicMock())
 
         self.assertTrue(row.get("transport_failure"))
+
+    def test_429_from_candidate_host_is_a_transport_failure_via_preflight(self):
+        with patch.object(hfc, "fetch_openalex_work", return_value=_oa_work()):
+            with patch.object(
+                hfc, "preflight",
+                return_value=MagicMock(
+                    ok=False, detail="HTTP 429: rate limited by source; not evidence the file is unavailable.",
+                    http_status=429, transport_failure=True,
+                ),
+            ):
+                row = hfc.examine_output({"doi": "10.1/x", "pure_uuid": "u", "title": "t"}, MagicMock(), MagicMock())
+
+        self.assertTrue(row.get("transport_failure"))
+        self.assertIn("rate limited", row["reason"])
+
+    def test_429_from_candidate_host_is_a_transport_failure_via_download(self):
+        with patch.object(hfc, "fetch_openalex_work", return_value=_oa_work()):
+            with patch.object(
+                hfc, "preflight", return_value=MagicMock(ok=True, detail="ok", transport_failure=False),
+            ), patch.object(
+                hfc, "download_and_validate",
+                side_effect=hfc.CandidateFetchError(
+                    "HTTP 429: rate limited by source while fetching candidate.",
+                    status_code=429, transport_failure=True,
+                ),
+            ):
+                row = hfc.examine_output({"doi": "10.1/x", "pure_uuid": "u", "title": "t"}, MagicMock(), MagicMock())
+
+        self.assertTrue(row.get("transport_failure"))
+        self.assertIn("rate limited", row["reason"])
+
+    def test_all_429_run_trips_the_guard(self):
+        """An all-429 run is throttling, not absence, and must trip the guard."""
+        with patch.object(hfc, "fetch_openalex_work", return_value=_oa_work()):
+            with patch.object(
+                hfc, "preflight",
+                return_value=MagicMock(
+                    ok=False, detail="HTTP 429: rate limited by source; not evidence the file is unavailable.",
+                    http_status=429, transport_failure=True,
+                ),
+            ):
+                rows = [
+                    hfc.examine_output(
+                        {"doi": f"10.1/{i}", "pure_uuid": f"u{i}", "title": "t"},
+                        MagicMock(), MagicMock(),
+                    )
+                    for i in range(5)
+                ]
+
+        with self.assertRaises(RuntimeError):
+            hfc.guard_against_total_failure(rows)
 
     def test_review_file_is_written_even_when_the_guard_then_raises(self):
         """The evidence must survive an abort: write_review_file must run before the guard raises."""

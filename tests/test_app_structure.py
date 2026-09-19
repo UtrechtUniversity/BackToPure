@@ -3201,3 +3201,70 @@ class FullTextJobTypeTests(unittest.TestCase):
 
         definition = get_job_type_definition(JobType.FULL_TEXT.value)
         self.assertIn("to_be_updated.csv", definition.required_csv)
+
+    def test_job_service_uses_job_scoped_artifact_dir_for_full_text(self):
+        """Two full_text runs (different faculties, or a rerun mid-review) must
+        not share output/full_text and overwrite each other's evidence."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            app = create_app()
+            app.config["BTP_DATA_DIR"] = tmpdir
+            init_db(app)
+
+            service = JobService(app.extensions["btp_db"]["db_path"])
+            created = service.create_job(
+                job_id="job-005",
+                job_type=JobType.FULL_TEXT.value,
+                status=JobStatus.QUEUED,
+                params={"facultyChoice": "all"},
+                created_at="2026-04-20T13:00:00Z",
+            )
+
+            self.assertEqual("output/full_text/job-005", created["artifact_dir"])
+
+    def test_job_service_apply_job_rejects_full_text_before_status_change(self):
+        """apply_job has no implementation for full_text (read-only, apply is
+        future work). It must fail before flipping status to APPLYING, not
+        leave the job wedged with an uncaught exception mid-apply."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            app = create_app()
+            app.config["BTP_DATA_DIR"] = os.path.join(tmpdir, "data")
+            init_db(app)
+
+            service = JobService(
+                app.extensions["btp_db"]["db_path"],
+                project_root=tmpdir,
+            )
+            service.create_job(
+                job_id="job-ft-1",
+                job_type=JobType.FULL_TEXT.value,
+                status=JobStatus.NEEDS_REVIEW,
+                created_at="2026-04-20T13:00:00Z",
+            )
+            service.update_job(
+                "job-ft-1",
+                artifacts={
+                    "canOpen": True,
+                    "canApply": True,
+                    "artifacts": {
+                        "directory": "output/full_text",
+                        "csv": ["to_be_updated.csv"],
+                        "json": [],
+                    },
+                },
+                results={
+                    "entity_label": "publications",
+                    "found_label": "Publications found",
+                    "ready_label": "Publications ready to update",
+                    "updated_label": "Publications updated",
+                    "found_count": 5,
+                    "ready_count": 2,
+                    "updated_count": 0,
+                },
+            )
+
+            with self.assertRaises(ValueError):
+                service.apply_job("job-ft-1")
+
+            after = service.get_job("job-ft-1")
+            self.assertEqual(JobStatus.NEEDS_REVIEW.value, after["status"])
+            self.assertIsNone(after.get("finished_at"))

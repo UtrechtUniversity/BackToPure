@@ -35,6 +35,15 @@ from config import (
 )
 
 
+_APPLY_SUPPORTED_JOB_TYPES = {
+    JobType.INTERNAL_PERSONS.value,
+    JobType.EXTERNAL_PERSONS.value,
+    JobType.EXTERNAL_ORGS.value,
+    JobType.RESEARCH_OUTPUTS.value,
+    JobType.DATASETS.value,
+}
+
+
 def _process_failure_message(returncode: int) -> str:
     if returncode < 0:
         signal_number = abs(returncode)
@@ -566,6 +575,8 @@ class JobService:
             raise ValueError(f"Job {job_id} is not ready to apply")
         if job["results"]["ready_count"] == 0:
             raise ValueError(f"Job {job_id} has no selected updates to apply")
+        if job["job_type"] not in _APPLY_SUPPORTED_JOB_TYPES:
+            raise ValueError(f"Job type '{job['job_type']}' does not support apply")
 
         script_path = self.project_root / "src" / "apply_updates_to_pure.py"
         log_path = self._runtime_path(job["log_path"] or Path("logs") / "jobs" / f"{job_id}.log")
@@ -1019,6 +1030,7 @@ class JobService:
             JobType.EXTERNAL_ORGS,
             JobType.RESEARCH_OUTPUTS,
             JobType.DATASETS,
+            JobType.FULL_TEXT,
         } and status in {JobStatus.QUEUED, JobStatus.RUNNING}:
             return str(Path(definition.artifact_dir) / job_id)
         return definition.artifact_dir
