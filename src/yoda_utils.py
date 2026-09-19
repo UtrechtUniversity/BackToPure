@@ -35,6 +35,9 @@ import logging
 from datetime import datetime
 from pathlib import Path
 import configparser
+from logging_config import setup_logging
+
+logger = setup_logging('btp', level=logging.INFO)
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 yoda_utils_dir = os.path.dirname(os.path.abspath(__file__))
@@ -56,10 +59,10 @@ def safe_load_json(filename):
         with open(filename, 'r') as file:
             return json.load(file)
     except FileNotFoundError:
-        logging.error(f"The file {filename} does not exist.")
+        logger.error(f"The file {filename} does not exist.")
         return None
     except json.JSONDecodeError:
-        logging.error(f"The file {filename} contains invalid JSON.")
+        logger.error(f"The file {filename} contains invalid JSON.")
         return None
 
 def parse_date(date_str):
@@ -79,7 +82,7 @@ def parse_date(date_str):
             }
         except ValueError:
             continue
-    logging.error(f"{date_str} is not a valid date format.")
+    logger.error(f"{date_str} is not a valid date format.")
 
 
 def parse_person_data(contributor):
@@ -157,5 +160,5 @@ def get_df_from_yoda(filename):
 if __name__ == "__main__":
 
     df = get_df_from_yoda(file_path)
-    logging.info(f"DataFrame loaded with {len(df)} entries")
+    logger.info(f"DataFrame loaded with {len(df)} entries")
 

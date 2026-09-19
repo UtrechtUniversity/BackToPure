@@ -3156,3 +3156,30 @@ class ResearchOutputTypeMappingTests(unittest.TestCase):
             "/dk/atira/pure/researchoutput/roles/workingpaper/author",
             pure_researchoutputs.person_role_uri_for(uri),
         )
+
+
+class ReviewFileIsVerifiedAfterWritingTests(unittest.TestCase):
+    """A run once reported writing a review file that was not on disk."""
+
+    def test_row_count_reflects_what_is_on_disk(self):
+        import csv as _csv
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "to_be_updated.csv")
+            with open(path, "w", newline="", encoding="utf-8") as handle:
+                writer = _csv.writer(handle)
+                writer.writerow(["to_be_updated", "updated", "doi", "title"])
+                writer.writerows([["x", " ", "10.1/a", "A"], ["x", " ", "10.1/b", "B"]])
+
+            self.assertEqual(2, pure_researchoutputs._count_csv_rows(path))
+
+    def test_missing_file_is_reported_rather_than_assumed(self):
+        self.assertEqual(-1, pure_researchoutputs._count_csv_rows("/nonexistent/to_be_updated.csv"))
+
+    def test_header_only_file_counts_as_zero_rows(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "empty.csv")
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write("to_be_updated,updated,doi,title\n")
+
+            self.assertEqual(0, pure_researchoutputs._count_csv_rows(path))

@@ -429,7 +429,7 @@ def find_publisher(publisher):
             return publisher_uuid
 
     except requests.RequestException as e:
-        logging.error(f"An error occurred while searching for publisher: {publisher}: {e}")
+        logger.error(f"An error occurred while searching for publisher: {publisher}: {e}")
 def format_description(description):
 
     description_object = {
@@ -486,7 +486,7 @@ def create_dataset(dataset_json):
             "created_external_persons": created_external_people,
         }
     else:
-        logging.error(f"Error creating dataset {response.status_code} - {response.text}")
+        logger.error(f"Error creating dataset {response.status_code} - {response.text}")
         # Print the entire response to see all available details
         return {
             "success": False,

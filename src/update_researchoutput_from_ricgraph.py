@@ -84,7 +84,7 @@ def fetch_personroots(faculty_key):
         response.raise_for_status()
         return response.json().get("results", [])
     except requests.RequestException as e:
-        logging.error(f"Error fetching person-roots for faculty {faculty_key}: {e}")
+        logger.error(f"Error fetching person-roots for faculty {faculty_key}: {e}")
         return []
 
 def select_faculties(faculty_choice):
@@ -147,7 +147,7 @@ def select_researchoutputs(persoonroot_key):
         return response.json().get("results", [])
 
     except requests.RequestException as e:
-        logging.error(f"Error fetching person IDs for person-root {persoonroot_key}: {e}")
+        logger.error(f"Error fetching person IDs for person-root {persoonroot_key}: {e}")
         return []
 
 

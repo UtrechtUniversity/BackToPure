@@ -359,6 +359,16 @@ def pure_type_for(openalex_type):
     return discriminator, RESEARCH_OUTPUT_TYPE_BASE + suffix, needs_journal
 
 
+
+def _count_csv_rows(path):
+    """Data rows actually on disk, so a write can be checked rather than assumed."""
+    try:
+        with open(path, newline='', encoding='utf-8') as handle:
+            return max(sum(1 for _ in handle) - 1, 0)
+    except OSError:
+        return -1
+
+
 def construct_research_output_json(row):
     """
     Constructs the JSON structure for a research output using data from the 'row'.
@@ -915,16 +925,25 @@ def df_to_pure(df):
     logger.info(f"{error} items cannot be imported in pure, see reasons above")
     logger.info(f"{inpure} items are already in pure")
     logger.info(f"{success} items can be updated")
-    logger.info(f"Research output that can be imported are in file: {csv_output_file}")
-    # logger.info(f"Please open that file to check if you want them all to be updated")
-    # logger.info(f"if not, please remove the 'X' for that row in the column 'to_be_updated'")
 
-
-
+    # Write first, then announce. The old order claimed the review file existed
+    # before it had been written, so a failed write still read as a clean run.
     try:
         to_be_updated_df.to_csv(csv_output_file, index=False, encoding='utf-8')
-        logger.debug(f"Successfully saved 'to be updated' DataFrame to {csv_output_file}.")
     except Exception as e:
-        logger.error(f"Failed to save 'to be updated' DataFrame: {e}")
+        logger.error(f"Failed to save 'to be updated' DataFrame to {csv_output_file}: {e}", exc_info=True)
+        raise
+
+    written = _count_csv_rows(csv_output_file)
+    if written != len(to_be_updated_rows):
+        logger.error(
+            f"Review file {csv_output_file} holds {written} row(s) but {len(to_be_updated_rows)} "
+            "were prepared; the file on disk does not match this run."
+        )
+    else:
+        logger.info(
+            f"Research output that can be imported are in file: {os.path.abspath(csv_output_file)} "
+            f"({written} row(s))"
+        )
 
 
