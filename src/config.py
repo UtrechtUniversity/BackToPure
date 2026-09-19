@@ -185,6 +185,29 @@ PURE_HEADERS = {
     "api-key": PURE_API_KEY
 }
 
+def current_pure_credentials() -> tuple[str, dict]:
+    """Re-read the Pure base URL and API key from disk.
+
+    Module-level PURE_BASE_URL/PURE_HEADERS are captured at import time. The
+    apply step runs as a subprocess and so always sees the current config, but
+    anything running inside the long-lived web process (rollback, for example)
+    would keep using whatever was on disk when the server started. A config
+    edit then makes rollback fail with 401 while apply succeeds.
+    """
+    fresh = configparser.ConfigParser()
+    fresh.read(config_path)
+    try:
+        base_url = fresh['PURE-API']['BaseURL']
+        api_key = fresh['PURE-API']['APIKey']
+    except KeyError:
+        return PURE_BASE_URL, dict(PURE_HEADERS)
+    return base_url, {
+        "Content-Type": "application/json",
+        "accept": "application/json",
+        "api-key": api_key,
+    }
+
+
 OPENALEX_HEADERS = {'Accept': 'application/json',
                     'User-Agent': EMAIL
                     }
