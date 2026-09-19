@@ -3110,3 +3110,49 @@ class ApplyReportsFailureWhenNothingWasWrittenTests(unittest.TestCase):
 
         self.assertEqual(JobStatus.COMPLETED.value, result["status"])
         self.assertIn("Applied 4 of 5", result["error_message"])
+
+
+class ResearchOutputTypeMappingTests(unittest.TestCase):
+    """Every output used to be built as ContributionToJournal/article, so
+    anything without a journal was rejected by Pure at apply time."""
+
+    def test_type_families_map_to_matching_discriminator(self):
+        cases = {
+            "article": ("ContributionToJournal", "contributiontojournal/article", True),
+            "conference-paper": ("ContributionToConference", "contributiontoconference/paper", False),
+            "conference-abstract": ("ContributionToConference", "contributiontoconference/abstract", False),
+            "preprint": ("WorkingPaper", "workingpaper/preprint", False),
+        }
+        for openalex_type, (discriminator, suffix, needs_journal) in cases.items():
+            with self.subTest(openalex_type=openalex_type):
+                got = pure_researchoutputs.pure_type_for(openalex_type)
+                self.assertIsNotNone(got)
+                self.assertEqual(discriminator, got[0])
+                self.assertTrue(got[1].endswith(suffix))
+                self.assertEqual(needs_journal, got[2])
+
+    def test_unsupported_type_is_refused_with_a_reason(self):
+        row = {"type": "software", "title": "A tool", "journal_issn": "1234-5678"}
+        _row, error, reason = pure_researchoutputs.unique_fields_per_type(row)
+
+        self.assertTrue(error)
+        self.assertIn("not supported", reason)
+
+    def test_conference_contribution_does_not_require_a_journal(self):
+        row = {"type": "conference-paper", "title": "A talk", "journal_issn": "No ISSN"}
+        _row, error, _reason = pure_researchoutputs.unique_fields_per_type(row)
+
+        self.assertFalse(error, "a conference paper must not be rejected for having no ISSN")
+
+    def test_person_role_matches_the_type_family(self):
+        """Pure rejects a contributiontojournal role on a ContributionToConference."""
+        _d, uri, _n = pure_researchoutputs.pure_type_for("conference-paper")
+        self.assertEqual(
+            "/dk/atira/pure/researchoutput/roles/contributiontoconference/author",
+            pure_researchoutputs.person_role_uri_for(uri),
+        )
+        _d, uri, _n = pure_researchoutputs.pure_type_for("preprint")
+        self.assertEqual(
+            "/dk/atira/pure/researchoutput/roles/workingpaper/author",
+            pure_researchoutputs.person_role_uri_for(uri),
+        )

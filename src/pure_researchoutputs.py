@@ -312,6 +312,53 @@ def get_journal_uuid(issn):
     return journal_uuid
 
 
+# ########################################################################
+# Mapping from OpenAlex work types to Pure research output types.
+#
+# Every output used to be built as ContributionToJournal/article regardless of
+# what it actually was, so anything without a journal was rejected by Pure with
+# "Journal is required". The typeDiscriminator has to match the type URI family:
+# a contributiontoconference/* type is a ContributionToConference, and so on.
+#
+# Types that are not listed are refused in unique_fields_per_type() rather than
+# sent to Pure to fail validation. Add one only once its family's required
+# fields are actually populated by this pipeline.
+# ########################################################################
+RESEARCH_OUTPUT_TYPE_BASE = "/dk/atira/pure/researchoutput/researchoutputtypes/"
+
+OPENALEX_TO_PURE_TYPE = {
+    # journal family - these require a journalAssociation
+    "article": ("ContributionToJournal", "contributiontojournal/article", True),
+    "review": ("ContributionToJournal", "contributiontojournal/systematicreview", True),
+    "editorial": ("ContributionToJournal", "contributiontojournal/editorial", True),
+    "letter": ("ContributionToJournal", "contributiontojournal/letter", True),
+    "erratum": ("ContributionToJournal", "contributiontojournal/comment", True),
+    # conference family - no journal involved
+    "conference-paper": ("ContributionToConference", "contributiontoconference/paper", False),
+    "conference-abstract": ("ContributionToConference", "contributiontoconference/abstract", False),
+    # working papers and preprints
+    "preprint": ("WorkingPaper", "workingpaper/preprint", False),
+    "posted-content": ("WorkingPaper", "workingpaper/preprint", False),
+}
+
+
+def person_role_uri_for(type_uri):
+    """Person roles live under the same family as the type, e.g. a
+    contributiontoconference/* type needs roles/contributiontoconference/author.
+    Pure rejects a mismatch."""
+    family = (type_uri or "").replace(RESEARCH_OUTPUT_TYPE_BASE, "").split("/")[0]
+    return f"/dk/atira/pure/researchoutput/roles/{family}/author"
+
+
+def pure_type_for(openalex_type):
+    """Return (typeDiscriminator, type URI, needs_journal) or None if unsupported."""
+    entry = OPENALEX_TO_PURE_TYPE.get((openalex_type or "").strip().lower())
+    if entry is None:
+        return None
+    discriminator, suffix, needs_journal = entry
+    return discriminator, RESEARCH_OUTPUT_TYPE_BASE + suffix, needs_journal
+
+
 def construct_research_output_json(row):
     """
     Constructs the JSON structure for a research output using data from the 'row'.
@@ -319,12 +366,19 @@ def construct_research_output_json(row):
     :return: A dictionary representing the research output in the defined JSON format.
     """
 
+    mapped = pure_type_for(row.get('type'))
+    if mapped is None:
+        # unique_fields_per_type() refuses these before we get here; falling back
+        # to a journal article is what produced the Pure validation failures.
+        raise ValueError(f"No Pure research output type mapped for OpenAlex type {row.get('type')!r}")
+    type_discriminator, type_uri, _needs_journal = mapped
+
     research_output = {
-        "typeDiscriminator": "ContributionToJournal",
+        "typeDiscriminator": type_discriminator,
         "peerReview": row['peer_review'],
 
         "title": {"value": row['title']},
-        "type": {"uri": "/dk/atira/pure/researchoutput/researchoutputtypes/contributiontojournal/article"},
+        "type": {"uri": type_uri},
         "category": {"uri": "/dk/atira/pure/researchoutput/category/academic"},
         "publicationStatuses": [{
             "current": True,
@@ -425,7 +479,10 @@ def format_organizations_from_contributors(contributors):
         managing_org = None
     return formatted_organizations, formatted_ext_organizations, managing_org
 
-def format_contributors(contributors_data):
+def format_contributors(contributors_data, role_uri=None):
+    """``role_uri`` must belong to the same family as the research output type:
+    Pure rejects a contributiontojournal role on a ContributionToConference."""
+    role_uri = role_uri or '/dk/atira/pure/researchoutput/roles/contributiontojournal/author'
     formatted_contributors = []
     # removing duplicate uuid's (that might be there to multiple aa
     for name, details in contributors_data.items():
@@ -460,7 +517,7 @@ def format_contributors(contributors_data):
                         "lastName": details['lastName']
                     },
                     "role": {
-                        "uri": "/dk/atira/pure/researchoutput/roles/contributiontojournal/author",
+                        "uri": role_uri,
                         "term": {"en_GB": "Author"}
                     },
                     "person": {
@@ -489,7 +546,7 @@ def format_contributors(contributors_data):
                             "lastName": details['external_person_last_name']
                         },
                         "role": {
-                            "uri": "/dk/atira/pure/researchoutput/roles/contributiontojournal/author",
+                            "uri": role_uri,
                             "term": {"en_GB": "Author"}
                         }
                     }
@@ -507,7 +564,7 @@ def format_contributors(contributors_data):
                             "lastName": details['external_person_last_name']
                         },
                         "role": {
-                            "uri": "/dk/atira/pure/researchoutput/roles/contributiontojournal/author",
+                            "uri": role_uri,
                             "term": {"en_GB": "Author"}
                         }
                     }
@@ -659,7 +716,28 @@ def unique_fields_per_type(row):
     error = False
 
     reason = row['type']
-    if row['type'] == 'article':
+
+    if row['type'] == 'dissertation':
+        # Policy: dissertations are not imported (see "Stop importing
+        # dissertations"). Checked before the mapping so the reason stays
+        # specific rather than "type not supported".
+        logger.debug(f"Skipping dissertation {row.get('title')}")
+        return row, True, 'dissertations are not imported'
+
+    mapped = pure_type_for(row.get('type'))
+    if mapped is None:
+        # Refuse here rather than building a journal article out of something
+        # that is not one: Pure rejects those at apply time, after a reviewer
+        # has already approved them.
+        logger.debug(f"Unsupported research output type {row.get('type')!r} for {row.get('title')}")
+        return row, True, f"research output type not supported for import: {row.get('type')}"
+
+    _discriminator, _uri, needs_journal = mapped
+    if not needs_journal:
+        # Conference contributions and working papers carry no journal.
+        return row, False, reason
+
+    if row['type'] in {'article', 'review', 'editorial', 'letter', 'erratum'}:
 
         if row['journal_issn'] or row['journal_issn'] == None:
             if row['journal_issn'] == 'No ISSN' or  row['journal_issn'] == '':
@@ -679,14 +757,6 @@ def unique_fields_per_type(row):
             reason = f"No ISSN for {row['title']}"
             logger.debug(f"No ISSN for {row['title']}")
 
-    elif row['type'] == 'dissertation':
-        # Dissertations are no longer imported from Ricgraph/OpenAlex.
-        # The old branch was inert anyway (it used '==' where assignment was
-        # meant) and its get_supervisors() call POSTed to Pure to create
-        # external persons, which a review-only harvest must never do.
-        error = True
-        reason = 'dissertations are not imported'
-        logger.debug(f"Skipping dissertation {row.get('title')}")
     elif row['type'] == 'book':
         # Process book type
         pass
@@ -780,7 +850,9 @@ def df_to_pure(df):
                 if contributors_details:
 
                     # Format and enrich row data
-                    row['parsed_contributors'] = format_contributors(contributors_details)
+                    mapped_type = pure_type_for(row.get('type'))
+                    role_uri = person_role_uri_for(mapped_type[1]) if mapped_type else None
+                    row['parsed_contributors'] = format_contributors(contributors_details, role_uri)
                     parsed_orgs, formatted_ext_orgs, managing_org = format_organizations_from_contributors(
                         contributors_details)
                     row['parsed_organizations'] = parsed_orgs
