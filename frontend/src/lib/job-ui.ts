@@ -161,6 +161,36 @@ const JOB_TYPE_GUIDES: Record<JobType, JobTypeGuide> = {
       "Apply only the reviewed rows that should be sent to Pure.",
     ],
   },
+  full_text: {
+    jobType: "full_text",
+    title: "Open Access Full Texts",
+    availability: "live",
+    summary:
+      "Report which publications in Pure could have an open access PDF attached, verified by fetching each candidate.",
+    currentScope:
+      "This workflow reports only. Nothing is uploaded to Pure: use the report to decide what should be deposited.",
+    reviewFiles: ["to_be_updated.csv"],
+    resultDefinitions: [
+      {
+        label: "Publications found",
+        description: "Number of publications examined for an open access full text.",
+      },
+      {
+        label: "Full texts ready to attach",
+        description:
+          "Publications with a candidate PDF that was downloaded and verified against the chosen version policy.",
+      },
+      {
+        label: "Full texts attached",
+        description: "Not yet available: depositing files into Pure is not part of this workflow.",
+      },
+    ],
+    userSteps: [
+      "Choose a faculty and which versions may be deposited.",
+      "Run the report; every publication examined appears with either a candidate or a reason.",
+      "Read the reason column to see what blocked the rest, such as paywalls or landing pages.",
+    ],
+  },
 };
 
 export function isActiveJobStatus(status: JobStatus) {
