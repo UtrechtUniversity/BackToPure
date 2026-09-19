@@ -779,3 +779,46 @@ class ExternalOrgCachedFetchTests(unittest.TestCase):
 
         session_get.assert_called_once()
         self.assertEqual(1, len(rows))
+
+
+class PureFetchFailLoudTests(unittest.TestCase):
+    """A run where every Pure batch fails must not look like a clean, empty run."""
+
+    def _outputs(self, n=3):
+        return [{"doi": f"10.1234/a{i}", "pure_uuid": f"uuid-{i}"} for i in range(n)]
+
+    def test_raises_when_every_uuid_batch_fails(self):
+        response = MagicMock()
+        response.raise_for_status.side_effect = Exception("401 Client Error: Unauthorized")
+
+        with patch("enrich_pure_external_persons._make_session") as make_session:
+            make_session.return_value.post.return_value = response
+            with self.assertRaises(RuntimeError) as ctx:
+                fetch_pure_researchoutputs(self._outputs(), batch_size=1, allow_doi_fallback=False)
+
+        self.assertIn("refusing to continue", str(ctx.exception))
+
+    def test_does_not_raise_when_pure_legitimately_returns_nothing(self):
+        """Zero matches is a valid answer; only total request failure is not."""
+        response = MagicMock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {"items": []}
+
+        with patch("enrich_pure_external_persons._make_session") as make_session:
+            make_session.return_value.post.return_value = response
+            result = fetch_pure_researchoutputs(self._outputs(), batch_size=1, allow_doi_fallback=False)
+
+        self.assertEqual([], result["results"])
+
+    def test_does_not_raise_when_only_some_batches_fail(self):
+        ok = MagicMock()
+        ok.raise_for_status.return_value = None
+        ok.json.return_value = {"items": [{"uuid": "ro-1"}]}
+        bad = MagicMock()
+        bad.raise_for_status.side_effect = Exception("500 Server Error")
+
+        with patch("enrich_pure_external_persons._make_session") as make_session:
+            make_session.return_value.post.side_effect = [bad, ok, bad]
+            result = fetch_pure_researchoutputs(self._outputs(), batch_size=1, allow_doi_fallback=False)
+
+        self.assertEqual(1, len(result["results"]))
