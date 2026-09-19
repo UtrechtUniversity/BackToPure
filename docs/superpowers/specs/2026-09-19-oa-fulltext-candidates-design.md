@@ -52,6 +52,13 @@ Ported from `doi_resolver/backend/app/services/fulltext.py` and the mappers in
   licence URIs
 - `_infer_pdf_filename`
 
+The `confidence` column in the review file is derived here, from the existing
+rank helpers rather than a separate scorer: `direct` when the candidate is a
+PDF link with open access status, `likely` when it ranks as open or likely-open
+but the link type is a landing page, `weak` otherwise. This is the
+`direct`/`likely`/`weak` scoring issue #6 refers to, expressed in terms of the
+ranks already being ported instead of as a second mechanism.
+
 `aggregate_full_text_data` itself is **not** ported. It is pydantic-based and
 exists to merge five sources (Unpaywall, Crossref, EuropePMC, Semantic Scholar,
 OpenAlex). This job uses OpenAlex alone, so the multi-source machinery is not
