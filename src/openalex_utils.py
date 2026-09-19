@@ -8,6 +8,9 @@ import requests
 import configparser
 import os
 import logging
+from logging_config import setup_logging
+
+logger = setup_logging('btp', level=logging.INFO)
 from config import DEFAULTS
 from typing import Dict, Tuple, List
 import html
@@ -161,7 +164,7 @@ def transform_openalex_to_df(openalex_data: Dict) -> Tuple[pd.DataFrame, pd.Data
 
             if missing_fields:
                 pub_id = publication.get('id', 'Unknown')
-                logging.info(f"Publication ID {pub_id} not processed. Missing fields: {' '.join(missing_fields)}")
+                logger.info(f"Publication ID {pub_id} not processed. Missing fields: {' '.join(missing_fields)}")
                 not_processed_publications.append(publication)
                 continue
 
@@ -187,7 +190,7 @@ def transform_openalex_to_df(openalex_data: Dict) -> Tuple[pd.DataFrame, pd.Data
 
         except Exception as e:
             pub_id = publication.get('id', 'Unknown')
-            logging.error(f"Unexpected error processing publication {pub_id}: {e}")
+            logger.error(f"Unexpected error processing publication {pub_id}: {e}")
             not_processed_publications.append(publication)
 
     df_processed = pd.DataFrame(processed_publications)

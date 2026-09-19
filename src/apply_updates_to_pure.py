@@ -330,6 +330,27 @@ def process_external_persons(filename, csv_file, big_json_data):
 
 
 
+
+def _log_created_record(label, doi, result):
+    """Say everything the apply wrote, not just the headline record.
+
+    Creating one dataset also creates an external person for every contributor
+    Pure does not already know. Those writes were tracked in the change set but
+    appeared nowhere in the log, so the apply understated what it had done.
+    """
+    created = result.get("created_external_persons") or []
+    logger.info(f"created {label} {result.get('uuid')} for DOI {doi}")
+    if created:
+        names = ", ".join(
+            f"{person.get('first_name','')} {person.get('last_name','')}".strip() or person.get("uuid", "?")
+            for person in created[:5]
+        )
+        more = f" (+{len(created) - 5} more)" if len(created) > 5 else ""
+        logger.info(
+            f"  also created {len(created)} external person(s) in Pure for this {label}: {names}{more}"
+        )
+
+
 def process_research_output(filename, csv_file, big_json_data):
     required_columns = {'to_be_updated', 'doi', 'updated'}
     missing_columns = required_columns - set(csv_file.columns)
@@ -369,6 +390,7 @@ def process_research_output(filename, csv_file, big_json_data):
                         "created_external_persons": result.get("created_external_persons", []),
                     }
                 )
+                _log_created_record("research output", row['doi'], result)
             else:
                 logger.error(f"Failed to create research output for DOI {row['doi']}")
         else:
@@ -431,6 +453,7 @@ def process_datasets(filename, csv_file, big_json_data):
                             "created_external_persons": result.get("created_external_persons", []),
                         }
                     )
+                    _log_created_record("dataset", row['doi'], result)
                 else:
                     logger.error(f"Error creating dataset for DOI {row['doi']}: create_dataset returned failure")
             except Exception as e:
