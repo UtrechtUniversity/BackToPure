@@ -3007,3 +3007,106 @@ class DissertationsAreNotImportedTests(unittest.TestCase):
 
         mock_get_supervisors.assert_not_called()
         mock_create_external_person.assert_not_called()
+
+
+class AddressRollbackClearsAddedFieldsTests(unittest.TestCase):
+    """Pure merges address payloads on PUT, so a sub-field that is merely absent
+    keeps its applied value and still returns HTTP 200."""
+
+    def test_keys_added_by_apply_are_explicitly_nulled(self):
+        from app.services.jobs import _address_with_cleared_additions
+
+        old = {"country": {"uri": "/gb"}, "geoLocation": {"point": "1,2"}}
+        new = {"city": "Edinburgh", "country": {"uri": "/gb"}, "geoLocation": {"point": "1,2"}}
+
+        restored = _address_with_cleared_additions(old, new)
+
+        self.assertIn("city", restored, "city must be sent explicitly, not omitted")
+        self.assertIsNone(restored["city"])
+        self.assertEqual({"uri": "/gb"}, restored["country"])
+
+    def test_untouched_old_values_are_preserved(self):
+        from app.services.jobs import _address_with_cleared_additions
+
+        old = {"city": "Utrecht", "country": {"uri": "/nl"}}
+        new = {"city": "Utrecht", "country": {"uri": "/nl"}, "postalCode": "3512"}
+
+        restored = _address_with_cleared_additions(old, new)
+
+        self.assertEqual("Utrecht", restored["city"])
+        self.assertIsNone(restored["postalCode"])
+
+    def test_handles_missing_payloads(self):
+        from app.services.jobs import _address_with_cleared_additions
+
+        self.assertEqual({}, _address_with_cleared_additions(None, None))
+        self.assertEqual({"city": None}, _address_with_cleared_additions({}, {"city": "X"}))
+
+
+class ApplyReportsFailureWhenNothingWasWrittenTests(unittest.TestCase):
+    """The apply script exits 0 even when Pure rejects every record, so a run
+    that wrote nothing must not be reported as a completed apply."""
+
+    def _service_with_applied_job(self, tmpdir):
+        app = create_app()
+        app.config["BTP_DATA_DIR"] = tmpdir
+        init_db(app)
+        service = JobService(
+            app.extensions["btp_db"]["db_path"],
+            project_root=Path(__file__).resolve().parents[1],
+            runtime_root=Path(tmpdir),
+        )
+        service.create_job(
+            job_id="job-apply-1",
+            job_type=JobType.INTERNAL_PERSONS.value,
+            status=JobStatus.NEEDS_REVIEW,
+            params={"faculty_choice": "uu faculty: faculteit test|organization_name"},
+            created_at="2026-04-20T13:00:00Z",
+        )
+        return service
+
+    def _run_apply(self, service, applied, tracked):
+        completed = MagicMock(returncode=0)
+        completed.communicate.return_value = ("", "")
+        real_get_job = service.get_job
+
+        def ready_job(job_id):
+            job = real_get_job(job_id)
+            if job is not None:
+                job = dict(job)
+                job["canApply"] = True
+                job["results"] = dict(job.get("results") or {}, ready_count=tracked)
+            return job
+
+        with patch.object(service, "get_job", side_effect=ready_job), patch.object(
+            service, "_capture_apply_change_set", return_value="cs-1"
+        ), patch.object(
+            service, "_finalize_apply_change_set", return_value=(applied, tracked)
+        ), patch("app.services.jobs.subprocess.Popen", return_value=completed), patch.object(
+            service, "_summarize_results", return_value={}
+        ):
+            return service.apply_job("job-apply-1")
+
+    def test_apply_fails_when_no_items_were_written(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = self._service_with_applied_job(tmpdir)
+            result = self._run_apply(service, applied=0, tracked=5)
+
+        self.assertEqual(JobStatus.FAILED.value, result["status"])
+        self.assertIn("none of the 5 selected item(s)", result["error_message"])
+
+    def test_apply_succeeds_when_every_item_was_written(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = self._service_with_applied_job(tmpdir)
+            result = self._run_apply(service, applied=5, tracked=5)
+
+        self.assertEqual(JobStatus.COMPLETED.value, result["status"])
+        self.assertIsNone(result["error_message"])
+
+    def test_partial_apply_completes_but_says_so(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = self._service_with_applied_job(tmpdir)
+            result = self._run_apply(service, applied=4, tracked=5)
+
+        self.assertEqual(JobStatus.COMPLETED.value, result["status"])
+        self.assertIn("Applied 4 of 5", result["error_message"])

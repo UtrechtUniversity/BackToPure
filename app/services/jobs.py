@@ -23,6 +23,7 @@ from app.models import (
     parse_job_status,
 )
 from config import (
+    current_pure_credentials,
     FACULTY_PREFIX,
     OPENALEXEX_ID_URI,
     ORCID_ID_URI,
@@ -43,6 +44,38 @@ def _process_failure_message(returncode: int) -> str:
             signal_name = f"signal {signal_number}"
         return f"Process was killed by {signal_name} ({signal_number})"
     return f"Process exited with code {returncode}"
+
+
+
+
+def _pure_credentials():
+    """Pure base URL and headers, re-read from disk on every call.
+
+    Rollback runs inside the long-lived web process, so module-level constants
+    would pin it to whatever config was on disk at server start.
+    """
+    return current_pure_credentials()
+
+
+def _pure_base_url():
+    return _pure_credentials()[0]
+
+
+def _pure_headers():
+    return _pure_credentials()[1]
+
+
+def _address_with_cleared_additions(old_address, new_address):
+    """Return ``old_address`` with keys that only exist in ``new_address`` set to None.
+
+    Pure merges address payloads, so omitting a sub-field leaves the applied value
+    in place. Sending it explicitly as None is what actually clears it.
+    """
+    restored = dict(old_address or {})
+    for key in (new_address or {}):
+        if key not in restored:
+            restored[key] = None
+    return restored
 
 
 class JobService:
@@ -595,8 +628,32 @@ class JobService:
         finished_at = self._utcnow()
         if process.returncode == 0:
             self._append_log(log_path, f"=== APPLY FINISHED {finished_at} ===\n")
+            applied_count = tracked_count = 0
             if change_set_id is not None:
-                self._finalize_apply_change_set(job, change_set_id)
+                applied_count, tracked_count = self._finalize_apply_change_set(job, change_set_id)
+            # The apply script exits 0 even when Pure rejected every record, so
+            # returncode alone would report a clean apply that changed nothing.
+            if tracked_count and applied_count == 0:
+                message = (
+                    f"Apply failed: none of the {tracked_count} selected item(s) were "
+                    "written to Pure. See the job log for the per-item errors."
+                )
+                self._append_log(log_path, f"ERROR {message}\n")
+                return self.update_job(
+                    job_id,
+                    status=JobStatus.FAILED,
+                    finished_at=finished_at,
+                    exit_code=process.returncode,
+                    artifacts=job["artifact_state"],
+                    error_message=message,
+                )
+            partial_message = None
+            if tracked_count and applied_count < tracked_count:
+                partial_message = (
+                    f"Applied {applied_count} of {tracked_count} selected item(s); "
+                    "the rest were rejected by Pure. See the job log."
+                )
+                self._append_log(log_path, f"WARNING {partial_message}\n")
             refreshed_results = self._summarize_results(
                 job["job_type"],
                 job.get("artifact_dir"),
@@ -609,7 +666,7 @@ class JobService:
                 exit_code=process.returncode,
                 artifacts=job["artifact_state"],
                 results=refreshed_results,
-                error_message=None,
+                error_message=partial_message,
             )
 
         cancelled_job = self.get_job(job_id)
@@ -1565,8 +1622,8 @@ class JobService:
                     if current_person is None:
                         try:
                             response = requests.get(
-                                f"{PURE_BASE_URL}external-persons/{entity_uuid}",
-                                headers=PURE_HEADERS,
+                                f"{_pure_base_url()}external-persons/{entity_uuid}",
+                                headers=_pure_headers(),
                                 timeout=30,
                             )
                             response.raise_for_status()
@@ -1734,7 +1791,7 @@ class JobService:
                 break
         return old_identifier, {"id": new_value, "uri": target_uri}, "identifier"
 
-    def _finalize_apply_change_set(self, job: dict, change_set_id: str) -> None:
+    def _finalize_apply_change_set(self, job: dict, change_set_id: str) -> tuple[int, int]:
         definition = get_job_type_definition(job["job_type"])
         artifact_state = job["artifact_state"] or self._empty_artifact_state(job.get("artifact_dir") or definition.artifact_dir)
         tracked_csv = tuple(artifact_state["artifacts"]["csv"])
@@ -1801,6 +1858,8 @@ class JobService:
                 ("applied" if applied_count > 0 else "no_applied_changes", self._utcnow(), applied_count, change_set_id),
             )
             connection.commit()
+
+        return applied_count, len(item_rows)
 
     def _mark_change_set_failed(self, change_set_id: str) -> None:
         with connect_db(self.db_path) as connection:
@@ -1955,8 +2014,8 @@ class JobService:
                 if person is None:
                     try:
                         response = requests.get(
-                            f"{PURE_BASE_URL}persons/{entity_uuid}",
-                            headers=PURE_HEADERS,
+                            f"{_pure_base_url()}persons/{entity_uuid}",
+                            headers=_pure_headers(),
                             timeout=30,
                         )
                         response.raise_for_status()
@@ -2022,8 +2081,8 @@ class JobService:
 
                 try:
                     response = requests.put(
-                        f"{PURE_BASE_URL}persons/{entity_uuid}",
-                        headers=PURE_HEADERS,
+                        f"{_pure_base_url()}persons/{entity_uuid}",
+                        headers=_pure_headers(),
                         json=person,
                         timeout=30,
                     )
@@ -2079,8 +2138,8 @@ class JobService:
                 if person is None:
                     try:
                         response = requests.get(
-                            f"{PURE_BASE_URL}external-persons/{entity_uuid}",
-                            headers=PURE_HEADERS,
+                            f"{_pure_base_url()}external-persons/{entity_uuid}",
+                            headers=_pure_headers(),
                             timeout=30,
                         )
                         response.raise_for_status()
@@ -2134,8 +2193,8 @@ class JobService:
 
                 try:
                     response = requests.put(
-                        f"{PURE_BASE_URL}external-persons/{entity_uuid}",
-                        headers=PURE_HEADERS,
+                        f"{_pure_base_url()}external-persons/{entity_uuid}",
+                        headers=_pure_headers(),
                         json=person,
                         timeout=30,
                     )
@@ -2193,8 +2252,8 @@ class JobService:
                 if org is None:
                     try:
                         response = requests.get(
-                            f"{PURE_BASE_URL}external-organizations/{entity_uuid}",
-                            headers=PURE_HEADERS,
+                            f"{_pure_base_url()}external-organizations/{entity_uuid}",
+                            headers=_pure_headers(),
                             timeout=30,
                         )
                         response.raise_for_status()
@@ -2254,17 +2313,27 @@ class JobService:
                         ]
                     elif item["identifier_type"] == "address":
                         old_value = item["old_value"] or {}
-                        field_name = old_value.get("field") or (item["new_value"] or {}).get("field") or item["field_name"]
-                        if old_value.get("value"):
-                            updated_org[field_name] = old_value.get("value")
+                        new_value = item["new_value"] or {}
+                        field_name = old_value.get("field") or new_value.get("field") or item["field_name"]
+                        restored = old_value.get("value")
+                        if restored:
+                            # Pure MERGES address sub-fields on PUT: a key that is
+                            # simply absent keeps its current value and still returns
+                            # HTTP 200. Restoring the pre-apply address therefore has
+                            # to null out every sub-field the apply added, or the
+                            # rollback silently leaves data behind while reporting
+                            # success.
+                            updated_org[field_name] = _address_with_cleared_additions(
+                                restored, new_value.get("value")
+                            )
                         else:
                             updated_org[field_name] = None
                 updated_org["identifiers"] = identifiers
 
                 try:
                     response = requests.put(
-                        f"{PURE_BASE_URL}external-organizations/{entity_uuid}",
-                        headers=PURE_HEADERS,
+                        f"{_pure_base_url()}external-organizations/{entity_uuid}",
+                        headers=_pure_headers(),
                         json=updated_org,
                         timeout=30,
                     )
@@ -2354,8 +2423,8 @@ class JobService:
 
                 try:
                     response = requests.get(
-                        f"{PURE_BASE_URL}{endpoint}/{record_uuid}",
-                        headers=PURE_HEADERS,
+                        f"{_pure_base_url()}{endpoint}/{record_uuid}",
+                        headers=_pure_headers(),
                         timeout=30,
                     )
                     response.raise_for_status()
@@ -2381,8 +2450,8 @@ class JobService:
 
                 try:
                     delete_response = requests.delete(
-                        f"{PURE_BASE_URL}{endpoint}/{record_uuid}",
-                        headers=PURE_HEADERS,
+                        f"{_pure_base_url()}{endpoint}/{record_uuid}",
+                        headers=_pure_headers(),
                         timeout=30,
                     )
                     delete_response.raise_for_status()
@@ -2424,8 +2493,8 @@ class JobService:
             return
         try:
             response = requests.get(
-                f"{PURE_BASE_URL}external-persons/{person_uuid}",
-                headers=PURE_HEADERS,
+                f"{_pure_base_url()}external-persons/{person_uuid}",
+                headers=_pure_headers(),
                 timeout=30,
             )
             response.raise_for_status()
@@ -2446,8 +2515,8 @@ class JobService:
 
         try:
             delete_response = requests.delete(
-                f"{PURE_BASE_URL}external-persons/{person_uuid}",
-                headers=PURE_HEADERS,
+                f"{_pure_base_url()}external-persons/{person_uuid}",
+                headers=_pure_headers(),
                 timeout=30,
             )
             delete_response.raise_for_status()
