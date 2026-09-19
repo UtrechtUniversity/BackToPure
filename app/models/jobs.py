@@ -10,6 +10,7 @@ class JobType(str, Enum):
     EXTERNAL_ORGS = "external_orgs"
     RESEARCH_OUTPUTS = "research_outputs"
     DATASETS = "datasets"
+    FULL_TEXT = "full_text"
 
 
 class JobStatus(str, Enum):
@@ -91,6 +92,16 @@ JOB_TYPE_REGISTRY: dict[JobType, JobTypeDefinition] = {
         entity_label_plural="datasets",
         required_csv=("to_be_updated.csv",),
         required_json=("datasets_to_be_updated.json",),
+        allowed_params=("faculty_choice", "facultyChoice"),
+        cli_param_aliases=(("faculty_choice", "facultyChoice"),),
+        identity_columns=("doi",),
+    ),
+    JobType.FULL_TEXT: JobTypeDefinition(
+        job_type=JobType.FULL_TEXT,
+        script_path="src/harvest_fulltext_candidates.py",
+        artifact_dir="output/full_text",
+        entity_label_plural="full texts",
+        required_csv=("to_be_updated.csv",),
         allowed_params=("faculty_choice", "facultyChoice"),
         cli_param_aliases=(("faculty_choice", "facultyChoice"),),
         identity_columns=("doi",),

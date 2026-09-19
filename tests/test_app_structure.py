@@ -3183,3 +3183,21 @@ class ReviewFileIsVerifiedAfterWritingTests(unittest.TestCase):
                 handle.write("to_be_updated,updated,doi,title\n")
 
             self.assertEqual(0, pure_researchoutputs._count_csv_rows(path))
+
+
+class FullTextJobTypeTests(unittest.TestCase):
+    def test_full_text_job_type_is_registered(self):
+        from app.models.jobs import JOB_TYPE_REGISTRY, JobType, get_job_type_definition
+
+        self.assertIn(JobType.FULL_TEXT, JOB_TYPE_REGISTRY)
+        definition = get_job_type_definition(JobType.FULL_TEXT.value)
+        self.assertEqual("src/harvest_fulltext_candidates.py", definition.script_path)
+        self.assertEqual("output/full_text", definition.artifact_dir)
+        self.assertEqual(("doi",), definition.identity_columns)
+        self.assertIn("faculty_choice", definition.allowed_params)
+
+    def test_full_text_job_declares_its_review_csv(self):
+        from app.models.jobs import JobType, get_job_type_definition
+
+        definition = get_job_type_definition(JobType.FULL_TEXT.value)
+        self.assertIn("to_be_updated.csv", definition.required_csv)
