@@ -105,3 +105,44 @@ def confidence_for(candidate):
     if access >= 3:
         return "likely"
     return "weak"
+
+
+def map_access_type(value):
+    """Pure open-access permission URI for a candidate's access status."""
+    normalized = (value or "").strip().lower()
+    if normalized in {"open", "gold", "green"}:
+        return ("/dk/atira/pure/core/openaccesspermission/open", "Open")
+    if normalized == "likely_open":
+        return ("/dk/atira/pure/core/openaccesspermission/open", "Likely open")
+    if normalized in {"restricted", "closed"}:
+        return ("/dk/atira/pure/core/openaccesspermission/restricted", "Restricted")
+    return ("/dk/atira/pure/core/openaccesspermission/unknown", "Unknown / No information")
+
+
+def map_license_type(value):
+    """Pure licence URI for a CC licence string, or (None, text) when unmapped."""
+    normalized = (value or "").strip().lower().replace("-", " ").replace("_", " ")
+    mapping = {
+        "cc by": ("/dk/atira/pure/core/document/licenses/cc_by", "CC BY"),
+        "cc by 4.0": ("/dk/atira/pure/core/document/licenses/cc_by", "CC BY"),
+        "cc by sa": ("/dk/atira/pure/core/document/licenses/cc_by_sa", "CC BY-SA"),
+        "cc by nc": ("/dk/atira/pure/core/document/licenses/cc_by_nc", "CC BY-NC"),
+        "cc by nc sa": ("/dk/atira/pure/core/document/licenses/cc_by_nc_sa", "CC BY-NC-SA"),
+        "cc by nd": ("/dk/atira/pure/core/document/licenses/cc_by_nd", "CC BY-ND"),
+        "cc by nc nd": ("/dk/atira/pure/core/document/licenses/cc_by_nc_nd", "CC BY-NC-ND"),
+    }
+    return mapping.get(normalized, (None, (value or "").strip()))
+
+
+def infer_pdf_filename(url, content_disposition):
+    """Filename for the uploaded file, from Content-Disposition or the URL path."""
+    if content_disposition:
+        match = re.search(r'filename\*?=(?:UTF-8\'\')?"?([^";]+)"?', content_disposition, re.IGNORECASE)
+        if match:
+            name = match.group(1).strip()
+            if name:
+                return name if name.lower().endswith(".pdf") else f"{name}.pdf"
+    path_name = urlparse(url or "").path.rsplit("/", 1)[-1]
+    if path_name and path_name.lower().endswith(".pdf"):
+        return path_name
+    return f"{path_name or 'fulltext'}.pdf"

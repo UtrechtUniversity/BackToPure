@@ -82,3 +82,32 @@ class ConfidenceTests(unittest.TestCase):
     def test_restricted_is_weak(self):
         candidate = {"url": "https://a.org/x", "link_type": "pdf", "access_status": "restricted"}
         self.assertEqual("weak", fc.confidence_for(candidate))
+
+
+class PureMapperTests(unittest.TestCase):
+    def test_open_maps_to_pure_open_permission(self):
+        uri, term = fc.map_access_type("open")
+        self.assertEqual("/dk/atira/pure/core/openaccesspermission/open", uri)
+        self.assertEqual("Open", term)
+
+    def test_unknown_value_falls_back_to_unknown_permission(self):
+        uri, _term = fc.map_access_type("something else")
+        self.assertEqual("/dk/atira/pure/core/openaccesspermission/unknown", uri)
+
+    def test_cc_by_variants_map_to_one_uri(self):
+        for value in ("cc-by", "CC BY", "cc_by"):
+            with self.subTest(value=value):
+                uri, term = fc.map_license_type(value)
+                self.assertEqual("/dk/atira/pure/core/document/licenses/cc_by", uri)
+                self.assertEqual("CC BY", term)
+
+    def test_unmapped_licence_returns_no_uri_but_keeps_the_text(self):
+        uri, term = fc.map_license_type("publisher-specific")
+        self.assertIsNone(uri)
+        self.assertEqual("publisher-specific", term)
+
+    def test_filename_comes_from_url_when_no_content_disposition(self):
+        self.assertEqual("article.pdf", fc.infer_pdf_filename("https://a.org/article.pdf", None))
+
+    def test_filename_falls_back_when_url_has_no_name(self):
+        self.assertTrue(fc.infer_pdf_filename("https://a.org/download?id=7", None).endswith(".pdf"))
