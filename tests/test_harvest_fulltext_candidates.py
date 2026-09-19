@@ -80,6 +80,56 @@ class ExamineOutputTests(unittest.TestCase):
 
         self.assertEqual(set(hfc.REVIEW_COLUMNS), set(row))
 
+    def test_openalex_non_200_is_reported_as_a_failed_lookup(self):
+        with patch.object(
+            hfc, "fetch_openalex_work",
+            side_effect=hfc.OpenAlexLookupError("OpenAlex lookup failed: HTTP 503"),
+        ):
+            row = hfc.examine_output(self.ENTRY, MagicMock(), MagicMock())
+
+        self.assertEqual("", row["to_be_updated"])
+        self.assertEqual("rejected", row["validation"])
+        self.assertIn("503", row["reason"])
+
+    def test_openalex_request_exception_is_reported_as_a_failed_lookup(self):
+        with patch.object(
+            hfc, "fetch_openalex_work",
+            side_effect=hfc.OpenAlexLookupError("OpenAlex lookup failed: connection error"),
+        ):
+            row = hfc.examine_output(self.ENTRY, MagicMock(), MagicMock())
+
+        self.assertEqual("", row["to_be_updated"])
+        self.assertEqual("rejected", row["validation"])
+        self.assertIn("connection error", row["reason"])
+
+    def test_openalex_404_is_a_genuine_absence_not_a_failure(self):
+        with patch.object(hfc, "fetch_openalex_work", return_value={}):
+            row = hfc.examine_output(self.ENTRY, MagicMock(), MagicMock())
+
+        self.assertEqual("", row["to_be_updated"])
+        self.assertEqual("", row["validation"])
+        self.assertIn("no open access location", row["reason"])
+
+
+class FetchOpenalexWorkTests(unittest.TestCase):
+    def test_404_returns_empty_dict(self):
+        session = MagicMock()
+        session.get.return_value = MagicMock(status_code=404)
+        self.assertEqual({}, hfc.fetch_openalex_work("10.1/a", session))
+
+    def test_non_200_non_404_raises_lookup_error(self):
+        session = MagicMock()
+        session.get.return_value = MagicMock(status_code=503)
+        with self.assertRaises(hfc.OpenAlexLookupError):
+            hfc.fetch_openalex_work("10.1/a", session)
+
+    def test_request_exception_raises_lookup_error(self):
+        import requests
+        session = MagicMock()
+        session.get.side_effect = requests.RequestException("boom")
+        with self.assertRaises(hfc.OpenAlexLookupError):
+            hfc.fetch_openalex_work("10.1/a", session)
+
 
 class MainFlowTests(unittest.TestCase):
     def test_run_where_every_fetch_fails_raises(self):
@@ -106,3 +156,20 @@ class MainFlowTests(unittest.TestCase):
         rows = [{"to_be_updated": "", "validation": "", "reason": "no open access location in OpenAlex"}]
 
         hfc.guard_against_total_failure(rows)
+
+    def test_all_failed_openalex_lookups_raise(self):
+        """A systemic OpenAlex outage must not be reported as near-zero coverage."""
+        with patch.object(
+            hfc, "fetch_openalex_work",
+            side_effect=hfc.OpenAlexLookupError("OpenAlex lookup failed: HTTP 503"),
+        ):
+            rows = [
+                hfc.examine_output(
+                    {"doi": f"10.1/{i}", "pure_uuid": f"u{i}", "title": "t"},
+                    MagicMock(), MagicMock(),
+                )
+                for i in range(3)
+            ]
+
+        with self.assertRaises(RuntimeError):
+            hfc.guard_against_total_failure(rows)

@@ -35,6 +35,10 @@ REVIEW_COLUMNS = [
 ]
 
 
+class OpenAlexLookupError(Exception):
+    """The OpenAlex lookup itself failed (network/HTTP/parse error), not a genuine absence."""
+
+
 def _output_dir():
     return os.environ.get('BTP_OUTPUT_DIR', 'output/full_text')
 
@@ -62,7 +66,12 @@ def _row(entry, **overrides):
 
 
 def fetch_openalex_work(doi, session=None):
-    """One OpenAlex work by DOI, or {} when it is not found."""
+    """One OpenAlex work by DOI, or {} when OpenAlex genuinely has no record (HTTP 404).
+
+    Raises OpenAlexLookupError when the lookup itself failed (network error, a
+    non-200/404 status, or unparseable JSON) -- that is a different fact from
+    "no record" and must not be reported as one.
+    """
     getter = session.get if session is not None else requests.get
     try:
         response = getter(
@@ -72,18 +81,23 @@ def fetch_openalex_work(doi, session=None):
         )
     except requests.RequestException as exc:
         logger.debug(f"OpenAlex lookup failed for {doi}: {exc}")
+        raise OpenAlexLookupError(f"OpenAlex lookup failed: {exc}") from exc
+    if response.status_code == 404:
         return {}
     if response.status_code != 200:
-        return {}
+        raise OpenAlexLookupError(f"OpenAlex lookup failed: HTTP {response.status_code}")
     try:
         return response.json()
-    except ValueError:
-        return {}
+    except ValueError as exc:
+        raise OpenAlexLookupError("OpenAlex lookup failed: could not parse response") from exc
 
 
 def examine_output(entry, session, registry):
     """Build one review row for one publication. Never returns None."""
-    work = fetch_openalex_work(entry.get('doi'), session)
+    try:
+        work = fetch_openalex_work(entry.get('doi'), session)
+    except OpenAlexLookupError as exc:
+        return _row(entry, validation='rejected', reason=str(exc))
     candidates = published_version_only(candidates_from_openalex_work(work))
     if not candidates:
         any_candidate = candidates_from_openalex_work(work)
