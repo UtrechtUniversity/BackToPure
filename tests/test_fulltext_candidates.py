@@ -111,3 +111,49 @@ class PureMapperTests(unittest.TestCase):
 
     def test_filename_falls_back_when_url_has_no_name(self):
         self.assertTrue(fc.infer_pdf_filename("https://a.org/download?id=7", None).endswith(".pdf"))
+
+
+class OpenAlexCandidateTests(unittest.TestCase):
+    WORK = {
+        "doi": "https://doi.org/10.1/a",
+        "best_oa_location": {
+            "pdf_url": "https://publisher.org/a.pdf",
+            "landing_page_url": "https://publisher.org/a",
+            "version": "publishedVersion",
+            "license": "cc-by",
+            "is_oa": True,
+        },
+        "locations": [
+            {
+                "pdf_url": "https://repo.uu.nl/a.pdf",
+                "landing_page_url": "https://repo.uu.nl/a",
+                "version": "acceptedVersion",
+                "license": None,
+                "is_oa": True,
+            }
+        ],
+    }
+
+    def test_pdf_url_becomes_a_pdf_candidate(self):
+        candidates = fc.candidates_from_openalex_work(self.WORK)
+        pdf = [c for c in candidates if c["url"] == "https://publisher.org/a.pdf"]
+        self.assertEqual(1, len(pdf))
+        self.assertEqual("pdf", pdf[0]["link_type"])
+        self.assertEqual("publishedVersion", pdf[0]["version"])
+        self.assertEqual("open", pdf[0]["access_status"])
+
+    def test_locations_are_included_as_candidates(self):
+        urls = {c["url"] for c in fc.candidates_from_openalex_work(self.WORK)}
+        self.assertIn("https://repo.uu.nl/a.pdf", urls)
+
+    def test_work_without_any_location_yields_nothing(self):
+        self.assertEqual([], fc.candidates_from_openalex_work({"doi": "https://doi.org/10.1/b"}))
+
+    def test_published_version_only_drops_accepted_manuscripts(self):
+        kept = fc.published_version_only(fc.candidates_from_openalex_work(self.WORK))
+        self.assertTrue(kept)
+        self.assertTrue(all(c["version"] == "publishedVersion" for c in kept))
+        self.assertNotIn("https://repo.uu.nl/a.pdf", {c["url"] for c in kept})
+
+    def test_published_version_only_drops_candidates_with_no_version(self):
+        self.assertEqual([], fc.published_version_only([{"url": "https://a.org/x", "version": None}]))

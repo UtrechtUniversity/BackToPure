@@ -146,3 +146,58 @@ def infer_pdf_filename(url, content_disposition):
     if path_name and path_name.lower().endswith(".pdf"):
         return path_name
     return f"{path_name or 'fulltext'}.pdf"
+
+
+PUBLISHED_VERSION = "publishedVersion"
+
+
+def _location_candidates(location, note):
+    """A location can yield a PDF candidate and a landing-page candidate."""
+    if not isinstance(location, dict):
+        return []
+    access_status = "open" if location.get("is_oa") else "unknown"
+    version = location.get("version")
+    licence = location.get("license")
+    built = []
+    if location.get("pdf_url"):
+        built.append({
+            "url": location["pdf_url"],
+            "link_type": "pdf",
+            "format": "pdf",
+            "access_status": access_status,
+            "version": version,
+            "license": licence,
+            "domain": extract_domain(location["pdf_url"]),
+            "notes": [note],
+        })
+    if location.get("landing_page_url"):
+        built.append({
+            "url": location["landing_page_url"],
+            "link_type": "publisher_landing",
+            "format": None,
+            "access_status": access_status,
+            "version": version,
+            "license": licence,
+            "domain": extract_domain(location["landing_page_url"]),
+            "notes": [note],
+        })
+    return built
+
+
+def candidates_from_openalex_work(work):
+    """Every OA location OpenAlex knows for one work, deduped and ranked."""
+    work = work or {}
+    candidates = _location_candidates(work.get("best_oa_location"), "best_oa_location")
+    for location in work.get("locations") or []:
+        candidates.extend(_location_candidates(location, "locations"))
+    return sorted(dedupe_candidates(candidates), key=ranking_key)
+
+
+def published_version_only(candidates):
+    """Policy: only the publisher version may be deposited.
+
+    Load-bearing. The Pure file entry hardcodes
+    versionType=publishersversion, so an unfiltered candidate would be
+    deposited under a label that is not true of it.
+    """
+    return [c for c in candidates if c.get("version") == PUBLISHED_VERSION]
