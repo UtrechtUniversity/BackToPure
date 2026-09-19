@@ -8,6 +8,7 @@ import { JobDetailPage } from "../pages/jobs/JobDetailPage";
 import { NewDatasetsJobPage } from "../pages/jobs/NewDatasetsJobPage";
 import { NewExternalOrgsJobPage } from "../pages/jobs/NewExternalOrgsJobPage";
 import { NewExternalPersonsJobPage } from "../pages/jobs/NewExternalPersonsJobPage";
+import { NewFullTextJobPage } from "../pages/jobs/NewFullTextJobPage";
 import { NewInternalPersonsJobPage } from "../pages/jobs/NewInternalPersonsJobPage";
 import { NewResearchOutputsJobPage } from "../pages/jobs/NewResearchOutputsJobPage";
 import { NotFoundPage } from "../pages/not-found/NotFoundPage";
@@ -50,6 +51,10 @@ export const router = createBrowserRouter(
         {
           path: "jobs/new/datasets",
           element: <NewDatasetsJobPage />,
+        },
+        {
+          path: "jobs/new/full-text",
+          element: <NewFullTextJobPage />,
         },
         {
           path: "jobs/:jobId",

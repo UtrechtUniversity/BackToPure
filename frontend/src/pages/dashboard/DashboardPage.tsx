@@ -60,6 +60,9 @@ export function DashboardPage() {
           <Link className="secondary-action" to="/jobs/new/datasets">
             Datasets
           </Link>
+          <Link className="secondary-action" to="/jobs/new/full-text">
+            Open Access Full Texts
+          </Link>
         </div>
       </header>
 
