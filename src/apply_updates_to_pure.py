@@ -551,9 +551,13 @@ def process_full_text(filename, csv_file, json_data=None):
     for index, row in csv_file.iterrows():
         if str(row.get('to_be_updated') or '').strip().upper() != 'X':
             continue
-        doi = normalize_doi(str(row.get('doi') or ''))
+        raw_doi = str(row.get('doi') or '')
+        doi = normalize_doi(raw_doi)
         record_uuid = str(row.get('pure_uuid') or '').strip()
         url = str(row.get('candidate_url') or '').strip()
+        if not doi:
+            logger.error(f"Cannot deposit {raw_doi!r}: DOI does not normalise")
+            continue
         if not record_uuid or not url:
             logger.error(f"Cannot deposit {doi}: missing Pure UUID or candidate URL")
             continue
@@ -572,16 +576,24 @@ def process_full_text(filename, csv_file, json_data=None):
 
         try:
             upload_key = upload_pdf(deposit_session, payload, file_name)
-        except DepositError as exc:
+        except Exception as exc:
             logger.error(f"Could not upload the PDF for {doi}: {exc}")
             continue
 
-        response = requests.get(f"{PURE_BASE_URL}research-outputs/{record_uuid}",
-                                headers=PURE_HEADERS, timeout=60)
+        try:
+            response = requests.get(f"{PURE_BASE_URL}research-outputs/{record_uuid}",
+                                    headers=PURE_HEADERS, timeout=60)
+        except Exception as exc:
+            logger.error(f"Could not load research output {record_uuid} for {doi}: {exc}")
+            continue
         if response.status_code != 200:
             logger.error(f"Could not load research output {record_uuid} for {doi}: HTTP {response.status_code}")
             continue
-        record = response.json()
+        try:
+            record = response.json()
+        except Exception as exc:
+            logger.error(f"Could not parse research output {record_uuid} for {doi}: {exc}")
+            continue
         previous_versions = record.get('electronicVersions') or []
 
         try:
@@ -591,8 +603,16 @@ def process_full_text(filename, csv_file, json_data=None):
             continue
 
         record['electronicVersions'] = list(previous_versions) + [entry]
-        put = requests.put(f"{PURE_BASE_URL}research-outputs/{record_uuid}",
-                           headers=PURE_HEADERS, json=record, timeout=180)
+        try:
+            put = requests.put(f"{PURE_BASE_URL}research-outputs/{record_uuid}",
+                               headers=PURE_HEADERS, json=record, timeout=180)
+        except Exception as exc:
+            logger.error(
+                f"Could not confirm the deposit for {doi} on {record_uuid}: {exc}. "
+                "The record's state is unknown: the PUT may have been applied in Pure before this "
+                "error was raised."
+            )
+            continue
         if put.status_code != 200:
             logger.error(f"Pure rejected the deposit for {doi}: HTTP {put.status_code} {put.text[:200]}")
             continue
@@ -610,6 +630,12 @@ def process_full_text(filename, csv_file, json_data=None):
         })
         deposited += 1
         logger.info(f"attached {file_name} ({len(payload)} bytes) to research output {record_uuid} for {doi}")
+
+    output_directory = _resolve_output_directory(os.environ.get('REFERER_PAGE', 'unknown')) or 'output/full_text'
+    file = os.path.join(output_directory, filename)
+    os.makedirs(output_directory, exist_ok=True)
+    csv_file.to_csv(file, index=False)
+    logger.info(f"Updated DataFrame saved to {file}.")
 
     logger.info(f"{deposited} full text(s) attached in Pure")
 

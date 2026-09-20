@@ -3265,6 +3265,83 @@ class FullTextApplySupportTests(unittest.TestCase):
         self.assertEqual("10.1/a", changes[0]["item_key"])
         self.assertEqual("rec-1", (changes[0]["new_value"] or {}).get("record_uuid"))
 
+    def test_finalize_apply_change_set_marks_full_text_applied_with_snapshot(self):
+        """Regression for the rollback-is-unreachable defect: full_text must use
+        the manifest branch (like research_outputs/datasets), and the manifest
+        loader must keep previous_electronic_versions -- the only thing
+        _execute_full_text_rollback can restore from."""
+        import csv as _csv
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            app = create_app()
+            app.config["BTP_DATA_DIR"] = tmpdir
+            init_db(app)
+            artifact_dir = os.path.join(tmpdir, "output", "full_text", "job-ft2")
+            os.makedirs(artifact_dir, exist_ok=True)
+            csv_path = os.path.join(artifact_dir, "to_be_updated.csv")
+            with open(csv_path, "w", newline="", encoding="utf-8") as handle:
+                writer = _csv.DictWriter(handle, fieldnames=["to_be_updated", "updated", "doi", "pure_uuid", "title"])
+                writer.writeheader()
+                writer.writerow({"to_be_updated": "X", "updated": " ", "doi": "10.1000/a",
+                                 "pure_uuid": "rec-1", "title": "A paper"})
+
+            service = JobService(
+                app.extensions["btp_db"]["db_path"],
+                project_root=Path(__file__).resolve().parents[1],
+                runtime_root=Path(tmpdir),
+            )
+            service.create_job(
+                job_id="job-ft2",
+                job_type=JobType.FULL_TEXT.value,
+                status=JobStatus.COMPLETED,
+                created_at="2026-04-20T13:00:00Z",
+                log_path="logs/jobs/job-ft2.log",
+            )
+            service.update_job(
+                "job-ft2",
+                artifact_dir="output/full_text/job-ft2",
+                artifacts={
+                    "canOpen": True,
+                    "canApply": True,
+                    "artifacts": {
+                        "directory": "output/full_text/job-ft2",
+                        "csv": ["to_be_updated.csv"],
+                        "json": [],
+                    },
+                },
+            )
+            change_set_id = service._capture_apply_change_set(service.get_job("job-ft2"))
+            self.assertIsNotNone(change_set_id)
+
+            # Simulate what the apply script writes: the row was deposited and
+            # to_be_updated cleared, and a manifest entry recorded the snapshot.
+            with open(csv_path, "w", newline="", encoding="utf-8") as handle:
+                writer = _csv.DictWriter(handle, fieldnames=["to_be_updated", "updated", "doi", "pure_uuid", "title"])
+                writer.writeheader()
+                writer.writerow({"to_be_updated": "", "updated": "x", "doi": "10.1000/a",
+                                 "pure_uuid": "rec-1", "title": "A paper"})
+            manifest_path = os.path.join(artifact_dir, "apply_manifest.jsonl")
+            with open(manifest_path, "w", encoding="utf-8") as handle:
+                handle.write(json.dumps({
+                    "job_type": "full_text",
+                    "item_key": "10.1000/a",
+                    "doi": "10.1000/a",
+                    "record_uuid": "rec-1",
+                    "previous_electronic_versions": [{"typeDiscriminator": "DoiElectronicVersion"}],
+                }) + "\n")
+
+            service._finalize_apply_change_set(service.get_job("job-ft2"), change_set_id)
+            change_set = service.get_job_change_set("job-ft2")
+
+            self.assertEqual(1, change_set["applied_item_count"])
+            item = change_set["items"][0]
+            self.assertEqual("applied", item["apply_status"])
+            self.assertEqual(
+                [{"typeDiscriminator": "DoiElectronicVersion"}],
+                (item["new_value"] or {}).get("previous_electronic_versions"),
+                "the snapshot must survive the manifest round trip so rollback can use it",
+            )
+
 
 class ApplySupportGuardTests(unittest.TestCase):
     """The `_APPLY_SUPPORTED_JOB_TYPES` guard in apply_job is what stops a job

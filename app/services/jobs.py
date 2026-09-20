@@ -1876,7 +1876,7 @@ class JobService:
                 if job["job_type"] in {JobType.EXTERNAL_PERSONS.value, JobType.EXTERNAL_ORGS.value}:
                     status = "applied" if row["entity_uuid"] in applied_entities else "not_applied"
                     new_value_json = None
-                elif job["job_type"] in {JobType.RESEARCH_OUTPUTS.value, JobType.DATASETS.value}:
+                elif job["job_type"] in {JobType.RESEARCH_OUTPUTS.value, JobType.DATASETS.value, JobType.FULL_TEXT.value}:
                     applied_record = applied_records.get(row["item_key"])
                     status = "applied" if applied_record else "not_applied"
                     new_value_json = json.dumps(applied_record, sort_keys=True) if applied_record else None
@@ -1990,12 +1990,15 @@ class JobService:
                 item_key = self._normalize_doi(str(entry.get("item_key") or entry.get("doi") or ""))
                 if not item_key:
                     continue
-                applied_records[item_key] = {
+                record: dict[str, Any] = {
                     "doi": item_key,
                     "record_type": entry.get("job_type"),
                     "record_uuid": entry.get("record_uuid"),
                     "created_external_persons": entry.get("created_external_persons", []),
                 }
+                if "previous_electronic_versions" in entry:
+                    record["previous_electronic_versions"] = entry.get("previous_electronic_versions")
+                applied_records[item_key] = record
         return applied_records
 
     @staticmethod
@@ -2526,7 +2529,11 @@ class JobService:
                     continue
 
                 stats["rolled_back"] += 1
-                self._append_log(log_path, f"ROLLED BACK full text on {record_uuid} ({payload.get('doi')})\n")
+                self._append_log(
+                    log_path,
+                    f"ROLLED BACK full text on {record_uuid} ({payload.get('doi')}); "
+                    "the uploaded file remains in Pure's file store (Pure exposes no delete for it)\n",
+                )
                 connection.execute(
                     "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = NULL WHERE id = ?",
                     ("rolled_back", item["id"]),
