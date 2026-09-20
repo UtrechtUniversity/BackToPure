@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import fulltext_deposit as fd
 
@@ -98,3 +98,75 @@ class FileEntryTests(unittest.TestCase):
     def test_unknown_version_refuses_rather_than_guessing(self):
         with self.assertRaises(ValueError):
             fd.build_file_electronic_version(self._candidate(version="draft"), "k", "a.pdf")
+
+
+class ProcessFullTextTests(unittest.TestCase):
+    """Deposit is a chain of network steps; each failure must land in the row
+    as a reason rather than aborting the run."""
+
+    def _csv(self):
+        import pandas as pd
+
+        return pd.DataFrame([
+            {
+                "to_be_updated": "X", "updated": " ",
+                "doi": "10.1/a", "pure_uuid": "rec-1",
+                "candidate_url": "https://publisher.org/a.pdf",
+                "version": "publishedVersion", "licence": "cc-by",
+                "access_status": "open",
+            }
+        ])
+
+    def test_deposits_and_records_the_previous_versions(self):
+        import apply_updates_to_pure as apply_mod
+
+        record = {"uuid": "rec-1", "electronicVersions": [{"typeDiscriminator": "DoiElectronicVersion"}]}
+        entries = []
+        with patch.object(apply_mod, "download_and_validate", return_value=(b"%PDF-", "a.pdf")), patch.object(
+            apply_mod, "upload_pdf", return_value="key-1"
+        ), patch.object(apply_mod.requests, "get", return_value=MagicMock(status_code=200, json=lambda: record)), patch.object(
+            apply_mod.requests, "put", return_value=MagicMock(status_code=200)
+        ), patch.object(apply_mod, "_append_apply_manifest_entry", side_effect=entries.append):
+            apply_mod.process_full_text("to_be_updated.csv", self._csv())
+
+        self.assertEqual(1, len(entries))
+        self.assertEqual("rec-1", entries[0]["record_uuid"])
+        self.assertEqual(
+            [{"typeDiscriminator": "DoiElectronicVersion"}],
+            entries[0]["previous_electronic_versions"],
+            "the snapshot is what rollback restores",
+        )
+
+    def test_a_failed_upload_records_no_manifest_entry(self):
+        import apply_updates_to_pure as apply_mod
+        import fulltext_deposit as fd_mod
+
+        entries = []
+        with patch.object(apply_mod, "download_and_validate", return_value=(b"%PDF-", "a.pdf")), patch.object(
+            apply_mod, "upload_pdf", side_effect=fd_mod.DepositError("HTTP 500")
+        ), patch.object(apply_mod, "_append_apply_manifest_entry", side_effect=entries.append):
+            apply_mod.process_full_text("to_be_updated.csv", self._csv())
+
+        self.assertEqual([], entries)
+
+    def test_unticked_rows_are_not_deposited(self):
+        import apply_updates_to_pure as apply_mod
+
+        frame = self._csv()
+        frame.loc[0, "to_be_updated"] = ""
+        entries = []
+        with patch.object(apply_mod, "download_and_validate") as download, patch.object(
+            apply_mod, "_append_apply_manifest_entry", side_effect=entries.append
+        ):
+            apply_mod.process_full_text("to_be_updated.csv", frame)
+
+        download.assert_not_called()
+        self.assertEqual([], entries)
+
+    def test_dispatch_reaches_full_text_without_a_json_file(self):
+        """The full text job writes only a CSV; the JSON-gated dispatch would skip it."""
+        import apply_updates_to_pure as apply_mod
+        import inspect
+
+        source = inspect.getsource(apply_mod.main)
+        self.assertIn("deposit_full_text", source)

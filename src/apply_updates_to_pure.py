@@ -16,6 +16,9 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import urllib3
+from enrich_pure_external_persons import normalize_doi
+from fulltext_deposit import DepositError, build_file_electronic_version, upload_pdf
+from fulltext_fetch import download_and_validate
 #Setup logger
 
 logger = setup_logging('btp', level=logging.INFO)
@@ -57,6 +60,8 @@ def _resolve_output_directory(referer_page):
         return "output/research_output"
     if 'import_research_outputs' in referer_page:
         return "output/research_output"
+    if 'deposit_full_text' in referer_page:
+        return "output/full_text"
     return None
 
 
@@ -534,12 +539,85 @@ def process_external_orgs(filename, csv_file, big_json_data):
     logger.info(f" {succes} external organizations are updated.. check pure for the results")
 
 
-if __name__ == "__main__":
+def process_full_text(filename, csv_file, json_data=None):
+    """Attach an open access PDF to each approved research output.
 
+    The bytes are fetched again here rather than cached from the report: no
+    copyrighted file sits in the artifact directory, and a candidate that
+    changed or vanished since review is caught instead of deposited blind.
+    """
+    deposit_session = requests.Session()
+    deposited = 0
+    for index, row in csv_file.iterrows():
+        if str(row.get('to_be_updated') or '').strip().upper() != 'X':
+            continue
+        doi = normalize_doi(str(row.get('doi') or ''))
+        record_uuid = str(row.get('pure_uuid') or '').strip()
+        url = str(row.get('candidate_url') or '').strip()
+        if not record_uuid or not url:
+            logger.error(f"Cannot deposit {doi}: missing Pure UUID or candidate URL")
+            continue
+
+        candidate = {
+            'version': str(row.get('version') or '').strip(),
+            'license': str(row.get('licence') or '').strip() or None,
+            'access_status': str(row.get('access_status') or 'open').strip(),
+        }
+
+        try:
+            payload, file_name = download_and_validate(deposit_session, url)
+        except Exception as exc:
+            logger.error(f"Could not fetch the PDF for {doi}: {exc}")
+            continue
+
+        try:
+            upload_key = upload_pdf(deposit_session, payload, file_name)
+        except DepositError as exc:
+            logger.error(f"Could not upload the PDF for {doi}: {exc}")
+            continue
+
+        response = requests.get(f"{PURE_BASE_URL}research-outputs/{record_uuid}",
+                                headers=PURE_HEADERS, timeout=60)
+        if response.status_code != 200:
+            logger.error(f"Could not load research output {record_uuid} for {doi}: HTTP {response.status_code}")
+            continue
+        record = response.json()
+        previous_versions = record.get('electronicVersions') or []
+
+        try:
+            entry = build_file_electronic_version(candidate, upload_key, file_name)
+        except ValueError as exc:
+            logger.error(f"Cannot build a file entry for {doi}: {exc}")
+            continue
+
+        record['electronicVersions'] = list(previous_versions) + [entry]
+        put = requests.put(f"{PURE_BASE_URL}research-outputs/{record_uuid}",
+                           headers=PURE_HEADERS, json=record, timeout=180)
+        if put.status_code != 200:
+            logger.error(f"Pure rejected the deposit for {doi}: HTTP {put.status_code} {put.text[:200]}")
+            continue
+
+        csv_file.loc[index, 'updated'] = 'x'
+        csv_file.loc[index, 'to_be_updated'] = ''
+        _append_apply_manifest_entry({
+            "job_type": "full_text",
+            "item_key": doi,
+            "doi": doi,
+            "record_uuid": record_uuid,
+            "previous_electronic_versions": previous_versions,
+            "upload_key": upload_key,
+            "file_name": file_name,
+        })
+        deposited += 1
+        logger.info(f"attached {file_name} ({len(payload)} bytes) to research output {record_uuid} for {doi}")
+
+    logger.info(f"{deposited} full text(s) attached in Pure")
+
+
+def main():
     # Step 1: Retrieve the REFERER_PAGE environment variable
     referer_page = os.environ.get('REFERER_PAGE', 'unknown')
 
-  
     logger.debug(f"Script called from page: {referer_page}")
 
     # Step 2: Execute specific logic based on the Referer
@@ -562,6 +640,12 @@ if __name__ == "__main__":
         logger.info(f"script to update Pure has ended")
         sys.exit(0)
 
+    if 'deposit_full_text' in referer_page:
+        for filename, csv_file in csv_files.items():
+            process_full_text(filename, csv_file)
+        logger.info("script to update Pure has ended")
+        sys.exit(0)
+
     if len(json_files) > 1:
         logger.warning(f"Multiple JSON files found in {directory}; using the first one after sorting.")
 
@@ -579,3 +663,7 @@ if __name__ == "__main__":
             elif 'enrich_external_orgs' in referer_page:
                 process_external_orgs(filename, csv_file, big_json_data)
     logger.info(f"script to update Pure has ended")
+
+
+if __name__ == "__main__":
+    main()
