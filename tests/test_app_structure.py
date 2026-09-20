@@ -3266,6 +3266,60 @@ class FullTextApplySupportTests(unittest.TestCase):
         self.assertEqual("rec-1", (changes[0]["new_value"] or {}).get("record_uuid"))
 
 
+class ApplySupportGuardTests(unittest.TestCase):
+    """The `_APPLY_SUPPORTED_JOB_TYPES` guard in apply_job is what stops a job
+    type with no apply implementation from wedging into APPLYING forever with
+    no finished_at. Every real JobType is apply-supported now, so this test
+    fabricates an unsupported one by patching the guard set rather than the
+    JobType enum."""
+
+    def test_apply_job_rejects_unsupported_job_type_before_status_change(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            app = create_app()
+            app.config["BTP_DATA_DIR"] = os.path.join(tmpdir, "data")
+            init_db(app)
+
+            service = JobService(
+                app.extensions["btp_db"]["db_path"],
+                project_root=tmpdir,
+            )
+            service.create_job(
+                job_id="job-unsupported-1",
+                job_type=JobType.INTERNAL_PERSONS.value,
+                status=JobStatus.NEEDS_REVIEW,
+                created_at="2026-04-20T13:00:00Z",
+            )
+            service.update_job(
+                "job-unsupported-1",
+                artifacts={
+                    "canOpen": True,
+                    "canApply": True,
+                    "artifacts": {
+                        "directory": "output/internal_persons",
+                        "csv": ["to_be_updated.csv"],
+                        "json": [],
+                    },
+                },
+                results={
+                    "entity_label": "persons",
+                    "found_label": "Persons found",
+                    "ready_label": "Persons ready to update",
+                    "updated_label": "Persons updated",
+                    "found_count": 5,
+                    "ready_count": 2,
+                    "updated_count": 0,
+                },
+            )
+
+            with patch("app.services.jobs._APPLY_SUPPORTED_JOB_TYPES", set()):
+                with self.assertRaisesRegex(ValueError, "does not support apply"):
+                    service.apply_job("job-unsupported-1")
+
+            after = service.get_job("job-unsupported-1")
+            self.assertEqual(JobStatus.NEEDS_REVIEW.value, after["status"])
+            self.assertIsNone(after.get("finished_at"))
+
+
 class FullTextVersionPolicyParamTests(unittest.TestCase):
     def test_version_policy_is_an_allowed_param(self):
         from app.models.jobs import JobType, get_job_type_definition
