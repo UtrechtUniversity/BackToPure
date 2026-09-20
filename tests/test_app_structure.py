@@ -3221,53 +3221,49 @@ class FullTextJobTypeTests(unittest.TestCase):
 
             self.assertEqual("output/full_text/job-005", created["artifact_dir"])
 
-    def test_job_service_apply_job_rejects_full_text_before_status_change(self):
-        """apply_job has no implementation for full_text (read-only, apply is
-        future work). It must fail before flipping status to APPLYING, not
-        leave the job wedged with an uncaught exception mid-apply."""
+class FullTextApplySupportTests(unittest.TestCase):
+    def test_full_text_is_now_an_apply_supported_job_type(self):
+        from app.services.jobs import _APPLY_SUPPORTED_JOB_TYPES
+
+        self.assertIn(JobType.FULL_TEXT.value, _APPLY_SUPPORTED_JOB_TYPES)
+
+    def test_full_text_has_a_referer_page(self):
+        from app.services.jobs import JobService
+
+        self.assertEqual("deposit_full_text", JobService._referer_page_for_job_type("full_text"))
+
+    def test_change_set_items_are_keyed_on_doi(self):
+        import csv as _csv
+
         with tempfile.TemporaryDirectory() as tmpdir:
             app = create_app()
-            app.config["BTP_DATA_DIR"] = os.path.join(tmpdir, "data")
+            app.config["BTP_DATA_DIR"] = tmpdir
             init_db(app)
+            artifact_dir = os.path.join(tmpdir, "output", "full_text", "job-ft")
+            os.makedirs(artifact_dir, exist_ok=True)
+            with open(os.path.join(artifact_dir, "to_be_updated.csv"), "w", newline="", encoding="utf-8") as handle:
+                writer = _csv.DictWriter(handle, fieldnames=["to_be_updated", "updated", "doi", "pure_uuid", "title"])
+                writer.writeheader()
+                writer.writerow({"to_be_updated": "X", "updated": " ", "doi": "10.1/a",
+                                 "pure_uuid": "rec-1", "title": "A paper"})
+                writer.writerow({"to_be_updated": "", "updated": " ", "doi": "10.1/b",
+                                 "pure_uuid": "rec-2", "title": "Not selected"})
 
             service = JobService(
                 app.extensions["btp_db"]["db_path"],
-                project_root=tmpdir,
+                project_root=Path(__file__).resolve().parents[1],
+                runtime_root=Path(tmpdir),
             )
-            service.create_job(
-                job_id="job-ft-1",
-                job_type=JobType.FULL_TEXT.value,
-                status=JobStatus.NEEDS_REVIEW,
-                created_at="2026-04-20T13:00:00Z",
-            )
-            service.update_job(
-                "job-ft-1",
-                artifacts={
-                    "canOpen": True,
-                    "canApply": True,
-                    "artifacts": {
-                        "directory": "output/full_text",
-                        "csv": ["to_be_updated.csv"],
-                        "json": [],
-                    },
-                },
-                results={
-                    "entity_label": "publications",
-                    "found_label": "Publications found",
-                    "ready_label": "Publications ready to update",
-                    "updated_label": "Publications updated",
-                    "found_count": 5,
-                    "ready_count": 2,
-                    "updated_count": 0,
-                },
-            )
+            job = {
+                "job_type": "full_text",
+                "artifact_dir": "output/full_text/job-ft",
+                "artifact_state": {"artifacts": {"csv": ["to_be_updated.csv"], "json": []}},
+            }
+            changes = service._collect_full_text_apply_changes(job)
 
-            with self.assertRaises(ValueError):
-                service.apply_job("job-ft-1")
-
-            after = service.get_job("job-ft-1")
-            self.assertEqual(JobStatus.NEEDS_REVIEW.value, after["status"])
-            self.assertIsNone(after.get("finished_at"))
+        self.assertEqual(1, len(changes), "only ticked rows become change set items")
+        self.assertEqual("10.1/a", changes[0]["item_key"])
+        self.assertEqual("rec-1", (changes[0]["new_value"] or {}).get("record_uuid"))
 
 
 class FullTextVersionPolicyParamTests(unittest.TestCase):

@@ -41,6 +41,7 @@ _APPLY_SUPPORTED_JOB_TYPES = {
     JobType.EXTERNAL_ORGS.value,
     JobType.RESEARCH_OUTPUTS.value,
     JobType.DATASETS.value,
+    JobType.FULL_TEXT.value,
 }
 
 
@@ -1043,6 +1044,7 @@ class JobService:
             JobType.EXTERNAL_ORGS.value: "enrich_external_orgs",
             JobType.RESEARCH_OUTPUTS.value: "import_research_outputs",
             JobType.DATASETS.value: "import_datasets",
+            JobType.FULL_TEXT.value: "deposit_full_text",
         }
         if job_type not in referers:
             raise ValueError(f"Unsupported job type for apply: {job_type}")
@@ -1487,6 +1489,8 @@ class JobService:
             changes = self._collect_record_creation_apply_changes(job, "research_output")
         elif job["job_type"] == JobType.DATASETS.value:
             changes = self._collect_record_creation_apply_changes(job, "dataset")
+        elif job["job_type"] == JobType.FULL_TEXT.value:
+            changes = self._collect_full_text_apply_changes(job)
         else:
             return None
         if not changes:
@@ -1778,6 +1782,43 @@ class JobService:
                     )
         return changes
 
+    def _collect_full_text_apply_changes(self, job: dict) -> list[dict[str, Any]]:
+        """One change set item per approved deposit, keyed on DOI.
+
+        old_value stays None here: the electronicVersions snapshot is taken by
+        the apply script at deposit time and arrives through the manifest,
+        because only then do we know what the record looked like.
+        """
+        artifact_state = job["artifact_state"] or {}
+        tracked_csv = tuple((artifact_state.get("artifacts") or {}).get("csv") or ())
+        if not tracked_csv:
+            return []
+
+        definition = get_job_type_definition(job["job_type"])
+        artifact_dir = self._artifact_directory(job.get("artifact_dir"))
+        changes: list[dict[str, Any]] = []
+        for csv_path in self._matching_csv_paths(artifact_dir, definition, tracked_names=tracked_csv):
+            with open(csv_path, "r", encoding="utf-8", newline="") as handle:
+                for row in csv.DictReader(handle):
+                    if not self._marker_is_selected(row.get("to_be_updated")):
+                        continue
+                    doi = self._normalize_doi(str(row.get("doi") or ""))
+                    record_uuid = str(row.get("pure_uuid") or "").strip()
+                    if not doi or not record_uuid:
+                        continue
+                    changes.append(
+                        {
+                            "item_key": doi,
+                            "entity_uuid": doi,
+                            "entity_label": str(row.get("title") or "").strip() or None,
+                            "field_name": "electronicVersions",
+                            "identifier_type": "full_text",
+                            "old_value": None,
+                            "new_value": {"doi": doi, "record_uuid": record_uuid},
+                        }
+                    )
+        return changes
+
     @staticmethod
     def _internal_person_change_key(entity_uuid: str, identifier_type: str, new_value: str) -> str:
         return f"{entity_uuid}|{identifier_type}|{new_value}"
@@ -1827,7 +1868,7 @@ class JobService:
                 definition,
                 tracked_csv,
             )
-        elif job["job_type"] in {JobType.RESEARCH_OUTPUTS.value, JobType.DATASETS.value}:
+        elif job["job_type"] in {JobType.RESEARCH_OUTPUTS.value, JobType.DATASETS.value, JobType.FULL_TEXT.value}:
             applied_records = self._load_apply_manifest(job)
         else:
             applied_records = {}
