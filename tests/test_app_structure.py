@@ -3221,10 +3221,136 @@ class FullTextJobTypeTests(unittest.TestCase):
 
             self.assertEqual("output/full_text/job-005", created["artifact_dir"])
 
-    def test_job_service_apply_job_rejects_full_text_before_status_change(self):
-        """apply_job has no implementation for full_text (read-only, apply is
-        future work). It must fail before flipping status to APPLYING, not
-        leave the job wedged with an uncaught exception mid-apply."""
+class FullTextApplySupportTests(unittest.TestCase):
+    def test_full_text_is_now_an_apply_supported_job_type(self):
+        from app.services.jobs import _APPLY_SUPPORTED_JOB_TYPES
+
+        self.assertIn(JobType.FULL_TEXT.value, _APPLY_SUPPORTED_JOB_TYPES)
+
+    def test_full_text_has_a_referer_page(self):
+        from app.services.jobs import JobService
+
+        self.assertEqual("deposit_full_text", JobService._referer_page_for_job_type("full_text"))
+
+    def test_change_set_items_are_keyed_on_doi(self):
+        import csv as _csv
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            app = create_app()
+            app.config["BTP_DATA_DIR"] = tmpdir
+            init_db(app)
+            artifact_dir = os.path.join(tmpdir, "output", "full_text", "job-ft")
+            os.makedirs(artifact_dir, exist_ok=True)
+            with open(os.path.join(artifact_dir, "to_be_updated.csv"), "w", newline="", encoding="utf-8") as handle:
+                writer = _csv.DictWriter(handle, fieldnames=["to_be_updated", "updated", "doi", "pure_uuid", "title"])
+                writer.writeheader()
+                writer.writerow({"to_be_updated": "X", "updated": " ", "doi": "10.1/a",
+                                 "pure_uuid": "rec-1", "title": "A paper"})
+                writer.writerow({"to_be_updated": "", "updated": " ", "doi": "10.1/b",
+                                 "pure_uuid": "rec-2", "title": "Not selected"})
+
+            service = JobService(
+                app.extensions["btp_db"]["db_path"],
+                project_root=Path(__file__).resolve().parents[1],
+                runtime_root=Path(tmpdir),
+            )
+            job = {
+                "job_type": "full_text",
+                "artifact_dir": "output/full_text/job-ft",
+                "artifact_state": {"artifacts": {"csv": ["to_be_updated.csv"], "json": []}},
+            }
+            changes = service._collect_full_text_apply_changes(job)
+
+        self.assertEqual(1, len(changes), "only ticked rows become change set items")
+        self.assertEqual("10.1/a", changes[0]["item_key"])
+        self.assertEqual("rec-1", (changes[0]["new_value"] or {}).get("record_uuid"))
+
+    def test_finalize_apply_change_set_marks_full_text_applied_with_snapshot(self):
+        """Regression for the rollback-is-unreachable defect: full_text must use
+        the manifest branch (like research_outputs/datasets), and the manifest
+        loader must keep previous_electronic_versions -- the only thing
+        _execute_full_text_rollback can restore from."""
+        import csv as _csv
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            app = create_app()
+            app.config["BTP_DATA_DIR"] = tmpdir
+            init_db(app)
+            artifact_dir = os.path.join(tmpdir, "output", "full_text", "job-ft2")
+            os.makedirs(artifact_dir, exist_ok=True)
+            csv_path = os.path.join(artifact_dir, "to_be_updated.csv")
+            with open(csv_path, "w", newline="", encoding="utf-8") as handle:
+                writer = _csv.DictWriter(handle, fieldnames=["to_be_updated", "updated", "doi", "pure_uuid", "title"])
+                writer.writeheader()
+                writer.writerow({"to_be_updated": "X", "updated": " ", "doi": "10.1000/a",
+                                 "pure_uuid": "rec-1", "title": "A paper"})
+
+            service = JobService(
+                app.extensions["btp_db"]["db_path"],
+                project_root=Path(__file__).resolve().parents[1],
+                runtime_root=Path(tmpdir),
+            )
+            service.create_job(
+                job_id="job-ft2",
+                job_type=JobType.FULL_TEXT.value,
+                status=JobStatus.COMPLETED,
+                created_at="2026-04-20T13:00:00Z",
+                log_path="logs/jobs/job-ft2.log",
+            )
+            service.update_job(
+                "job-ft2",
+                artifact_dir="output/full_text/job-ft2",
+                artifacts={
+                    "canOpen": True,
+                    "canApply": True,
+                    "artifacts": {
+                        "directory": "output/full_text/job-ft2",
+                        "csv": ["to_be_updated.csv"],
+                        "json": [],
+                    },
+                },
+            )
+            change_set_id = service._capture_apply_change_set(service.get_job("job-ft2"))
+            self.assertIsNotNone(change_set_id)
+
+            # Simulate what the apply script writes: the row was deposited and
+            # to_be_updated cleared, and a manifest entry recorded the snapshot.
+            with open(csv_path, "w", newline="", encoding="utf-8") as handle:
+                writer = _csv.DictWriter(handle, fieldnames=["to_be_updated", "updated", "doi", "pure_uuid", "title"])
+                writer.writeheader()
+                writer.writerow({"to_be_updated": "", "updated": "x", "doi": "10.1000/a",
+                                 "pure_uuid": "rec-1", "title": "A paper"})
+            manifest_path = os.path.join(artifact_dir, "apply_manifest.jsonl")
+            with open(manifest_path, "w", encoding="utf-8") as handle:
+                handle.write(json.dumps({
+                    "job_type": "full_text",
+                    "item_key": "10.1000/a",
+                    "doi": "10.1000/a",
+                    "record_uuid": "rec-1",
+                    "previous_electronic_versions": [{"typeDiscriminator": "DoiElectronicVersion"}],
+                }) + "\n")
+
+            service._finalize_apply_change_set(service.get_job("job-ft2"), change_set_id)
+            change_set = service.get_job_change_set("job-ft2")
+
+            self.assertEqual(1, change_set["applied_item_count"])
+            item = change_set["items"][0]
+            self.assertEqual("applied", item["apply_status"])
+            self.assertEqual(
+                [{"typeDiscriminator": "DoiElectronicVersion"}],
+                (item["new_value"] or {}).get("previous_electronic_versions"),
+                "the snapshot must survive the manifest round trip so rollback can use it",
+            )
+
+
+class ApplySupportGuardTests(unittest.TestCase):
+    """The `_APPLY_SUPPORTED_JOB_TYPES` guard in apply_job is what stops a job
+    type with no apply implementation from wedging into APPLYING forever with
+    no finished_at. Every real JobType is apply-supported now, so this test
+    fabricates an unsupported one by patching the guard set rather than the
+    JobType enum."""
+
+    def test_apply_job_rejects_unsupported_job_type_before_status_change(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             app = create_app()
             app.config["BTP_DATA_DIR"] = os.path.join(tmpdir, "data")
@@ -3235,37 +3361,38 @@ class FullTextJobTypeTests(unittest.TestCase):
                 project_root=tmpdir,
             )
             service.create_job(
-                job_id="job-ft-1",
-                job_type=JobType.FULL_TEXT.value,
+                job_id="job-unsupported-1",
+                job_type=JobType.INTERNAL_PERSONS.value,
                 status=JobStatus.NEEDS_REVIEW,
                 created_at="2026-04-20T13:00:00Z",
             )
             service.update_job(
-                "job-ft-1",
+                "job-unsupported-1",
                 artifacts={
                     "canOpen": True,
                     "canApply": True,
                     "artifacts": {
-                        "directory": "output/full_text",
+                        "directory": "output/internal_persons",
                         "csv": ["to_be_updated.csv"],
                         "json": [],
                     },
                 },
                 results={
-                    "entity_label": "publications",
-                    "found_label": "Publications found",
-                    "ready_label": "Publications ready to update",
-                    "updated_label": "Publications updated",
+                    "entity_label": "persons",
+                    "found_label": "Persons found",
+                    "ready_label": "Persons ready to update",
+                    "updated_label": "Persons updated",
                     "found_count": 5,
                     "ready_count": 2,
                     "updated_count": 0,
                 },
             )
 
-            with self.assertRaises(ValueError):
-                service.apply_job("job-ft-1")
+            with patch("app.services.jobs._APPLY_SUPPORTED_JOB_TYPES", set()):
+                with self.assertRaisesRegex(ValueError, "does not support apply"):
+                    service.apply_job("job-unsupported-1")
 
-            after = service.get_job("job-ft-1")
+            after = service.get_job("job-unsupported-1")
             self.assertEqual(JobStatus.NEEDS_REVIEW.value, after["status"])
             self.assertIsNone(after.get("finished_at"))
 
@@ -3283,3 +3410,96 @@ class FullTextVersionPolicyParamTests(unittest.TestCase):
 
         definition = get_job_type_definition(JobType.FULL_TEXT.value)
         self.assertIn(("version_policy", "versionPolicy"), definition.cli_param_aliases)
+
+
+class FullTextRollbackTests(unittest.TestCase):
+    """Restoring the snapshot is the whole rollback: Pure has no delete for an
+    uploaded file, and electronicVersions replaces on PUT (verified on staging)."""
+
+    def _change_set(self, rollback_status="pending", apply_status="applied"):
+        return {
+            "items": [
+                {
+                    "id": 1,
+                    "entity_uuid": "10.1/a",
+                    "apply_status": apply_status,
+                    "rollback_status": rollback_status,
+                    "new_value": {
+                        "doi": "10.1/a",
+                        "record_uuid": "rec-1",
+                        "previous_electronic_versions": [{"typeDiscriminator": "DoiElectronicVersion"}],
+                    },
+                }
+            ]
+        }
+
+    def _service(self, tmpdir):
+        app = create_app()
+        app.config["BTP_DATA_DIR"] = tmpdir
+        init_db(app)
+        return JobService(
+            app.extensions["btp_db"]["db_path"],
+            project_root=Path(__file__).resolve().parents[1],
+            runtime_root=Path(tmpdir),
+        )
+
+    def test_restores_the_previous_electronic_versions(self):
+        deposited = {"uuid": "rec-1", "electronicVersions": [
+            {"typeDiscriminator": "DoiElectronicVersion"},
+            {"typeDiscriminator": "FileElectronicVersion"},
+        ]}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = self._service(tmpdir)
+            log_path = Path(tmpdir) / "rollback.log"
+            with patch("app.services.jobs.requests.get", return_value=MagicMock(status_code=200, json=lambda: deposited)), patch(
+                "app.services.jobs.requests.put", return_value=MagicMock(status_code=200)
+            ) as put:
+                stats = service._execute_full_text_rollback(self._change_set(), log_path)
+
+        self.assertEqual(1, stats["rolled_back"])
+        sent = put.call_args.kwargs["json"]
+        self.assertEqual([{"typeDiscriminator": "DoiElectronicVersion"}], sent["electronicVersions"])
+
+    def test_unapplied_items_are_skipped(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = self._service(tmpdir)
+            with patch("app.services.jobs.requests.put") as put:
+                stats = service._execute_full_text_rollback(
+                    self._change_set(apply_status="not_applied"), Path(tmpdir) / "r.log"
+                )
+
+        put.assert_not_called()
+        self.assertEqual(0, stats["rolled_back"])
+
+    def test_a_missing_record_is_a_conflict_not_a_failure_to_notice(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = self._service(tmpdir)
+            with patch("app.services.jobs.requests.get", return_value=MagicMock(status_code=404)), patch(
+                "app.services.jobs.requests.put"
+            ) as put:
+                stats = service._execute_full_text_rollback(self._change_set(), Path(tmpdir) / "r.log")
+
+        put.assert_not_called()
+        self.assertEqual(0, stats["rolled_back"])
+        self.assertGreaterEqual(stats["conflicts"] + stats["failed"], 1)
+
+    def test_missing_snapshot_is_a_conflict_rather_than_an_empty_put(self):
+        """Without a snapshot there is nothing to restore; PUTing an empty list
+        would strip electronicVersions the deposit never touched."""
+        change_set = self._change_set()
+        change_set["items"][0]["new_value"].pop("previous_electronic_versions")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = self._service(tmpdir)
+            with patch("app.services.jobs.requests.put") as put:
+                stats = service._execute_full_text_rollback(change_set, Path(tmpdir) / "r.log")
+
+        put.assert_not_called()
+        self.assertEqual(1, stats["conflicts"])
+
+    def test_an_unknown_job_type_does_not_fall_through_to_dataset_deletion(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = self._service(tmpdir)
+            with patch.object(service, "_execute_datasets_rollback") as datasets:
+                with self.assertRaises(ValueError):
+                    service._rollback_executor_for("something_else")
+            datasets.assert_not_called()
