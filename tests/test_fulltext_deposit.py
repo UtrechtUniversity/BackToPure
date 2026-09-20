@@ -121,11 +121,14 @@ class ProcessFullTextTests(unittest.TestCase):
         ])
 
     def test_deposits_and_records_the_previous_versions(self):
+        import tempfile
         import apply_updates_to_pure as apply_mod
 
         record = {"uuid": "rec-1", "electronicVersions": [{"typeDiscriminator": "DoiElectronicVersion"}]}
         entries = []
-        with patch.object(apply_mod, "download_and_validate", return_value=(b"%PDF-", "a.pdf")), patch.object(
+        with tempfile.TemporaryDirectory() as tmpdir, patch.object(
+            apply_mod, "_resolve_output_directory", return_value=tmpdir
+        ), patch.object(apply_mod, "download_and_validate", return_value=(b"%PDF-", "a.pdf")), patch.object(
             apply_mod, "upload_pdf", return_value="key-1"
         ), patch.object(apply_mod.requests, "get", return_value=MagicMock(status_code=200, json=lambda: record)), patch.object(
             apply_mod.requests, "put", return_value=MagicMock(status_code=200)
@@ -141,11 +144,14 @@ class ProcessFullTextTests(unittest.TestCase):
         )
 
     def test_a_failed_upload_records_no_manifest_entry(self):
+        import tempfile
         import apply_updates_to_pure as apply_mod
         import fulltext_deposit as fd_mod
 
         entries = []
-        with patch.object(apply_mod, "download_and_validate", return_value=(b"%PDF-", "a.pdf")), patch.object(
+        with tempfile.TemporaryDirectory() as tmpdir, patch.object(
+            apply_mod, "_resolve_output_directory", return_value=tmpdir
+        ), patch.object(apply_mod, "download_and_validate", return_value=(b"%PDF-", "a.pdf")), patch.object(
             apply_mod, "upload_pdf", side_effect=fd_mod.DepositError("HTTP 500")
         ), patch.object(apply_mod, "_append_apply_manifest_entry", side_effect=entries.append):
             apply_mod.process_full_text("to_be_updated.csv", self._csv())
@@ -153,12 +159,15 @@ class ProcessFullTextTests(unittest.TestCase):
         self.assertEqual([], entries)
 
     def test_unticked_rows_are_not_deposited(self):
+        import tempfile
         import apply_updates_to_pure as apply_mod
 
         frame = self._csv()
         frame.loc[0, "to_be_updated"] = ""
         entries = []
-        with patch.object(apply_mod, "download_and_validate") as download, patch.object(
+        with tempfile.TemporaryDirectory() as tmpdir, patch.object(
+            apply_mod, "_resolve_output_directory", return_value=tmpdir
+        ), patch.object(apply_mod, "download_and_validate") as download, patch.object(
             apply_mod, "_append_apply_manifest_entry", side_effect=entries.append
         ):
             apply_mod.process_full_text("to_be_updated.csv", frame)
@@ -266,12 +275,15 @@ class ProcessFullTextTests(unittest.TestCase):
         )
 
     def test_a_doi_that_does_not_normalise_is_skipped_before_depositing(self):
+        import tempfile
         import apply_updates_to_pure as apply_mod
 
         frame = self._csv()
         frame.loc[0, "doi"] = "not-a-doi"
         entries = []
-        with patch.object(apply_mod, "download_and_validate") as download, patch.object(
+        with tempfile.TemporaryDirectory() as tmpdir, patch.object(
+            apply_mod, "_resolve_output_directory", return_value=tmpdir
+        ), patch.object(apply_mod, "download_and_validate") as download, patch.object(
             apply_mod, "_append_apply_manifest_entry", side_effect=entries.append
         ):
             apply_mod.process_full_text("to_be_updated.csv", frame)
