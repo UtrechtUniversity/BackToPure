@@ -13,6 +13,7 @@ const JOB_TYPE_OPTIONS: Array<{ value: "all" | JobType; label: string }> = [
   { value: "external_orgs", label: "External Organisations" },
   { value: "research_outputs", label: "Research Outputs" },
   { value: "datasets", label: "Datasets" },
+  { value: "full_text", label: "Open Access Full Texts" },
 ];
 
 const JOB_STATUS_OPTIONS: Array<{ value: "all" | JobStatus; label: string }> = [

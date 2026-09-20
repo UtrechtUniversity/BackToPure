@@ -5,7 +5,8 @@ export type JobType =
   | "external_persons"
   | "external_orgs"
   | "research_outputs"
-  | "datasets";
+  | "datasets"
+  | "full_text";
 
 export interface FacultyOption {
   value: string;
