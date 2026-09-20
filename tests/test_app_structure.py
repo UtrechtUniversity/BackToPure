@@ -3333,3 +3333,96 @@ class FullTextVersionPolicyParamTests(unittest.TestCase):
 
         definition = get_job_type_definition(JobType.FULL_TEXT.value)
         self.assertIn(("version_policy", "versionPolicy"), definition.cli_param_aliases)
+
+
+class FullTextRollbackTests(unittest.TestCase):
+    """Restoring the snapshot is the whole rollback: Pure has no delete for an
+    uploaded file, and electronicVersions replaces on PUT (verified on staging)."""
+
+    def _change_set(self, rollback_status="pending", apply_status="applied"):
+        return {
+            "items": [
+                {
+                    "id": 1,
+                    "entity_uuid": "10.1/a",
+                    "apply_status": apply_status,
+                    "rollback_status": rollback_status,
+                    "new_value": {
+                        "doi": "10.1/a",
+                        "record_uuid": "rec-1",
+                        "previous_electronic_versions": [{"typeDiscriminator": "DoiElectronicVersion"}],
+                    },
+                }
+            ]
+        }
+
+    def _service(self, tmpdir):
+        app = create_app()
+        app.config["BTP_DATA_DIR"] = tmpdir
+        init_db(app)
+        return JobService(
+            app.extensions["btp_db"]["db_path"],
+            project_root=Path(__file__).resolve().parents[1],
+            runtime_root=Path(tmpdir),
+        )
+
+    def test_restores_the_previous_electronic_versions(self):
+        deposited = {"uuid": "rec-1", "electronicVersions": [
+            {"typeDiscriminator": "DoiElectronicVersion"},
+            {"typeDiscriminator": "FileElectronicVersion"},
+        ]}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = self._service(tmpdir)
+            log_path = Path(tmpdir) / "rollback.log"
+            with patch("app.services.jobs.requests.get", return_value=MagicMock(status_code=200, json=lambda: deposited)), patch(
+                "app.services.jobs.requests.put", return_value=MagicMock(status_code=200)
+            ) as put:
+                stats = service._execute_full_text_rollback(self._change_set(), log_path)
+
+        self.assertEqual(1, stats["rolled_back"])
+        sent = put.call_args.kwargs["json"]
+        self.assertEqual([{"typeDiscriminator": "DoiElectronicVersion"}], sent["electronicVersions"])
+
+    def test_unapplied_items_are_skipped(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = self._service(tmpdir)
+            with patch("app.services.jobs.requests.put") as put:
+                stats = service._execute_full_text_rollback(
+                    self._change_set(apply_status="not_applied"), Path(tmpdir) / "r.log"
+                )
+
+        put.assert_not_called()
+        self.assertEqual(0, stats["rolled_back"])
+
+    def test_a_missing_record_is_a_conflict_not_a_failure_to_notice(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = self._service(tmpdir)
+            with patch("app.services.jobs.requests.get", return_value=MagicMock(status_code=404)), patch(
+                "app.services.jobs.requests.put"
+            ) as put:
+                stats = service._execute_full_text_rollback(self._change_set(), Path(tmpdir) / "r.log")
+
+        put.assert_not_called()
+        self.assertEqual(0, stats["rolled_back"])
+        self.assertGreaterEqual(stats["conflicts"] + stats["failed"], 1)
+
+    def test_missing_snapshot_is_a_conflict_rather_than_an_empty_put(self):
+        """Without a snapshot there is nothing to restore; PUTing an empty list
+        would strip electronicVersions the deposit never touched."""
+        change_set = self._change_set()
+        change_set["items"][0]["new_value"].pop("previous_electronic_versions")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = self._service(tmpdir)
+            with patch("app.services.jobs.requests.put") as put:
+                stats = service._execute_full_text_rollback(change_set, Path(tmpdir) / "r.log")
+
+        put.assert_not_called()
+        self.assertEqual(1, stats["conflicts"])
+
+    def test_an_unknown_job_type_does_not_fall_through_to_dataset_deletion(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            service = self._service(tmpdir)
+            with patch.object(service, "_execute_datasets_rollback") as datasets:
+                with self.assertRaises(ValueError):
+                    service._rollback_executor_for("something_else")
+            datasets.assert_not_called()

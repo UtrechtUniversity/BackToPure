@@ -706,6 +706,7 @@ class JobService:
             JobType.EXTERNAL_ORGS.value,
             JobType.RESEARCH_OUTPUTS.value,
             JobType.DATASETS.value,
+            JobType.FULL_TEXT.value,
         }:
             raise ValueError(f"Rollback is not supported for job type {job['job_type']}")
         if job["status"] != JobStatus.COMPLETED.value:
@@ -749,16 +750,8 @@ class JobService:
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         self._append_log(log_path, f"=== ROLLBACK START {self._utcnow()} ===\n")
 
-        if job["job_type"] == JobType.INTERNAL_PERSONS.value:
-            stats = self._execute_internal_persons_rollback(change_set, log_path)
-        elif job["job_type"] == JobType.EXTERNAL_PERSONS.value:
-            stats = self._execute_external_persons_rollback(change_set, log_path)
-        elif job["job_type"] == JobType.EXTERNAL_ORGS.value:
-            stats = self._execute_external_orgs_rollback(change_set, log_path)
-        elif job["job_type"] == JobType.RESEARCH_OUTPUTS.value:
-            stats = self._execute_research_outputs_rollback(change_set, log_path)
-        else:
-            stats = self._execute_datasets_rollback(change_set, log_path)
+        executor = self._rollback_executor_for(job["job_type"])
+        stats = executor(change_set, log_path)
         finished_at = self._utcnow()
         self._append_log(log_path, f"=== ROLLBACK FINISHED {finished_at} ===\n")
 
@@ -2438,6 +2431,132 @@ class JobService:
             doi_getter=self._dataset_dois,
             label="dataset",
         )
+
+    def _execute_full_text_rollback(self, change_set: dict[str, Any], log_path: Path) -> dict[str, int]:
+        """Put back the electronicVersions the deposit replaced.
+
+        Pure exposes no delete for an uploaded file, so the file itself may
+        remain in Pure's store, unreferenced and unreachable through the API.
+        Restoring the record is the whole of what we can do.
+        """
+        stats = {"checked": 0, "rolled_back": 0, "conflicts": 0, "failed": 0}
+
+        with connect_db(self.db_path) as connection:
+            for item in change_set["items"]:
+                if item["apply_status"] != "applied":
+                    connection.execute(
+                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
+                        ("skipped", "apply_status_not_applied", item["id"]),
+                    )
+                    continue
+                if item["rollback_status"] in {"rolled_back", "conflict", "skipped"}:
+                    continue
+
+                stats["checked"] += 1
+                payload = item.get("new_value") or {}
+                record_uuid = str(payload.get("record_uuid") or "").strip()
+                previous = payload.get("previous_electronic_versions")
+
+                if not record_uuid or previous is None:
+                    stats["conflicts"] += 1
+                    reason = f"No deposit snapshot was recorded for {item['entity_uuid']}"
+                    self._append_log(log_path, f"CONFLICT {reason}\n")
+                    connection.execute(
+                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
+                        ("conflict", reason, item["id"]),
+                    )
+                    continue
+
+                try:
+                    response = requests.get(
+                        f"{_pure_base_url()}research-outputs/{record_uuid}",
+                        headers=_pure_headers(),
+                        timeout=30,
+                    )
+                except Exception as exc:
+                    stats["failed"] += 1
+                    reason = f"Could not load research output {record_uuid}: {exc}"
+                    self._append_log(log_path, f"ERROR {reason}\n")
+                    connection.execute(
+                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
+                        ("failed", reason, item["id"]),
+                    )
+                    continue
+
+                if response.status_code == 404:
+                    stats["conflicts"] += 1
+                    reason = f"Research output {record_uuid} no longer exists in Pure"
+                    self._append_log(log_path, f"CONFLICT {reason}\n")
+                    connection.execute(
+                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
+                        ("conflict", reason, item["id"]),
+                    )
+                    continue
+
+                try:
+                    response.raise_for_status()
+                    record = response.json()
+                except Exception as exc:
+                    stats["failed"] += 1
+                    reason = f"Could not load research output {record_uuid}: {exc}"
+                    self._append_log(log_path, f"ERROR {reason}\n")
+                    connection.execute(
+                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
+                        ("failed", reason, item["id"]),
+                    )
+                    continue
+
+                record["electronicVersions"] = previous
+                try:
+                    put = requests.put(
+                        f"{_pure_base_url()}research-outputs/{record_uuid}",
+                        headers=_pure_headers(),
+                        json=record,
+                        timeout=180,
+                    )
+                    put.raise_for_status()
+                except Exception as exc:
+                    stats["failed"] += 1
+                    reason = f"Could not restore research output {record_uuid}: {exc}"
+                    self._append_log(log_path, f"ERROR {reason}\n")
+                    connection.execute(
+                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
+                        ("failed", reason, item["id"]),
+                    )
+                    continue
+
+                stats["rolled_back"] += 1
+                self._append_log(log_path, f"ROLLED BACK full text on {record_uuid} ({payload.get('doi')})\n")
+                connection.execute(
+                    "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = NULL WHERE id = ?",
+                    ("rolled_back", item["id"]),
+                )
+            connection.commit()
+
+        return stats
+
+    def _rollback_executor_for(self, job_type: str):
+        """Return the bound rollback executor for a job type.
+
+        Kept separate from `rollback_job` so the dangerous fallback branch
+        (never fall through to a destructive executor) is directly testable.
+        """
+        if job_type == JobType.INTERNAL_PERSONS.value:
+            return self._execute_internal_persons_rollback
+        if job_type == JobType.EXTERNAL_PERSONS.value:
+            return self._execute_external_persons_rollback
+        if job_type == JobType.EXTERNAL_ORGS.value:
+            return self._execute_external_orgs_rollback
+        if job_type == JobType.RESEARCH_OUTPUTS.value:
+            return self._execute_research_outputs_rollback
+        if job_type == JobType.DATASETS.value:
+            return self._execute_datasets_rollback
+        if job_type == JobType.FULL_TEXT.value:
+            return self._execute_full_text_rollback
+        # Never fall through to a destructive executor: the datasets
+        # rollback deletes records, and an unrecognised job type reaching
+        # it would delete records it never created.
+        raise ValueError(f"Job type '{job_type}' has no rollback implementation")
 
     def _execute_created_record_rollback(
         self,
