@@ -44,6 +44,9 @@ export function AppShell() {
           <NavLink to="/jobs/new/datasets" className="nav-link">
             Datasets
           </NavLink>
+          <NavLink to="/jobs/new/full-text" className="nav-link">
+            Open Access Full Texts
+          </NavLink>
         </nav>
       </aside>
 

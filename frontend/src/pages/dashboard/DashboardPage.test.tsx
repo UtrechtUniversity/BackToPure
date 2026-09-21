@@ -108,6 +108,9 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Review rows in each job before applying updates.")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Open Guide" })).not.toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "Datasets" })).toHaveLength(2);
+    // Two links means the job is reachable from both the sidebar and the
+    // dashboard tile. Full texts had a tile but no sidebar entry.
+    expect(screen.getAllByRole("link", { name: "Open Access Full Texts" })).toHaveLength(2);
     expect(screen.getAllByRole("link", { name: "Research Outputs" })).toHaveLength(2);
     expect(screen.getAllByRole("link", { name: "External Persons" })).toHaveLength(2);
     expect(screen.queryByRole("link", { name: "New Datasets Job" })).not.toBeInTheDocument();
