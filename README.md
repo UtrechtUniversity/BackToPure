@@ -1,21 +1,21 @@
 # BackToPure
 
 ## Overview
-BackToPure is a Flask-based web application that simplifies the process of enriching and updating research-related records in Pure using external data sources such as Ricgraph and OpenAlex. This tool provides an interactive interface to handle the enrichment of internal and external person records, external organizations, research outputs, and datasets.
+BackToPure enriches and updates research records in Pure using external sources such as Ricgraph and OpenAlex. It is a React frontend served by a Flask API: the API runs jobs, tracks their state, and exposes the review files each job produces; the frontend is how you create jobs, review what they propose, and apply or roll back the result.
 
-The application orchestrates a series of Python scripts to fetch, process, and upload data seamlessly via a user-friendly interface.
+Every workflow runs in two phases. A job first produces a review file listing what it would change, with a reason on every row it could not use. Nothing reaches Pure until that file has been reviewed and the job is applied, and an applied job can be rolled back.
 
 ---
 
 ## Key Features
-- **Home Dashboard:** Central hub for navigating different operations.
-- **Enrich Internal Persons:** Enriches internal person profiles with identifiers such as ORCID.
-- **Enrich External Persons:** Matches and updates external researchers with ORCID and OpenAlex IDs.
-- **Enrich External Organizations:** Enriches external organizations in Pure with ROR IDs.
-- **Import Research Outputs:** Imports research outputs from Ricgraph into Pure.
-- **Import Datasets:** Imports datasets from Ricgraph into Pure.
-- **Apply Updates:** Processes and uploads the updates to the Pure system.
-- **Directory Access:** Opens directories with generated output files for review.
+- **Dashboard and History:** Create jobs, follow running ones, and see what previous runs changed.
+- **Internal Persons:** Adds identifiers such as ORCID and OpenAlex IDs to person records.
+- **External Persons:** Matches external co-authors and adds their ORCID and OpenAlex IDs.
+- **External Organizations:** Adds ROR IDs and geographic data to external organizations.
+- **Research Outputs:** Imports research outputs from Ricgraph into Pure.
+- **Datasets:** Imports datasets from Ricgraph into Pure.
+- **Open Access Full Texts:** Reports which publications could have an open access PDF attached -- verified by fetching and validating each candidate -- and deposits the approved ones onto the Pure record.
+- **Apply and Rollback:** Sends reviewed changes to Pure, and takes them back off again.
 
 ---
 
@@ -57,13 +57,18 @@ To use BackToPure, **access to Ricgraph** is mandatory. Ricgraph is a data stora
 ```
 BackToPure/
 ├── BackToPure.py (Flask app entry point)
-├── app/ (Flask app package, routes, services, templates, static assets)
+├── app/ (Flask API package: routes, services, job models, static images)
 ├── src/ (workflow scripts and Pure/Ricgraph/OpenAlex helpers)
 │   ├── enrich_internal_persons_with_ids.py
 │   ├── enrich_pure_external_persons.py
 │   ├── enrich_pure_external_orgs.py
 │   ├── update_researchoutput_from_ricgraph.py
 │   ├── update_datasets_from_ricgraph.py
+│   ├── harvest_fulltext_candidates.py (open access full text report)
+│   ├── fulltext_candidates.py (candidate ranking, version policy, Pure mappings)
+│   ├── fulltext_fetch.py (preflight and PDF validation)
+│   ├── fulltext_ratelimit.py (per-host request throttling)
+│   ├── fulltext_deposit.py (upload to Pure and file entry building)
 │   ├── apply_updates_to_pure.py
 │   ├── config.py
 │   └── config.example.ini
@@ -199,8 +204,8 @@ gunicorn --bind 0.0.0.0:5002 --workers 2 --timeout 300 BackToPure:app
 ```
 
 ### 2. Navigate to the Dashboard
-- Legacy Flask UI: open `http://127.0.0.1:5002`
-- React UI: build the frontend first, then open `http://127.0.0.1:5002/app`
+Build the frontend, then open `http://127.0.0.1:5002/app`. The root URL
+redirects there; the earlier server-rendered Flask pages have been removed.
 
 ```bash
 cd frontend
@@ -209,16 +214,30 @@ cd ..
 python3 BackToPure.py
 ```
 
-### 3. Enrich and Update Records
-- **Internal Persons:** Select the "Enrich Internal Persons" option and choose the desired faculty.
-- **External Persons:** Choose "Enrich External Persons" to update records with OpenAlex and ORCID IDs.
-- **External Organizations:** Enrich organizations with missing ROR IDs.
-- **Import Research Outputs/Datasets:** Import data from Ricgraph into Pure.
+### 3. Create a job
+Pick a workflow from the sidebar and choose a faculty, or "all". The job runs
+in the background; the job page shows its log while it works.
 
-### 4. Review and Apply Updates
-- After each import or enrichment, access the relevant output files.
-- Modify the CSV files to remove unwanted updates.
-- Click "Apply Updates" to send changes to Pure.
+- **Internal Persons** -- adds ORCID and OpenAlex IDs to person records
+- **External Persons** -- adds identifiers to external co-authors
+- **External Organizations** -- adds ROR IDs and geographic data
+- **Research Outputs / Datasets** -- imports records from Ricgraph into Pure
+- **Open Access Full Texts** -- reports which publications could have a PDF
+  attached. Choose which versions may be deposited: publisher version only
+  (the default), or also accepted manuscripts or preprints. Each deposited
+  file carries the version label that is true of it.
+
+### 4. Review, apply, roll back
+- Every row a job examined appears in its review file, either proposed for
+  update or with a reason it was not usable.
+- Untick anything you do not want. The review table is editable in the UI.
+- Apply sends only the ticked rows to Pure.
+- An applied job can be rolled back. Rollback restores what the job replaced,
+  and refuses with a conflict if the record changed in the meantime.
+
+Note on full text rollback: it removes the file from the research output, but
+Pure exposes no way to delete the uploaded file itself, so the file may remain
+in Pure's internal store.
 
 ---
 
