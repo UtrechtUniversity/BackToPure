@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from requests.exceptions import RequestException
 
+import config as btp_config
 from app import create_app, routes
 from app.db import connect_db, init_db
 from app.services import JobService
@@ -34,7 +35,27 @@ class FakeProcess:
         return self.returncode
 
 
+
+def pin_faculty_prefixes(testcase):
+    """Pin the organisation prefixes for the duration of one test.
+
+    ``is_primary_organization_key`` reads these from the deployment config, so a
+    test using realistic keys like "uu faculty: ..." only passes when the ini
+    file on disk happens to carry UU's prefixes. CI runs with
+    src/config.example.ini, whose placeholders match nothing, and every faculty
+    was filtered away. Pin them so the test asserts behaviour, not deployment.
+    """
+    for name, value in (("PRIMARY_ORGANIZATION_PREFIXES", ("uu faculty:",)),
+                        ("EXCLUDED_ORGANIZATION_PREFIXES", ("uu faculty research:",))):
+        patcher = patch.object(btp_config, name, value)
+        patcher.start()
+        testcase.addCleanup(patcher.stop)
+
+
 class RouteHelperTests(unittest.TestCase):
+    def setUp(self):
+        pin_faculty_prefixes(self)
+
     @patch("app.routes.requests.get")
     def test_fetch_faculties_excludes_research_organisations(self, mock_get):
         response = MagicMock()
@@ -59,6 +80,7 @@ class RouteHelperTests(unittest.TestCase):
 
 class FlaskRouteTests(unittest.TestCase):
     def setUp(self):
+        pin_faculty_prefixes(self)
         self.tempdir = tempfile.TemporaryDirectory()
         self.app = create_app()
         self.app.config["BTP_DATA_DIR"] = os.path.join(self.tempdir.name, "data")

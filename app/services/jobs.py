@@ -23,17 +23,15 @@ from app.models import (
     parse_job_status,
 )
 from config import (
-    current_pure_credentials,
     FACULTY_PREFIX,
     OPENALEXEX_ID_URI,
     ORCID_ID_URI,
     PURE_BASE_URL,
-    PURE_HEADERS,
     RIC_BASE_URL,
     ROR_ID_URI,
+    current_pure_credentials,
     is_excluded_organization_key,
 )
-
 
 _APPLY_SUPPORTED_JOB_TYPES = {
     JobType.INTERNAL_PERSONS.value,

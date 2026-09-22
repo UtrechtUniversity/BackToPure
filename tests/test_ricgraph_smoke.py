@@ -4,7 +4,6 @@ from urllib.parse import urljoin
 import pytest
 import requests
 
-
 BASE_URL = os.environ.get("BTP_RICGRAPH_TEST_BASE_URL")
 
 

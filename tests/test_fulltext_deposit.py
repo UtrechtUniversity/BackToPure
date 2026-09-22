@@ -122,6 +122,7 @@ class ProcessFullTextTests(unittest.TestCase):
 
     def test_deposits_and_records_the_previous_versions(self):
         import tempfile
+
         import apply_updates_to_pure as apply_mod
 
         record = {"uuid": "rec-1", "electronicVersions": [{"typeDiscriminator": "DoiElectronicVersion"}]}
@@ -145,6 +146,7 @@ class ProcessFullTextTests(unittest.TestCase):
 
     def test_a_failed_upload_records_no_manifest_entry(self):
         import tempfile
+
         import apply_updates_to_pure as apply_mod
         import fulltext_deposit as fd_mod
 
@@ -160,6 +162,7 @@ class ProcessFullTextTests(unittest.TestCase):
 
     def test_unticked_rows_are_not_deposited(self):
         import tempfile
+
         import apply_updates_to_pure as apply_mod
 
         frame = self._csv()
@@ -177,8 +180,9 @@ class ProcessFullTextTests(unittest.TestCase):
 
     def test_dispatch_reaches_full_text_without_a_json_file(self):
         """The full text job writes only a CSV; the JSON-gated dispatch would skip it."""
-        import apply_updates_to_pure as apply_mod
         import inspect
+
+        import apply_updates_to_pure as apply_mod
 
         source = inspect.getsource(apply_mod.main)
         self.assertIn("deposit_full_text", source)
@@ -188,6 +192,7 @@ class ProcessFullTextTests(unittest.TestCase):
         already deposited, and a rerun on the same artifact directory would
         deposit them a second time (jobs.py unlinks the manifest per run)."""
         import tempfile
+
         import apply_updates_to_pure as apply_mod
 
         record = {"uuid": "rec-1", "electronicVersions": []}
@@ -209,7 +214,9 @@ class ProcessFullTextTests(unittest.TestCase):
 
     def test_a_connection_error_on_upload_does_not_abort_the_run(self):
         import tempfile
+
         import requests as requests_mod
+
         import apply_updates_to_pure as apply_mod
 
         frame = pd.concat([self._csv(), self._csv()], ignore_index=True)
@@ -241,7 +248,9 @@ class ProcessFullTextTests(unittest.TestCase):
 
     def test_a_put_error_does_not_abort_the_run_and_logs_unknown_state(self):
         import tempfile
+
         import requests as requests_mod
+
         import apply_updates_to_pure as apply_mod
 
         frame = pd.concat([self._csv(), self._csv()], ignore_index=True)
@@ -276,6 +285,7 @@ class ProcessFullTextTests(unittest.TestCase):
 
     def test_a_doi_that_does_not_normalise_is_skipped_before_depositing(self):
         import tempfile
+
         import apply_updates_to_pure as apply_mod
 
         frame = self._csv()
