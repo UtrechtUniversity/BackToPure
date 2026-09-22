@@ -36,9 +36,11 @@ from enrich_pure_external_persons import (
     fetch_pure_researchoutputs,
     match_ricgraph_persons,
     normalize_doi,
-    select_faculties as select_external_person_faculties,
     select_persons_researchoutput,
     select_researchoutputs,
+)
+from enrich_pure_external_persons import (
+    select_faculties as select_external_person_faculties,
 )
 
 

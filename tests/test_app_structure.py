@@ -26,7 +26,14 @@ from app.models import (
     is_valid_transition,
 )
 from app.services import JobService
-from config import FACULTY_PREFIX, OPENALEXEX_ID_URI, ORCID_ID_URI, PURE_BASE_URL, RIC_BASE_URL, ROR_ID_URI
+from config import (
+    FACULTY_PREFIX,
+    OPENALEXEX_ID_URI,
+    ORCID_ID_URI,
+    PURE_BASE_URL,
+    RIC_BASE_URL,
+    ROR_ID_URI,
+)
 
 
 class FakeCompletedProcess:
