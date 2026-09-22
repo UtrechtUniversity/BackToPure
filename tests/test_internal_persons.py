@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
+import config as btp_config
 import enrich_pure_external_orgs as external_orgs
 import snapshot_openalex_institutions
 from config import ROR_ID_URI
@@ -44,7 +45,26 @@ from enrich_pure_external_persons import (
 )
 
 
+def pin_faculty_prefixes(testcase):
+    """Pin the organisation prefixes for the duration of one test.
+
+    ``is_primary_organization_key`` reads these from the deployment config, so a
+    test using realistic keys like "uu faculty: ..." only passes when the ini
+    file on disk happens to carry UU's prefixes. CI runs with
+    src/config.example.ini, whose placeholders match nothing, and every faculty
+    was filtered away. Pin them so the test asserts behaviour, not deployment.
+    """
+    for name, value in (("PRIMARY_ORGANIZATION_PREFIXES", ("uu faculty:",)),
+                        ("EXCLUDED_ORGANIZATION_PREFIXES", ("uu faculty research:",))):
+        patcher = patch.object(btp_config, name, value)
+        patcher.start()
+        testcase.addCleanup(patcher.stop)
+
+
 class InternalPersonsTests(unittest.TestCase):
+    def setUp(self):
+        pin_faculty_prefixes(self)
+
     def test_normalize_identifier_strips_orcid_query_suffixes(self):
         self.assertEqual("0000-0003-2472-6589", _normalize_identifier("0000-0003-2472-6589?LANG=EN"))
         self.assertEqual("0000-0003-2472-6589", _normalize_identifier("https://orcid.org/0000-0003-2472-6589?lang=en"))

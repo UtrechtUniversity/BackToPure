@@ -279,7 +279,11 @@ class AppStructureTests(unittest.TestCase):
             self.assertFalse(created["canApply"])
 
     def test_job_service_rejects_faculty_research_organisation_scope(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
+        # The prefixes come from the deployment config, so pin them here. Without
+        # this the test passes or fails depending on which ini file is on disk.
+        with patch.object(btp_config, "PRIMARY_ORGANIZATION_PREFIXES", ("uu faculty:",)), \
+             patch.object(btp_config, "EXCLUDED_ORGANIZATION_PREFIXES", ("uu faculty research:",)), \
+             tempfile.TemporaryDirectory() as tmpdir:
             app = create_app()
             app.config["BTP_DATA_DIR"] = tmpdir
             init_db(app)
