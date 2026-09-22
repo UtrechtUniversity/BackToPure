@@ -17,6 +17,58 @@ class AttachedFileTests(unittest.TestCase):
         self.assertFalse(hfc.has_attached_file({}))
 
 
+def _doi_version(doi, access="open", version="Final published version"):
+    return {
+        "typeDiscriminator": "DoiElectronicVersion",
+        "doi": doi,
+        "accessType": {"uri": f"/dk/atira/pure/core/openaccesspermission/{access}"},
+        "versionType": {"term": {"en_GB": version}},
+    }
+
+
+class OpenDoiVersionTests(unittest.TestCase):
+    """The first real run deposited 63 PDFs, and every one of them landed on a
+    record that already linked its own DOI as an open full text. Only
+    FileElectronicVersion was being checked, so the link was invisible."""
+
+    DOI = "10.1038/s41598-018-25436-2"
+
+    def test_own_doi_open_and_published_blocks_the_deposit(self):
+        record = {"electronicVersions": [_doi_version(self.DOI)]}
+        self.assertTrue(hfc.has_open_version_for_own_doi(record, self.DOI))
+
+    def test_doi_comparison_ignores_url_prefix_and_case(self):
+        record = {"electronicVersions": [_doi_version(self.DOI)]}
+        self.assertTrue(
+            hfc.has_open_version_for_own_doi(record, "https://doi.org/10.1038/S41598-018-25436-2")
+        )
+
+    def test_unknown_access_still_allows_the_deposit(self):
+        """An Unknown access link says nothing about reachability, so a
+        deposited file still adds something."""
+        record = {"electronicVersions": [_doi_version(self.DOI, access="unknown")]}
+        self.assertFalse(hfc.has_open_version_for_own_doi(record, self.DOI))
+
+    def test_a_different_doi_does_not_block_the_deposit(self):
+        record = {"electronicVersions": [_doi_version("10.1234/other")]}
+        self.assertFalse(hfc.has_open_version_for_own_doi(record, self.DOI))
+
+    def test_open_link_to_another_version_does_not_block_the_deposit(self):
+        record = {"electronicVersions": [_doi_version(self.DOI, version="Submitted manuscript")]}
+        self.assertFalse(hfc.has_open_version_for_own_doi(record, self.DOI))
+
+    def test_policy_widens_which_versions_count_as_already_present(self):
+        record = {"electronicVersions": [_doi_version(self.DOI, version="Accepted author manuscript")]}
+        self.assertFalse(hfc.has_open_version_for_own_doi(record, self.DOI))
+        self.assertTrue(
+            hfc.has_open_version_for_own_doi(record, self.DOI, version_policy="published_accepted")
+        )
+
+    def test_record_without_a_doi_is_never_blocked(self):
+        record = {"electronicVersions": [_doi_version(self.DOI)]}
+        self.assertFalse(hfc.has_open_version_for_own_doi(record, ""))
+
+
 class ExamineOutputTests(unittest.TestCase):
     ENTRY = {"doi": "10.1/a", "pure_uuid": "uuid-1", "title": "A paper"}
 
