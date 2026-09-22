@@ -18,11 +18,11 @@ import enrich_pure_external_persons as enrich
 from config import OPENALEX_HEADERS
 from enrich_pure_external_orgs import phase_timer
 from fulltext_candidates import (
+    DEFAULT_VERSION_POLICY,
     candidates_from_openalex_work,
     confidence_for,
-    DEFAULT_VERSION_POLICY,
     filter_by_version_policy,
-    published_version_only,
+    pure_version_type_for,
     versions_allowed_by,
 )
 from fulltext_fetch import CandidateFetchError, download_and_validate, preflight
@@ -67,6 +67,60 @@ def has_attached_file(pure_record):
     """True when Pure already holds a file for this output (not just a link)."""
     for version in (pure_record or {}).get('electronicVersions') or []:
         if isinstance(version, dict) and version.get('typeDiscriminator') == 'FileElectronicVersion':
+            return True
+    return False
+
+
+def _normalized_doi(value):
+    text = str(value or '').strip().lower()
+    for prefix in ('https://doi.org/', 'http://dx.doi.org/', 'https://dx.doi.org/', 'doi:'):
+        if text.startswith(prefix):
+            text = text[len(prefix):]
+    return text.rstrip('.')
+
+
+def _version_term(version):
+    return ((version.get('versionType') or {}).get('term') or {}).get('en_GB') or ''
+
+
+def _access_uri(version):
+    return (version.get('accessType') or {}).get('uri') or ''
+
+
+def has_open_version_for_own_doi(pure_record, doi, version_policy=DEFAULT_VERSION_POLICY):
+    """True when the record already links its own DOI as an open full text.
+
+    A DoiElectronicVersion carrying the record's own DOI, marked Open, is the
+    publisher's open-access copy: the full text is already reachable from Pure.
+    Depositing a PDF next to it adds a second copy of the same thing.
+
+    Checking only for FileElectronicVersion missed this entirely. In the first
+    real run all 63 deposits landed on records that already had such a link,
+    60 of them Open and labelled Final published version.
+
+    The access check is what keeps this narrow. A link whose accessType is
+    Unknown or Restricted says nothing about reachability, so a deposit there
+    still adds something and is left alone. The version must also be one the
+    policy allows, so an open link to a preprint does not block the deposit of
+    the published version.
+    """
+    wanted = _normalized_doi(doi)
+    if not wanted:
+        return False
+    allowed_terms = {
+        pure_version_type_for(version)[1]
+        for version in versions_allowed_by(version_policy)
+    }
+    for version in (pure_record or {}).get('electronicVersions') or []:
+        if not isinstance(version, dict):
+            continue
+        if version.get('typeDiscriminator') != 'DoiElectronicVersion':
+            continue
+        if _normalized_doi(version.get('doi')) != wanted:
+            continue
+        if not _access_uri(version).endswith('/open'):
+            continue
+        if _version_term(version) in allowed_terms:
             return True
     return False
 
@@ -223,6 +277,7 @@ def main(faculty_choice, test_choice='yes', version_policy=DEFAULT_VERSION_POLIC
     registry = default_registry()
     rows = []
     skipped_with_file = 0
+    skipped_open_doi = 0
 
     with phase_timer("examine candidates", timings):
         for count, entry in enumerate(outputs, start=1):
@@ -232,6 +287,12 @@ def main(faculty_choice, test_choice='yes', version_policy=DEFAULT_VERSION_POLIC
             if has_attached_file(pure_record or {}):
                 skipped_with_file += 1
                 rows.append(_row(entry, reason='Pure already holds a file for this output'))
+                continue
+            if has_open_version_for_own_doi(pure_record or {}, entry.get('doi'), version_policy):
+                skipped_open_doi += 1
+                rows.append(_row(
+                    entry,
+                    reason='Pure already links this DOI as an open full text'))
                 continue
             rows.append(examine_output(entry, session, registry, version_policy))
 
@@ -243,7 +304,8 @@ def main(faculty_choice, test_choice='yes', version_policy=DEFAULT_VERSION_POLIC
     attachable = sum(1 for row in rows if row.get('to_be_updated') == 'X')
     logger.info(
         f"Full-text funnel: {len(outputs)} publication(s) examined, {skipped_with_file} already "
-        f"hold a file, {attachable} with a validated publisher-version PDF"
+        f"hold a file, {skipped_open_doi} already link their own DOI as an open full text, "
+        f"{attachable} with a validated publisher-version PDF"
     )
     breakdown = ", ".join(f"{label} {seconds:.1f}s" for label, seconds in timings)
     logger.info(f"Phase timings: {breakdown}")
