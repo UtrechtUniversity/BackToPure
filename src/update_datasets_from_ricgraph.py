@@ -63,6 +63,7 @@ import json
 session = requests.Session()
 retry_strategy = Retry(
     total=0,
+    raise_on_status=False,
     status_forcelist=[429, 500, 502, 503, 504],
     allowed_methods=["GET", "POST"],
     backoff_factor=1,

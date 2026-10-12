@@ -82,6 +82,7 @@ def _make_session(retries=3, backoff=0.5):
     session = requests.Session()
     retry = Retry(
         total=0,
+        raise_on_status=False,
         backoff_factor=backoff,
         status_forcelist=[429, 500, 502, 503, 504],
         allowed_methods=["GET"],

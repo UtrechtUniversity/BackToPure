@@ -44,6 +44,7 @@ logger = setup_logging('dataset', level=logging.INFO)
 session = requests.Session()
 retry_strategy = Retry(
     total=0,
+    raise_on_status=False,
     status_forcelist=[429, 500, 502, 503, 504],
     allowed_methods=["GET"],
     backoff_factor=1,
