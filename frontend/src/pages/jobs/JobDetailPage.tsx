@@ -288,6 +288,10 @@ export function JobDetailPage() {
 
   const runJobMutation = useMutation({
     mutationFn: () => api.runJob(jobId),
+    onError: () => {
+      void jobQuery.refetch();
+      void logsQuery.refetch();
+    },
     onMutate: () => {
       setJobActionInProgress(true);
       void logsQuery.refetch();
@@ -304,6 +308,11 @@ export function JobDetailPage() {
 
   const applyJobMutation = useMutation({
     mutationFn: () => api.applyJob(jobId),
+    onError: () => {
+      void jobQuery.refetch();
+      void logsQuery.refetch();
+      void changeSetQuery.refetch();
+    },
     onMutate: () => {
       setJobActionInProgress(true);
       void logsQuery.refetch();
@@ -671,18 +680,18 @@ export function JobDetailPage() {
                 {deleteJobMutation.isPending ? "Deleting..." : "Delete Job"}
               </button>
             ) : null}
-            {runJobMutation.isError ? (
+            {runJobMutation.isError && job.status === "queued" ? (
               <p className="error-banner">
                 {runJobMutation.error instanceof ApiError
                   ? runJobMutation.error.message
-                  : "Could not run the job."}
+                  : "Could not confirm whether the job started. Refresh its status before trying again."}
               </p>
             ) : null}
-            {applyJobMutation.isError ? (
+            {applyJobMutation.isError && job.status === "needs_review" ? (
               <p className="error-banner">
                 {applyJobMutation.error instanceof ApiError
                   ? applyJobMutation.error.message
-                  : "Could not apply the updates."}
+                  : "Could not confirm the apply result. Refresh the job status before trying again."}
               </p>
             ) : null}
             {deleteJobMutation.isError ? (

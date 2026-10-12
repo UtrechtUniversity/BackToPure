@@ -64,6 +64,33 @@ describe("api client", () => {
     );
   });
 
+  it.each(["runJob", "applyJob"] as const)("%s checks job state when the action response is lost", async (action) => {
+    const job = { id: "job-001", status: action === "runJob" ? "running" : "applying" };
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValueOnce({ ok: true, json: async () => job });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(api[action]("job-001")).resolves.toEqual(job);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toBe("/api/jobs/job-001");
+    expect(fetchMock.mock.calls.filter((call) => call[1]?.method === "POST")).toHaveLength(1);
+  });
+
+  it("reports an unconfirmed start when neither request nor status can be reached", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    await expect(api.runJob("job-001")).rejects.toThrow("Could not confirm whether the job started");
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not turn a rejected run into success", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: false, status: 400, json: async () => ({ error: "Job must be queued" }),
+    }));
+    await expect(api.runJob("job-001")).rejects.toThrow("Job must be queued");
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   it("posts to the cancel endpoint", async () => {
     vi.stubGlobal(
       "fetch",

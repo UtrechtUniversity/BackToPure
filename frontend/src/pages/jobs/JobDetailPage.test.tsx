@@ -7,7 +7,8 @@ import { api } from "../../lib/api";
 import { renderWithRouter } from "../../test/test-utils";
 import type { JobRecord } from "../../lib/types";
 
-vi.mock("../../lib/api", () => ({
+vi.mock("../../lib/api", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../lib/api")>(),
   api: {
     getJob: vi.fn(),
     getJobLogs: vi.fn(),
@@ -140,6 +141,23 @@ describe("JobDetailPage", () => {
     expect(screen.getByRole("columnheader", { name: "Name" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Pure UUID" })).toBeInTheDocument();
     expect(await screen.findByText("Showing 2 of 2 rows.")).toBeInTheDocument();
+  });
+
+  it("refreshes job state after a lost start response and removes the false run error", async () => {
+    mockedApi.getJob.mockResolvedValueOnce(makeJob()).mockResolvedValue(makeJob({ status: "running" }));
+    mockedApi.getJobLogs.mockResolvedValue({ jobId: "job-001", logPath: null, content: "" });
+    mockedApi.getJobArtifacts.mockResolvedValue({ jobId: "job-001", directory: "output/internal_persons", items: [] });
+    mockedApi.getJobChangeSet.mockResolvedValue(null);
+    mockedApi.runJob.mockRejectedValue(new TypeError("Failed to fetch"));
+    renderWithRouter({
+      routes: [{ path: "/", element: <AppShell />, children: [{ path: "jobs/:jobId", element: <JobDetailPage /> }] }],
+      initialEntries: ["/jobs/job-001"],
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "Run Job" }));
+    await waitFor(() => expect(mockedApi.getJob).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole("button", { name: "Stop Job" })).toBeInTheDocument();
+    expect(screen.queryByText(/Could not confirm whether the job started/)).not.toBeInTheDocument();
+    expect(mockedApi.runJob).toHaveBeenCalledTimes(1);
   });
 
   it("runs a queued job and refreshes job detail and logs", async () => {
