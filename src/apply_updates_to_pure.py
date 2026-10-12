@@ -13,6 +13,7 @@ import pandas as pd
 import os
 import requests
 import copy
+from pure_countries import load_external_org_countries, resolve_country
 import tempfile
 from functools import wraps
 from pathlib import Path
@@ -310,14 +311,23 @@ def _update_people(filename, frame, data, kind, key_column, endpoint, fallback):
         required |= {'new_id', 'new_value'}
     journal = _prepare(filename, frame, required, fallback)
     lookup = {(item.get('UUID') or item.get('uuid')): item for item in _records(data)}
+    countries = None
     for key, group in _selected_for_update(frame).groupby(key_column, dropna=False):
         def operation():
+            nonlocal countries
             if pd.isna(key) or not str(key).strip():
                 return {'success': False, 'error': 'Missing Pure UUID'}
             source = lookup.get(key)
             if not source:
                 return {'success': False, 'error': 'No matching JSON record for Pure UUID'}
             entry = copy.deepcopy(source)
+            if kind == 'external_orgs':
+                for field in ('address', 'contactAddress'):
+                    address = entry.get(field) or {}
+                    if address.get('country') is not None:
+                        if countries is None:
+                            countries = load_external_org_countries(session, PURE_BASE_URL, PURE_HEADERS)
+                        address['country'] = resolve_country(address['country'], countries)
             if kind == 'internal_persons':
                 for _, row in group.iterrows():
                     value = row['new_value']

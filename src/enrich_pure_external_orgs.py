@@ -30,6 +30,7 @@
 
 import time
 import copy
+from pure_countries import load_external_org_countries, resolve_country
 from contextlib import contextmanager
 import csv
 import re
@@ -102,6 +103,7 @@ FUZZY_MATCH_THRESHOLD = 0.88
 AMBIGUOUS_MATCH_GAP = 0.02
 OPENALEX_INSTITUTIONS_LOOKUP_PATH = "output/openalex_cache/openalex_institutions_snapshot_by_ror.json"
 EXTERNAL_ORG_UPDATE_COLUMNS = [
+    "validation_error",
     "to_be_updated",
     "updated",
     "uuid",
@@ -370,7 +372,7 @@ def _has_identifier(identifiers, identifier_id, identifier_uri):
     return False
 
 
-def build_pure_country_ref(geo_summary):
+def build_pure_country_ref(geo_summary, countries=None):
     geo_summary = geo_summary or {}
     country_code = geo_summary.get("country_code")
     country_name = geo_summary.get("country")
@@ -382,10 +384,12 @@ def build_pure_country_ref(geo_summary):
         country_ref["uri"] = f"/dk/atira/pure/core/countries/{str(country_code).lower()}"
     if country_name:
         country_ref["term"] = {"en_GB": country_name}
-    return country_ref or None
+    if countries is None:
+        countries = load_external_org_countries(session, PURE_BASE_URL, PURE_HEADERS)
+    return resolve_country(country_ref, countries)
 
 
-def build_pure_address_payload(geo_summary, existing_address=None):
+def build_pure_address_payload(geo_summary, existing_address=None, countries=None):
     geo_summary = geo_summary or {}
     existing_address = existing_address if isinstance(existing_address, dict) else {}
     address = dict(existing_address)
@@ -394,7 +398,7 @@ def build_pure_address_payload(geo_summary, existing_address=None):
     if city and not address.get("city"):
         address["city"] = city
 
-    country_ref = build_pure_country_ref(geo_summary)
+    country_ref = build_pure_country_ref(geo_summary, countries) if not address.get('country') else None
     if country_ref and not address.get("country"):
         address["country"] = country_ref
 
@@ -596,6 +600,7 @@ def update_externalorg_pure(orgs, test_choice, update, org_index=None):
     json_updates = []
 
     org_index = org_index or {}
+    countries = None
 
     for row in orgs:
         url = PURE_BASE_URL + 'external-organizations/' + row['uuid']
@@ -624,7 +629,16 @@ def update_externalorg_pure(orgs, test_choice, update, org_index=None):
                 continue
         address_field = 'contactAddress' if 'contactAddress' in data else 'address'
         existing_address = data.get(address_field) or {}
-        desired_address = build_pure_address_payload(row.get('geo_summary'), existing_address)
+        geo = row.get('geo_summary') or {}
+        if countries is None and (geo.get('country') or geo.get('country_code')):
+            countries = load_external_org_countries(session, PURE_BASE_URL, PURE_HEADERS)
+        country_error = ''
+        try:
+            desired_address = build_pure_address_payload(geo, existing_address, countries)
+        except ValueError as exc:
+            country_error = str(exc)
+            logger.warning('External organization %s: %s', row['uuid'], country_error)
+            desired_address = existing_address
         needs_geo_update = address_needs_update(existing_address, desired_address)
         new_ror = None
 
@@ -645,12 +659,13 @@ def update_externalorg_pure(orgs, test_choice, update, org_index=None):
 
         needs_ror_update = bool(new_ror and not _has_identifier(data['identifiers'], new_ror['id'], ROR_ID_URI))
 
-        if needs_ror_update or needs_geo_update:
-            auto_select = str(row.get('match_type') or '').startswith('exact_')
+        if needs_ror_update or needs_geo_update or country_error:
+            auto_select = str(row.get('match_type') or '').startswith('exact_') and not country_error
             # Mark as "to be updated"
             rows_to_update.append({
                 'to_be_updated': 'X' if auto_select else '',
                 'updated': ' ',
+                'validation_error': country_error,
                 'uuid': row['uuid'],
                 'pure_name': row.get('pure_name'),
                 'needs_ror_update': needs_ror_update,
