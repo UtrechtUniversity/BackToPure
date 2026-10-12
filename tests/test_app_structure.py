@@ -617,6 +617,8 @@ class AppStructureTests(unittest.TestCase):
 
     def test_research_output_apply_manifest_is_written(self):
         with tempfile.TemporaryDirectory() as tmpdir:
+            previous_output = os.environ.get("BTP_OUTPUT_DIR")
+            os.environ["BTP_OUTPUT_DIR"] = tmpdir
             previous_manifest = os.environ.get("BTP_APPLY_MANIFEST_FILE")
             os.environ["BTP_APPLY_MANIFEST_FILE"] = os.path.join(tmpdir, "apply_manifest.jsonl")
             try:
@@ -636,6 +638,10 @@ class AppStructureTests(unittest.TestCase):
                 self.assertEqual("ro-1", lines[0]["record_uuid"])
                 self.assertEqual("ext-1", lines[0]["created_external_persons"][0]["uuid"])
             finally:
+                if previous_output is None:
+                    os.environ.pop("BTP_OUTPUT_DIR", None)
+                else:
+                    os.environ["BTP_OUTPUT_DIR"] = previous_output
                 if previous_manifest is None:
                     os.environ.pop("BTP_APPLY_MANIFEST_FILE", None)
                 else:
@@ -835,7 +841,7 @@ class AppStructureTests(unittest.TestCase):
             self.assertEqual("job-002", second["id"])
 
     @patch("app.services.jobs.subprocess.Popen")
-    def test_job_service_run_job_marks_success_and_writes_logs(self, mock_popen):
+    def test_job_service_run_job_requires_artifacts_and_writes_logs(self, mock_popen):
         with tempfile.TemporaryDirectory() as tmpdir:
             app = create_app()
             app.config["BTP_DATA_DIR"] = os.path.join(tmpdir, "data")
@@ -859,7 +865,8 @@ class AppStructureTests(unittest.TestCase):
 
             result = service.run_job("job-001")
 
-            self.assertEqual("completed", result["status"])
+            self.assertEqual("failed", result["status"])
+            self.assertIn("review files", result["error_message"])
             self.assertEqual(0, result["exit_code"])
             self.assertEqual("logs/jobs/job-001.log", result["log_path"])
             self.assertFalse(result["canOpen"])
@@ -900,7 +907,8 @@ class AppStructureTests(unittest.TestCase):
 
             result = service.run_job("job-001")
 
-            self.assertEqual("completed", result["status"])
+            self.assertEqual("failed", result["status"])
+            self.assertIn("review files", result["error_message"])
             with open(os.path.join(tmpdir, "logs", "jobs", "job-001.log"), "r", encoding="utf-8") as handle:
                 contents = handle.read()
             self.assertIn("line 1", contents)
@@ -961,7 +969,8 @@ class AppStructureTests(unittest.TestCase):
 
             result = service.run_job("job-ro-001")
 
-            self.assertEqual("completed", result["status"])
+            self.assertEqual("failed", result["status"])
+            self.assertIn("review files", result["error_message"])
             command = mock_popen.call_args.args[0]
             self.assertIn("update_researchoutput_from_ricgraph.py", command[2])
             self.assertEqual("all", command[3])
@@ -995,7 +1004,8 @@ class AppStructureTests(unittest.TestCase):
 
             result = service.run_job("job-ds-001")
 
-            self.assertEqual("completed", result["status"])
+            self.assertEqual("failed", result["status"])
+            self.assertIn("review files", result["error_message"])
             command = mock_popen.call_args.args[0]
             self.assertIn("update_datasets_from_ricgraph.py", command[2])
             self.assertEqual("all", command[3])

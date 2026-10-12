@@ -37,6 +37,7 @@ select = ["E", "F", "I"]
 [tool.setuptools]
 include-package-data = true
 py-modules = [
+  "apply_state",
   "apply_updates_to_pure",
   "btp",
   "config",
@@ -58,6 +59,7 @@ py-modules = [
   "snapshot_openalex_institutions",
   "update_datasets_from_ricgraph",
   "update_researchoutput_from_ricgraph",
+  "workflow_http",
   "yoda_utils",
 ]
 packages = [

@@ -12,6 +12,8 @@
 import pandas as pd
 import json
 import requests
+from apply_state import request_write, created_uuid
+from workflow_http import request_read, json_object, records
 from datetime import datetime, time
 import configparser
 import os
@@ -127,9 +129,9 @@ def find_person(contributor, person_ids, date, type):
         uuid = person_ids['uuid']
         api_url = PURE_BASE_URL + 'persons/' + uuid
 
-        response = requests.get(api_url, headers=headers)
+        response = request_read(requests.get, api_url, headers=headers)
         if response.status_code == 200:
-            data = response.json()
+            data = json_object(response)
             person_detail = construct_person_detail(data, ref_date)
             if person_detail:
                 logger.debug(f"Person found with UUID: {person_ids['uuid']}")
@@ -143,10 +145,10 @@ def find_person(contributor, person_ids, date, type):
                     json_data = json.dumps(data)
                     api_url = PURE_BASE_URL + 'persons/search/'
                     try:
-                        response = requests.post(api_url, headers=headers, data=json_data)
+                        response = request_read(requests.post, api_url, headers=headers, data=json_data)
                         if response.status_code == 200:
-                            data = response.json()
-                            items = data.get('items', [])
+                            data = json_object(response)
+                            items = records(data, 'items')
 
                             if items:
                                 if len(items) == 1:
@@ -167,10 +169,10 @@ def find_person(contributor, person_ids, date, type):
         json_data = json.dumps(data)
         api_url = PURE_BASE_URL + 'persons/search/'
         try:
-            response = requests.post(api_url, headers=headers, data=json_data)
+            response = request_read(requests.post, api_url, headers=headers, data=json_data)
             if response.status_code == 200:
-                data = response.json()
-                items = data.get('items', [])
+                data = json_object(response)
+                items = records(data, 'items')
 
                 if items:
                     if len(items) == 1:
@@ -264,10 +266,10 @@ def find_external_person(person_ids):
         json_data = json.dumps(data)
         api_url = PURE_BASE_URL + 'external-persons/search/'
         try:
-            response = requests.post(api_url, headers=PURE_HEADERS, data=json_data)
+            response = request_read(requests.post, api_url, headers=PURE_HEADERS, data=json_data)
             if response.status_code == 200:
-                data = response.json()
-                items = data.get('items', [])
+                data = json_object(response)
+                items = records(data, 'items')
 
                 if items:
                     if len(items) == 1:
@@ -330,11 +332,10 @@ def create_external_person(first_name, last_name, orcid, openalex):
     json_data = json.dumps(data)
 
     try:
-        response = requests.put(api_url, headers=PURE_HEADERS, data=json_data)
+        response = request_write(requests.put, api_url, headers=PURE_HEADERS, data=json_data)
 
         if response.status_code in [200, 201]:
-            external_person = response.json()
-            return external_person.get('uuid')
+            return created_uuid(response)
         else:
             logger.error(f"Error creating external person: {response.status_code} - {response.text}")
     except requests.RequestException as e:
@@ -353,10 +354,10 @@ def find_extenal_orgs(affiliations):
         json_data = json.dumps(data)
         api_url = PURE_BASE_URL + 'external-organizations/search/'
         try:
-            response = requests.post(api_url, headers=PURE_HEADERS, data=json_data)
+            response = request_read(requests.post, api_url, headers=PURE_HEADERS, data=json_data)
             if response.status_code == 200:
-                data = response.json()
-                items = data.get('items', [])
+                data = json_object(response)
+                items = records(data, 'items')
 
                 if items:
                     if len(items) == 1:

@@ -246,7 +246,7 @@ class ProcessFullTextTests(unittest.TestCase):
         self.assertEqual(1, len(entries), "the second row must still be deposited")
         self.assertEqual("rec-1", entries[0]["record_uuid"])
 
-    def test_a_put_error_does_not_abort_the_run_and_logs_unknown_state(self):
+    def test_a_put_error_stops_the_run_and_records_unknown_state(self):
         import tempfile
 
         import requests as requests_mod
@@ -274,14 +274,15 @@ class ProcessFullTextTests(unittest.TestCase):
                 apply_mod.requests, "get", return_value=MagicMock(status_code=200, json=lambda: record)
             ), patch.object(apply_mod.requests, "put", side_effect=put_side_effect), patch.object(
                 apply_mod, "_append_apply_manifest_entry", side_effect=entries.append
-            ), self.assertLogs("btp", level="ERROR") as logs:
-                apply_mod.process_full_text("to_be_updated.csv", frame)
+            ):
+                from workflow_http import FatalWorkflowError
+                with self.assertRaisesRegex(FatalWorkflowError, 'unknown'):
+                    apply_mod.process_full_text("to_be_updated.csv", frame)
+                saved = pd.read_csv(os.path.join(tmpdir, "to_be_updated.csv"))
+                self.assertEqual('unknown', saved.loc[0, 'apply_status'])
 
-        self.assertEqual(1, len(entries), "the second row must still be deposited")
-        self.assertTrue(
-            any("unknown" in message.lower() for message in logs.output),
-            "the PUT failure log must say the record's state is unknown",
-        )
+        self.assertEqual([], entries)
+        self.assertEqual(1, calls['count'], 'stop before another write after an ambiguous outcome')
 
     def test_a_doi_that_does_not_normalise_is_skipped_before_depositing(self):
         import tempfile

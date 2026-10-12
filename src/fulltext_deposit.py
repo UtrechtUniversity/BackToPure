@@ -5,6 +5,7 @@ expires after two hours if nothing references it, so uploading and
 attaching are one operation, not two phases.
 """
 import logging
+from apply_state import request_write
 
 from config import PURE_BASE_URL, PURE_HEADERS
 from fulltext_candidates import map_access_type, map_license_type, pure_version_type_for
@@ -24,11 +25,12 @@ def upload_pdf(session, payload, filename):
     headers = dict(PURE_HEADERS)
     headers['Content-Type'] = 'application/pdf'
     headers['Accept'] = 'application/json'
-    response = session.put(
+    response = request_write(session.put,
         PURE_BASE_URL + 'research-outputs/file-uploads',
         headers=headers,
         data=payload,
         timeout=UPLOAD_TIMEOUT,
+        allow_redirects=False,
     )
     if response.status_code not in (200, 201):
         raise DepositError(
@@ -38,6 +40,8 @@ def upload_pdf(session, payload, filename):
         body = response.json()
     except ValueError as exc:
         raise DepositError(f"Pure returned a non-JSON upload response for {filename}") from exc
+    if not isinstance(body, dict):
+        raise DepositError(f'Pure returned an invalid upload response for {filename}')
     key = body.get('key') or ((body.get('uploadedFile') or {}).get('key'))
     if not key:
         raise DepositError(f"Pure returned no upload key for {filename}")

@@ -523,7 +523,7 @@ export function JobDetailPage() {
       : null;
   const canRollback =
     supportsRollback &&
-    job.status === "completed" &&
+    ["completed", "failed"].includes(job.status) &&
     !!changeSet &&
     ["applied", "rolled_back_with_conflicts"].includes(changeSet.status) &&
     remainingRollbackItems > 0 &&

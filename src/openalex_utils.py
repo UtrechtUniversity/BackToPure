@@ -5,6 +5,7 @@ from datetime import datetime
 import pathlib
 # import ricgraph as rcg
 import requests
+from workflow_http import request_read, json_object
 import configparser
 import os
 import logging
@@ -62,9 +63,9 @@ def get_jsons_from_open_alex(dois):
         doi = 'doi.org/'  +  item
         url = 'https://api.openalex.org/works/' + doi
         try:
-            response = requests.get(url, headers=OPENALEX_HEADERS)
+            response = request_read(requests.get, url, headers=OPENALEX_HEADERS, allowed_status=(404,))
             if response.status_code == 200:
-                all_responses.append(response.json())
+                all_responses.append(json_object(response))
             else:
                 print(f"Failed to retrieve data for DOI {item}. Status code: {response.status_code}")
         except requests.exceptions.RequestException as e:
@@ -291,6 +292,6 @@ if __name__ == '__main__':
 # OPENALEX_MAX_RECS_TO_HARVEST = 3
 # doi = 'doi.org/10.1002/ijc.34742'
 # url = 'https://api.openalex.org/works/' + doi
-# response = requests.get(url, headers=OPENALEX_HEADERS)
+# response = request_read(requests.get, url, headers=OPENALEX_HEADERS, allowed_status=(404,))
 #
 # print (response.text)

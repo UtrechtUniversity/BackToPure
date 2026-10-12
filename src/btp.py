@@ -2,6 +2,7 @@ import logging
 import sys
 from logging_config import setup_logging
 import requests
+from workflow_http import FatalWorkflowError, request_read, json_object, records
 from config import (
     FACULTY_PREFIX,
     ID_URI,
@@ -31,8 +32,8 @@ def checks_before_start(faculty):
     params = {'key': faculty, 'max_nr_items': '1'}
     url = RIC_BASE_URL + 'get_all_personroot_nodes'
     try:
-        response = requests.get(url, params=params)
-        response.raise_for_status()  # This will raise an HTTPError for bad responses (4xx, 5xx)
+        response = request_read(requests.get, url, params=params)
+
     except requests.exceptions.RequestException as e:
         raise SystemExit(f"Failed to connect to ricgraph: {e}")
 
@@ -42,8 +43,8 @@ def checks_before_start(faculty):
             'size': '1',
             'offset': '1',
         }
-        response = requests.get(url, headers = PURE_HEADERS, params=params)
-        response.raise_for_status()  # This will raise an HTTPError for bad responses (4xx, 5xx)
+        response = request_read(requests.get, url, headers = PURE_HEADERS, params=params)
+
     except requests.exceptions.RequestException as e:
         logger.error(f"API request failed for pure: {e}")
 
@@ -54,19 +55,19 @@ def select_faculties(faculty_choice):
     url = f"{RIC_BASE_URL}organization/search"
 
     try:
-        response = requests.get(url, params=params)
-        response.raise_for_status()  # Raises an HTTPError if the HTTP request returned an unsuccessful status code
+        response = request_read(requests.get, url, params=params)
+
     except requests.RequestException as e:
         logger.error(f"Error conntecting to Ricgraph: {e}")
         raise SystemExit()
 
     try:
-        data = response.json()
+        data = json_object(response)
     except ValueError:
         raise SystemExit("Failed to decode JSON from response.")
 
     # Extract faculties or use the provided choice
     return resolve_faculty_selection(
         faculty_choice,
-        [item.get('_key') for item in data.get("results", [])],
+        [item.get('_key') for item in records(data, "results")],
     )

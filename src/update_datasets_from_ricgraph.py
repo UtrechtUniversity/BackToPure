@@ -37,6 +37,7 @@
 
 import logging
 import requests
+from workflow_http import FatalWorkflowError, request_read, json_object, records
 import datacite_utils
 import time
 import pure_datasets as puda
@@ -61,7 +62,7 @@ import json
 
 session = requests.Session()
 retry_strategy = Retry(
-    total=5,
+    total=0,
     status_forcelist=[429, 500, 502, 503, 504],
     allowed_methods=["GET", "POST"],
     backoff_factor=1,
@@ -77,11 +78,11 @@ def print_faculty_list(faculty_list):
 def fetch_personroots(faculty_key):
     """Fetch person-root nodes for a given faculty."""
     try:
-        params = {'key': faculty_key, 'max_nr_items': '9999'}
+        params = {'key': faculty_key, 'max_nr_items': '0'}
         url = RIC_BASE_URL + 'get_all_personroot_nodes'
-        response = session.get(url, params=params, timeout=30)
+        response = request_read(session.get, url, params=params, timeout=30)
 
-        return response.json().get("results", [])
+        return records(json_object(response), "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching person-roots for faculty {faculty_key}: {e}")
         return []
@@ -95,16 +96,16 @@ def select_faculties(faculty_choice):
     }
     try:
         url = RIC_BASE_URL + 'organization/search'
-        response = session.get(url, params=params, timeout=30)
-        response.raise_for_status()
-        data = response.json()
+        response = request_read(session.get, url, params=params, timeout=30)
+
+        data = json_object(response)
     except requests.RequestException as e:
         logger.error(f"Error fetching faculties from Ricgraph: {e}")
         return []
 
     return resolve_faculty_selection(
         faculty_choice,
-        [item.get('_key') for item in data.get("results", [])],
+        [item.get('_key') for item in records(data, "results")],
     )
 
 def select_persons_datasets(faculties, faculty_choice):
@@ -118,9 +119,12 @@ def select_persons_datasets(faculties, faculty_choice):
         }
         data = []
         url = RIC_BASE_URL + 'advanced_search'
-        response = session.get(url, params=params, timeout=30)
-        datasets = response.json().get("results", [])
+        response = request_read(session.get, url, params=params, timeout=30)
+        datasets = records(json_object(response), "results")
         for set in datasets:
+            if not isinstance(set.get("_key"), str) or not set["_key"]:
+                logger.warning("Skipping invalid Ricgraph record without a key")
+                continue
             doi = set["_key"].split("|")[0]
             data.append(doi)
     else:
@@ -128,12 +132,14 @@ def select_persons_datasets(faculties, faculty_choice):
             logger.info(f"Processing faculty: {faculty}")
 
             personroots = fetch_personroots(faculty)
-            data = []
             for persoonroot in personroots:
-                if not persoonroot['_key'] == None:
+                if isinstance(persoonroot.get('_key'), str) and persoonroot['_key']:
                     persoonroot_key = persoonroot['_key']
                     datasets = select_datasets(persoonroot_key)
                     for set in datasets:
+                        if not isinstance(set.get("_key"), str) or not set["_key"]:
+                            logger.warning("Skipping invalid Ricgraph record without a key")
+                            continue
                         doi = set["_key"].split("|")[0]
                         data.append(doi)
     data = list(dict.fromkeys(data))
@@ -147,9 +153,9 @@ def select_datasets(persoonroot_key):
     try:
         params = {'key': persoonroot_key, 'category_want': 'data set'}
         url = RIC_BASE_URL + 'get_all_neighbor_nodes'
-        response = session.get(url, params=params, timeout=30)
+        response = request_read(session.get, url, params=params, timeout=30)
 
-        return response.json().get("results", [])
+        return records(json_object(response), "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching person IDs for person-root {persoonroot_key}: {e}")
         return []
@@ -213,8 +219,11 @@ def df_to_pure(df, created, ignored, no_internal):
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(dataset_collection, f, ensure_ascii=False, indent=4)
         logger.debug(f"Successfully saved datasets to {output_file}.")
+    except FatalWorkflowError:
+        raise
     except Exception as e:
         logger.error(f"Failed to save datasets: {e}")
+        raise
 
     # Create and save the "to be updated" DataFrame
     to_be_updated_df = pd.DataFrame(to_be_updated_rows)
@@ -223,8 +232,11 @@ def df_to_pure(df, created, ignored, no_internal):
     try:
         to_be_updated_df.to_csv(csv_output_file, index=False, encoding='utf-8')
         logger.debug(f"Successfully saved 'to be updated' DataFrame to {csv_output_file}.")
+    except FatalWorkflowError:
+        raise
     except Exception as e:
         logger.error(f"Failed to save 'to be updated' DataFrame: {e}")
+        raise
 
     return created, ignored, no_internal
 

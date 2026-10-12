@@ -12,6 +12,12 @@ import json
 import pandas as pd
 import os
 import requests
+import copy
+import tempfile
+from functools import wraps
+from pathlib import Path
+from apply_state import append_jsonl, current_apply, journal_event, request_write
+from workflow_http import FatalWorkflowError, request_read, json_object
 
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -27,9 +33,9 @@ datetimetoday = datetime.now().strftime('%Y%m%d')
 # Set up a single session for all requests
 session = requests.Session()
 retry_strategy = Retry(
-    total=5,
+    total=0,
     status_forcelist=[429, 500, 502, 503, 504],
-    allowed_methods=["HEAD", "GET", "OPTIONS", "PUT", "POST"],
+    allowed_methods=["HEAD", "GET", "OPTIONS"],
     backoff_factor=1
 )
 adapter = HTTPAdapter(max_retries=retry_strategy)
@@ -68,7 +74,8 @@ def _resolve_output_directory(referer_page):
 def _selected_for_update(csv_file):
     """Return rows marked for update, accepting x/X with optional whitespace."""
     markers = csv_file['to_be_updated'].fillna('').astype(str).str.strip().str.lower()
-    return csv_file[markers == 'x']
+    updated = csv_file.get('updated', pd.Series('', index=csv_file.index)).fillna('').astype(str).str.strip().str.lower()
+    return csv_file[(markers == 'x') & (updated != 'x')]
 
 
 def _parse_target_filenames(raw_value):
@@ -81,9 +88,7 @@ def _append_apply_manifest_entry(entry):
     manifest_path = os.environ.get("BTP_APPLY_MANIFEST_FILE")
     if not manifest_path:
         return
-    os.makedirs(os.path.dirname(manifest_path), exist_ok=True)
-    with open(manifest_path, "a", encoding="utf-8") as handle:
-        handle.write(json.dumps(entry, sort_keys=True) + "\n")
+    append_jsonl(manifest_path, entry)
 
 
 def get_csv_files(directory, allowed_filenames=None):
@@ -117,10 +122,12 @@ def get_csv_files(directory, allowed_filenames=None):
                 logger.info(f"Successfully loaded file {filename}.")
             except pd.errors.EmptyDataError:
                 logger.warning(f"File {filename} is empty or malformed. Skipping...")
-            except Exception as e:
-                logger.error(f"Error reading {filename}: {e}")
+            except (OSError, ValueError, pd.errors.ParserError) as e:
+                raise FatalWorkflowError(f'Cannot read apply CSV file {filename}: {e}') from e
     if allowed_filenames:
         missing_files = sorted(set(allowed_filenames) - set(csv_files))
+        if missing_files:
+            raise FatalWorkflowError(f'Cannot load selected apply CSV files: {missing_files}')
         for filename in missing_files:
             file_path = os.path.join(directory, filename)
             if os.path.exists(file_path):
@@ -153,14 +160,16 @@ def get_json_files(directory, allowed_filenames=None):
                 with open(file_path, "r") as json_file:
                     json_data = json.load(json_file)
                     json_files.append(json_data)
-            except Exception as e:
-                logger.error(f"Error reading JSON file {filename}: {e}")
+            except (OSError, ValueError) as e:
+                raise FatalWorkflowError(f'Cannot read apply JSON file {filename}: {e}') from e
     if allowed_filenames:
         loaded_names = {
             filename for filename in sorted(os.listdir(directory))
             if filename.endswith(".json") and (allowed_filenames is None or filename in allowed_filenames)
         }
         missing_files = sorted(set(allowed_filenames) - loaded_names)
+        if missing_files:
+            raise FatalWorkflowError(f'Cannot load selected apply JSON files: {missing_files}')
         for filename in missing_files:
             logger.warning(f"Target JSON file {filename} was not found in {directory}.")
     return json_files
@@ -182,462 +191,268 @@ def read_directory_files(directory, allowed_csv_filenames=None, allowed_json_fil
     return csv_files, json_files
 
 
-def process_internal_persons(filename, csv_file, json_data):
-    """
-    Processes a CSV file by looping over each row and retrieving an entry from the big JSON file
-    for each 'personuuid' in the CSV file.
+def _checkpoint(filename, frame, fallback):
+    directory = _resolve_output_directory(os.environ.get('REFERER_PAGE', 'unknown')) or fallback
+    os.makedirs(directory, exist_ok=True)
+    destination = os.path.join(directory, filename)
+    fd, temporary = tempfile.mkstemp(prefix='.apply-', suffix='.csv', dir=directory)
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8', newline='') as handle:
+            frame.to_csv(handle, index=False)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, destination)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
 
-    Args:
-        csv_file (pd.DataFrame): The CSV file as a DataFrame.
-        json_data (list): The big JSON list containing the data to look up.
-    """
 
-    required_columns = {'to_be_updated', 'PURE_UUID_PERS', 'new_id', 'new_value', 'updated'}
-    missing_columns = required_columns - set(csv_file.columns)
-    if missing_columns:
-        logger.error(f"CSV file {filename} is missing required columns: {sorted(missing_columns)}")
-        return
+def _prepare(filename, frame, required, fallback):
+    missing = required - set(frame.columns)
+    if missing:
+        raise FatalWorkflowError(f'CSV {filename} is missing required columns: {sorted(missing)}')
+    for column in ('updated', 'to_be_updated', 'apply_error', 'apply_status'):
+        if column not in frame:
+            frame[column] = ''
+        frame[column] = frame[column].fillna('').astype(str)
+    _checkpoint(filename, frame, fallback)
+    directory = _resolve_output_directory(os.environ.get('REFERER_PAGE', 'unknown')) or fallback
+    manifest = os.environ.get('BTP_APPLY_MANIFEST_FILE')
+    path = (Path(manifest).parent if manifest else Path(directory)) / 'apply_journal.jsonl'
+    return {'path': path, 'history': _history(path), 'pending': 0}
 
-    # Filter the DataFrame to only consider rows where 'to_be_updated' is 'X'
-    filtered_csv = _selected_for_update(csv_file)
-    logger.info(f"{len(filtered_csv)} persons are selected to be updated")
 
-    # Grouping the DataFrame by 'PURE_UUID_PERS' to collect updates for the same person
-    grouped = filtered_csv.groupby('PURE_UUID_PERS')
-    logger.info(f"{len(grouped)} persons will be updated")
-    success = 0
-    errors = 0
-    json_by_uuid = {}
-    for item in json_data:
-        item_uuid = item.get('uuid')
-        if not item_uuid:
-            continue
-        if item_uuid not in json_by_uuid:
-            json_by_uuid[item_uuid] = item
-    for person_uuid, group in grouped:
-        # Retrieve the corresponding entry from the JSON data
-        entry = json_by_uuid.get(person_uuid)
-
-        if entry:
-            # Iterate through all rows in the group to update the entry
-            for _, row in group.iterrows():
-                if row['new_id'] == 'orcid':
-                    entry['orcid'] = ipersons._normalize_identifier(row['new_value'])
-                else:
-
-                    new_identifier = {
-                        'typeDiscriminator': 'ClassifiedId',
-                        'id': row['new_value'],
-                        'type': {'uri': row.get('uri', '')}  # Use .get() to avoid KeyError
-                    }
-                    if 'identifiers' in entry:
-                        entry['identifiers'].append(new_identifier)
-                    else:
-                        entry['identifiers'] = [new_identifier]
-
-            # After processing all updates for the person, call the API once
-            api_url = PURE_BASE_URL + 'persons/' + person_uuid
+def _history(path):
+    state = {}
+    if path.exists():
+        for line in path.read_text(encoding='utf-8').splitlines():
             try:
-                response = session.put(api_url, headers=PURE_HEADERS, json=entry, timeout=30)
-            except requests.exceptions.RequestException as e:
-                errors = errors + 1
-                logger.error(f"Failed to update person UUID: {person_uuid}, Request error: {e}")
-                continue
-            # response = type('MockResponse', (), {'status_code': 200})()
-            # If the API call is successful, mark all rows for the person as updated and clear 'to_be_updated'
-            if response.status_code == 200:
-                success = success + 1
-                csv_file['updated'] = csv_file['updated'].astype(str)
-                csv_file.loc[group.index, 'updated'] = 'X'
-                csv_file.loc[group.index, 'to_be_updated'] = ''  # Clear 'to_be_updated' for successfully updated rows
-            else:
-                errors = errors + 1
-                logger.error(f'Failed to update person UUID: {person_uuid}, Response: {response.text}')
+                event = json.loads(line)
+                identity = (event['filename'], event['job_type'], event['item_key'])
+                if event['status'] == 'child_created':
+                    state[identity] = 'partial'
+                elif event['status'] == 'failed' and state.get(identity) == 'partial':
+                    pass
+                else:
+                    state[identity] = event['status']
+            except (ValueError, KeyError, TypeError) as exc:
+                raise FatalWorkflowError('Apply journal is damaged; reconcile previous writes before retrying.') from exc
+    return state
+
+
+def _run_item(filename, frame, indices, key, job_type, fallback, journal, operation):
+    identity = {'filename': filename, 'job_type': job_type, 'item_key': str(key)}
+    history_key = (filename, job_type, str(key))
+    previous = journal['history'].get(history_key)
+    if previous == 'success':
+        frame.loc[indices, 'updated'] = 'X' if job_type in ('internal_persons', 'external_persons', 'external_orgs') else 'x'
+        frame.loc[indices, 'to_be_updated'] = ''
+        _checkpoint(filename, frame, fallback)
+        return
+    if previous in ('started', 'unknown', 'partial'):
+        raise FatalWorkflowError(f'Previous write for {key} has an unknown outcome; reconcile it in Pure before retrying.')
+    children = []
+    token = current_apply.set((journal['path'], identity, children))
+    try:
+        journal_event('started')
+        journal['history'][history_key] = 'started'
+        try:
+            result = operation()
+        except (ValueError, KeyError, TypeError) as exc:
+            result = {'success': False, 'error': f'Invalid record: {exc}'}
+        except Exception as exc:
+            frame.loc[indices, 'apply_error'] = str(exc)
+            frame.loc[indices, 'apply_status'] = 'unknown'
+            journal_event('unknown', error=str(exc))
+            _checkpoint(filename, frame, fallback)
+            raise
+        if result.get('success'):
+            entry = {**identity, **{k: v for k, v in result.items() if k != 'success'}}
+            entry['record_uuid'] = entry.pop('uuid', entry.get('record_uuid'))
+            journal_event('success', **{k: v for k, v in entry.items() if k not in identity})
+            journal['history'][history_key] = 'success'
+            _append_apply_manifest_entry(entry)
+            frame.loc[indices, 'updated'] = 'X' if job_type in ('internal_persons', 'external_persons', 'external_orgs') else 'x'
+            frame.loc[indices, 'to_be_updated'] = ''
+            frame.loc[indices, 'apply_error'] = ''
+            frame.loc[indices, 'apply_status'] = 'success'
         else:
-            logger.info(f'Not found for person UUID: {person_uuid}')
-
-    logger.info(f"{success} persons have been updated")
-    if errors > 0:
-        logger.info(f"{errors} updates have resulted in an error , check te log for more info")
-
-    # Reorder the columns to make 'updated' the second column
-    cols = list(csv_file.columns)
-    cols.insert(1, cols.pop(cols.index('updated')))
-    csv_file = csv_file[cols]
-
-    # Save the updated DataFrame to 'output/updated.csv'
-    output_directory = _resolve_output_directory(os.environ.get('REFERER_PAGE', 'unknown')) or 'output/internal_persons'
-    file = os.path.join(output_directory, filename)
-    os.makedirs(output_directory, exist_ok=True)
-    csv_file.to_csv(file, index=False)
-
-    logger.info(f"Updated DataFrame saved to {file}.")
+            error = str(result.get('error') or 'Pure rejected the record; check the job log.')
+            status = 'partial' if (children or result.get('created_external_persons')) else ('unknown' if result.get('unknown') else 'failed')
+            journal_event(status, error=error)
+            journal['history'][history_key] = status
+            frame.loc[indices, 'apply_error'] = error
+            frame.loc[indices, 'apply_status'] = status
+            logger.error(f'Could not apply {job_type} {key}: {error}')
+        journal['pending'] += 1
+        if journal['pending'] >= 100:
+            _checkpoint(filename, frame, fallback)
+            journal['pending'] = 0
+    finally:
+        current_apply.reset(token)
 
 
-# Define a function to match and extract the JSON object
+def _records(data):
+    if not isinstance(data, list):
+        raise FatalWorkflowError('Apply JSON must contain a list of records.')
+    return [record for record in data if isinstance(record, dict)]
+
+
 def find_json_by_uuid(pure_uuid, json_data):
-    for record in json_data:
-        if record.get('UUID') == pure_uuid:
-            return record
-        if record.get('uuid') == pure_uuid:
-            return record
-    return None
+    return next((record for record in _records(json_data)
+                 if (record.get('UUID') or record.get('uuid')) == pure_uuid), None)
 
+
+def _update_people(filename, frame, data, kind, key_column, endpoint, fallback):
+    required = {'to_be_updated', 'updated', key_column}
+    if kind == 'internal_persons':
+        required |= {'new_id', 'new_value'}
+    journal = _prepare(filename, frame, required, fallback)
+    lookup = {(item.get('UUID') or item.get('uuid')): item for item in _records(data)}
+    for key, group in _selected_for_update(frame).groupby(key_column, dropna=False):
+        def operation():
+            if pd.isna(key) or not str(key).strip():
+                return {'success': False, 'error': 'Missing Pure UUID'}
+            source = lookup.get(key)
+            if not source:
+                return {'success': False, 'error': 'No matching JSON record for Pure UUID'}
+            entry = copy.deepcopy(source)
+            if kind == 'internal_persons':
+                for _, row in group.iterrows():
+                    value = row['new_value']
+                    if pd.isna(value) or not str(value).strip():
+                        raise ValueError('Missing identifier value')
+                    if row['new_id'] == 'orcid':
+                        entry['orcid'] = ipersons._normalize_identifier(value)
+                    else:
+                        identifier = {'typeDiscriminator': 'ClassifiedId', 'id': str(value),
+                                      'type': {'uri': row.get('uri', '')}}
+                        identifiers = entry.get('identifiers') or []
+                        if identifier not in identifiers:
+                            identifiers.append(identifier)
+                        entry['identifiers'] = identifiers
+            entry = {k: v for k, v in entry.items() if not str(k).startswith('_')}
+            response = request_write(session.put, PURE_BASE_URL + endpoint + '/' + str(key),
+                                     headers=PURE_HEADERS, json=entry)
+            return {'success': response.status_code in (200, 201, 204), 'uuid': str(key),
+                    'error': f'HTTP {response.status_code}: {response.text[:300]}'}
+        _run_item(filename, frame, group.index, key, kind, fallback, journal, operation)
+
+
+def _save_on_exit(fallback):
+    def decorate(process):
+        @wraps(process)
+        def run(filename, frame, *args, **kwargs):
+            try:
+                return process(filename, frame, *args, **kwargs)
+            finally:
+                _checkpoint(filename, frame, fallback)
+        return run
+    return decorate
+
+
+@_save_on_exit('output/internal_persons')
+def process_internal_persons(filename, csv_file, json_data):
+    _update_people(filename, csv_file, json_data, 'internal_persons', 'PURE_UUID_PERS', 'persons', 'output/internal_persons')
+
+
+@_save_on_exit('output/external_persons')
 def process_external_persons(filename, csv_file, big_json_data):
-    required_columns = {'to_be_updated', 'Pure_UUID', 'updated'}
-    missing_columns = required_columns - set(csv_file.columns)
-    if missing_columns:
-        logger.error(f"CSV file {filename} is missing required columns: {sorted(missing_columns)}")
-        return
-
-    # Filter the DataFrame to only consider rows where 'to_be_updated' is 'X'
-    filtered_csv = _selected_for_update(csv_file)
-    grouped = filtered_csv.groupby('Pure_UUID')
-    logger.info(f"{len(grouped)} persons will be updated")
-    success = 0
-    json_by_uuid = {}
-    for record in big_json_data:
-        record_uuid = record.get('UUID') or record.get('uuid')
-        if record_uuid and record_uuid not in json_by_uuid:
-            json_by_uuid[record_uuid] = record
-    for group_index, (uuid, group) in enumerate(grouped, start=1):
-        if group_index % 250 == 0:
-            logger.info(f"processing {group_index} items")
-        matched_record = json_by_uuid.get(uuid)
-        if matched_record:
-            url = PURE_BASE_URL + 'external-persons/' + uuid
-            try:
-                response = session.put(url, headers=headers, json=matched_record, timeout=30, verify=False)
-                if response.status_code != 200:
-                    logger.warning(f"Failed to update data for UUID {uuid}: {response.text}")
-                else:
-                    csv_file.loc[group.index, 'updated'] = 'X'
-                    csv_file.loc[group.index, 'to_be_updated'] = ''  # Clear 'to_be_updated' for successfully updated rows
-                    success = success + 1
-                    logger.debug(f"Successfully updated data for UUID {uuid}")
-            except requests.exceptions.RequestException as e:
-                logger.error(f"Error updating UUID {uuid}: {e}")
-            time.sleep(0.1)  # Adjust the sleep time based on rate limits
-        else:
-            logger.warning(f"Not found for external person UUID: {uuid}")
-
-    # Reorder the columns to make 'updated' the second column
-    logger.info(f"{success} persons have been updated")
-    cols = list(csv_file.columns)
-    cols.insert(1, cols.pop(cols.index('updated')))
-    csv_file = csv_file[cols]
-
-    output_directory = _resolve_output_directory(os.environ.get('REFERER_PAGE', 'unknown')) or 'output/external_persons'
-    file = os.path.join(output_directory, filename)
-    os.makedirs(output_directory, exist_ok=True)
-    csv_file.to_csv(file, index=False)
-    logger.info(f"Updated DataFrame saved to {file}.")
+    _update_people(filename, csv_file, big_json_data, 'external_persons', 'Pure_UUID', 'external-persons', 'output/external_persons')
 
 
-
-
-def _log_created_record(label, doi, result):
-    """Say everything the apply wrote, not just the headline record.
-
-    Creating one dataset also creates an external person for every contributor
-    Pure does not already know. Those writes were tracked in the change set but
-    appeared nowhere in the log, so the apply understated what it had done.
-    """
-    created = result.get("created_external_persons") or []
-    logger.info(f"created {label} {result.get('uuid')} for DOI {doi}")
-    if created:
-        names = ", ".join(
-            f"{person.get('first_name','')} {person.get('last_name','')}".strip() or person.get("uuid", "?")
-            for person in created[:5]
-        )
-        more = f" (+{len(created) - 5} more)" if len(created) > 5 else ""
-        logger.info(
-            f"  also created {len(created)} external person(s) in Pure for this {label}: {names}{more}"
-        )
-
-
-def process_research_output(filename, csv_file, big_json_data):
-    required_columns = {'to_be_updated', 'doi', 'updated'}
-    missing_columns = required_columns - set(csv_file.columns)
-    if missing_columns:
-        logger.error(f"CSV file {filename} is missing required columns: {sorted(missing_columns)}")
-        return
-
-    def normalize_doi(doi_value):
-        if not doi_value:
-            return ""
-        return str(doi_value).replace("https://doi.org/", "").replace("http://doi.org/", "").strip().lower()
-
-    filtered_csv = _selected_for_update(csv_file)
-    logger.info(f"{len(filtered_csv)} research outputs are selected to be updated")
-    doi_to_item = {}
-    for item in big_json_data:
-        for version in item.get("electronicVersions", []):
-            norm = normalize_doi(version.get("doi", ""))
-            if norm and norm not in doi_to_item:
-                doi_to_item[norm] = item
-
-    for index, row in filtered_csv.iterrows():
-        doi_item = doi_to_item.get(normalize_doi(row['doi']))
-
-        # Output the result
-        if doi_item:
-            result = pure_researchoutputs.create_research_output(doi_item)
-            if result.get("success"):
-                csv_file.loc[index, 'updated'] = 'x'
-                csv_file.loc[index, 'to_be_updated'] = ''  # Clear 'to_be_updated' for successfully updated rows
-                _append_apply_manifest_entry(
-                    {
-                        "job_type": "research_outputs",
-                        "item_key": normalize_doi(row['doi']),
-                        "doi": normalize_doi(row['doi']),
-                        "record_uuid": result.get("uuid"),
-                        "created_external_persons": result.get("created_external_persons", []),
-                    }
-                )
-                _log_created_record("research output", row['doi'], result)
-            else:
-                logger.error(f"Failed to create research output for DOI {row['doi']}")
-        else:
-            logger.debug(f"No item found with DOI: {row['doi']}")
-            time.sleep(0.1)  # Adjust the sleep time based on rate limits
-
-        # Reorder the columns to make 'updated' the second column
-    cols = list(csv_file.columns)
-    cols.insert(1, cols.pop(cols.index('updated')))
-    csv_file = csv_file[cols]
-
-    # Save the updated DataFrame
-    output_directory = _resolve_output_directory(os.environ.get('REFERER_PAGE', 'unknown')) or 'output/research_output'
-    os.makedirs(output_directory, exist_ok=True)
-    file = os.path.join(output_directory, filename)
-    csv_file.to_csv(file, index=False)
-    logger.info(f"Updated DataFrame saved to {file}.")
-
-
-
-def process_datasets(filename, csv_file, big_json_data):
-    required_columns = {'to_be_updated', 'doi', 'updated'}
-    missing_columns = required_columns - set(csv_file.columns)
-    if missing_columns:
-        logger.error(f"CSV file {filename} is missing required columns: {sorted(missing_columns)}")
-        return
-
-    def normalize_doi(doi_value):
-        if not doi_value:
-            return ""
-        return str(doi_value).replace("https://doi.org/", "").replace("http://doi.org/", "").strip().lower()
-
-    filtered_csv = _selected_for_update(csv_file)
-    logger.info(f"{len(filtered_csv)} datasets are selected to be updated")
-    # Create a lookup dictionary for faster DOI-based access
-    doi_to_dataset = {}
-    for dataset in big_json_data:
-        norm = normalize_doi(dataset.get("doi", {}).get("doi"))
-        if norm and norm not in doi_to_dataset:
-            doi_to_dataset[norm] = dataset
-
-    for index, row in filtered_csv.iterrows():
-
-        dataset = doi_to_dataset.get(normalize_doi(row['doi']))
-
-        # Output the result
-        if dataset:
-
-            try:
-                result = puda.create_dataset(dataset)
-                if result.get("success"):
-                    csv_file.loc[index, 'updated'] = 'x'
-                    csv_file.loc[index, 'to_be_updated'] = ''  # Clear 'to_be_updated' for successfully updated rows
-                    _append_apply_manifest_entry(
-                        {
-                            "job_type": "datasets",
-                            "item_key": normalize_doi(row['doi']),
-                            "doi": normalize_doi(row['doi']),
-                            "record_uuid": result.get("uuid"),
-                            "created_external_persons": result.get("created_external_persons", []),
-                        }
-                    )
-                    _log_created_record("dataset", row['doi'], result)
-                else:
-                    logger.error(f"Error creating dataset for DOI {row['doi']}: create_dataset returned failure")
-            except Exception as e:
-                logger.error(f"Error creating dataset for DOI {row['doi']}: {e}")
-        else:
-            logger.debug(f"No item found with DOI: {row['doi']}")
-            time.sleep(0.1)  # Adjust the sleep time based on rate limits
-
-        # Reorder the columns to make 'updated' the second column
-    cols = list(csv_file.columns)
-    cols.insert(1, cols.pop(cols.index('updated')))
-
-    csv_file = csv_file[cols]
-
-    # Save the updated DataFrame
-    output_directory = _resolve_output_directory(os.environ.get('REFERER_PAGE', 'unknown')) or 'output/datasets'
-    os.makedirs(output_directory, exist_ok=True)
-    file = os.path.join(output_directory, filename)
-    csv_file.to_csv(file, index=False)
-    logger.info(f"Updated DataFrame saved to {file}.")
-
-
-
+@_save_on_exit('output/external_orgs')
 def process_external_orgs(filename, csv_file, big_json_data):
-    required_columns = {'to_be_updated', 'uuid', 'updated'}
-    missing_columns = required_columns - set(csv_file.columns)
-    if missing_columns:
-        logger.error(f"CSV file {filename} is missing required columns: {sorted(missing_columns)}")
-        return
-
-    # Filter the DataFrame to only consider rows where 'to_be_updated' is 'X'
-    filtered_csv = _selected_for_update(csv_file)
-    grouped = filtered_csv.groupby('uuid')
-    logger.info(f" {len(grouped)} external organizations are selected to be updated")
-    succes = 0
-    json_by_uuid = {}
-    for record in big_json_data:
-        record_uuid = record.get('UUID') or record.get('uuid')
-        if record_uuid and record_uuid not in json_by_uuid:
-            json_by_uuid[record_uuid] = record
-
-    for uuid, group in grouped:
-        matched_record = json_by_uuid.get(uuid)
-        if matched_record:
-            payload = {
-                key: value for key, value in matched_record.items()
-                if not str(key).startswith('_')
-            }
-
-            url = PURE_BASE_URL + 'external-organizations/' + uuid
-
-            try:
-                response = session.put(url, headers=headers, json=payload, verify=False, timeout=30)
-
-                if response.status_code != 200:
-                    logger.info(f"Failed to update data for UUID {uuid}: {response.text}")
-
-                else:
-                    csv_file.loc[group.index, 'updated'] = 'X'
-                    csv_file.loc[group.index, 'to_be_updated'] = ''  # Clear 'to_be_updated' for successfully updated rows
-                    logger.debug(f"Successfully updated data for UUID {uuid}")
-                    succes +=1
-            except requests.exceptions.RequestException as e:
-                logger.error(f"Error updating UUID {uuid}: {e}")
-            time.sleep(0.1)  # Adjust the sleep time based on rate limits
-
-    # Reorder the columns to make 'updated' the second column
-    cols = list(csv_file.columns)
-    cols.insert(1, cols.pop(cols.index('updated')))
-    csv_file = csv_file[cols]
-
-    # Save the updated DataFrame to 'output/updated.csv'uccessfully updated data for UUID
-    output_directory = _resolve_output_directory(os.environ.get('REFERER_PAGE', 'unknown')) or 'output/external_orgs'
-    file = os.path.join(output_directory, filename)
-    os.makedirs(output_directory, exist_ok=True)
-    csv_file.to_csv(file, index=False)
-    logger.info(f"Updated DataFrame saved to {file}.")
-    logger.info(f" {succes} external organizations are updated.. check pure for the results")
+    _update_people(filename, csv_file, big_json_data, 'external_orgs', 'uuid', 'external-organizations', 'output/external_orgs')
 
 
+def _doi(value):
+    if not isinstance(value, str):
+        return ''
+    return value.replace('https://doi.org/', '').replace('http://doi.org/', '').strip().lower()
+
+
+def _create_records(filename, frame, data, kind, fallback, create):
+    journal = _prepare(filename, frame, {'to_be_updated', 'updated', 'doi'}, fallback)
+    lookup = {}
+    for item in _records(data):
+        if kind == 'datasets':
+            value = item.get('doi')
+            values = [value.get('doi')] if isinstance(value, dict) else []
+        else:
+            versions = item.get('electronicVersions') or []
+            values = [v.get('doi') for v in versions if isinstance(v, dict)] if isinstance(versions, list) else []
+        for value in values:
+            if _doi(value):
+                lookup.setdefault(_doi(value), item)
+    for index, row in _selected_for_update(frame).iterrows():
+        key = _doi(row['doi'])
+        def operation():
+            item = lookup.get(key)
+            if not item:
+                return {'success': False, 'error': 'No matching JSON record for DOI'}
+            result = create(item)
+            if result.get('success'):
+                logger.info(f"created {kind} {result.get('uuid')} for DOI {key}")
+            return {**result, 'doi': key}
+        _run_item(filename, frame, [index], key, kind, fallback, journal, operation)
+
+
+@_save_on_exit('output/research_output')
+def process_research_output(filename, csv_file, big_json_data):
+    _create_records(filename, csv_file, big_json_data, 'research_outputs', 'output/research_output', pure_researchoutputs.create_research_output)
+
+
+@_save_on_exit('output/datasets')
+def process_datasets(filename, csv_file, big_json_data):
+    _create_records(filename, csv_file, big_json_data, 'datasets', 'output/datasets', puda.create_dataset)
+
+
+@_save_on_exit('output/full_text')
 def process_full_text(filename, csv_file, json_data=None):
-    """Attach an open access PDF to each approved research output.
-
-    The bytes are fetched again here rather than cached from the report: no
-    copyrighted file sits in the artifact directory, and a candidate that
-    changed or vanished since review is caught instead of deposited blind.
-    """
-    deposit_session = requests.Session()
-    deposited = 0
-    for index, row in csv_file.iterrows():
-        if str(row.get('to_be_updated') or '').strip().upper() != 'X':
-            continue
-        raw_doi = str(row.get('doi') or '')
-        doi = normalize_doi(raw_doi)
-        record_uuid = str(row.get('pure_uuid') or '').strip()
-        url = str(row.get('candidate_url') or '').strip()
-        if not doi:
-            logger.error(f"Cannot deposit {raw_doi!r}: DOI does not normalise")
-            continue
-        if not record_uuid or not url:
-            logger.error(f"Cannot deposit {doi}: missing Pure UUID or candidate URL")
-            continue
-
-        candidate = {
-            'version': str(row.get('version') or '').strip(),
-            'license': str(row.get('licence') or '').strip() or None,
-            'access_status': str(row.get('access_status') or 'open').strip(),
-        }
-
-        try:
-            payload, file_name = download_and_validate(deposit_session, url)
-        except Exception as exc:
-            logger.error(f"Could not fetch the PDF for {doi}: {exc}")
-            continue
-
-        try:
-            upload_key = upload_pdf(deposit_session, payload, file_name)
-        except Exception as exc:
-            logger.error(f"Could not upload the PDF for {doi}: {exc}")
-            continue
-
-        try:
-            response = requests.get(f"{PURE_BASE_URL}research-outputs/{record_uuid}",
-                                    headers=PURE_HEADERS, timeout=60)
-        except Exception as exc:
-            logger.error(f"Could not load research output {record_uuid} for {doi}: {exc}")
-            continue
-        if response.status_code != 200:
-            logger.error(f"Could not load research output {record_uuid} for {doi}: HTTP {response.status_code}")
-            continue
-        try:
-            record = response.json()
-        except Exception as exc:
-            logger.error(f"Could not parse research output {record_uuid} for {doi}: {exc}")
-            continue
-        previous_versions = record.get('electronicVersions') or []
-
-        try:
-            entry = build_file_electronic_version(candidate, upload_key, file_name)
-        except ValueError as exc:
-            logger.error(f"Cannot build a file entry for {doi}: {exc}")
-            continue
-
-        record['electronicVersions'] = list(previous_versions) + [entry]
-        try:
-            put = requests.put(f"{PURE_BASE_URL}research-outputs/{record_uuid}",
-                               headers=PURE_HEADERS, json=record, timeout=180)
-        except Exception as exc:
-            logger.error(
-                f"Could not confirm the deposit for {doi} on {record_uuid}: {exc}. "
-                "The record's state is unknown: the PUT may have been applied in Pure before this "
-                "error was raised."
-            )
-            continue
-        if put.status_code != 200:
-            logger.error(f"Pure rejected the deposit for {doi}: HTTP {put.status_code} {put.text[:200]}")
-            continue
-
-        csv_file.loc[index, 'updated'] = 'x'
-        csv_file.loc[index, 'to_be_updated'] = ''
-        _append_apply_manifest_entry({
-            "job_type": "full_text",
-            "item_key": doi,
-            "doi": doi,
-            "record_uuid": record_uuid,
-            "previous_electronic_versions": previous_versions,
-            "upload_key": upload_key,
-            "file_name": file_name,
-        })
-        deposited += 1
-        logger.info(f"attached {file_name} ({len(payload)} bytes) to research output {record_uuid} for {doi}")
-
-    output_directory = _resolve_output_directory(os.environ.get('REFERER_PAGE', 'unknown')) or 'output/full_text'
-    file = os.path.join(output_directory, filename)
-    os.makedirs(output_directory, exist_ok=True)
-    csv_file.to_csv(file, index=False)
-    logger.info(f"Updated DataFrame saved to {file}.")
-
-    logger.info(f"{deposited} full text(s) attached in Pure")
+    """Deposit each approved file with durable progress and rollback evidence."""
+    fallback = 'output/full_text'
+    journal = _prepare(filename, csv_file, {'to_be_updated', 'updated', 'doi', 'pure_uuid', 'candidate_url'}, fallback)
+    with requests.Session() as deposit_session:
+        for index, row in _selected_for_update(csv_file).iterrows():
+            doi = normalize_doi(_doi(row.get('doi')))
+            record_uuid = row.get('pure_uuid')
+            url = row.get('candidate_url')
+            def operation():
+                if not doi:
+                    return {'success': False, 'error': 'DOI does not normalise'}
+                if not isinstance(record_uuid, str) or not record_uuid.strip() or not isinstance(url, str) or not url.strip():
+                    return {'success': False, 'error': 'Missing Pure UUID or candidate URL'}
+                candidate = {
+                    'version': row.get('version') if isinstance(row.get('version'), str) else '',
+                    'license': row.get('licence') if isinstance(row.get('licence'), str) else None,
+                    'access_status': row.get('access_status') if isinstance(row.get('access_status'), str) and row.get('access_status').strip() else 'open',
+                }
+                try:
+                    payload, file_name = download_and_validate(deposit_session, url)
+                except (requests.RequestException, ValueError, RuntimeError) as exc:
+                    return {'success': False, 'error': f'Could not fetch PDF: {exc}'}
+                try:
+                    upload_key = upload_pdf(deposit_session, payload, file_name)
+                except (requests.RequestException, DepositError) as exc:
+                    return {'success': False, 'error': f'Could not upload PDF: {exc}'}
+                response = request_read(requests.get, f'{PURE_BASE_URL}research-outputs/{record_uuid}',
+                                        headers=PURE_HEADERS, timeout=60)
+                record = json_object(response)
+                previous_versions = record.get('electronicVersions') or []
+                if not isinstance(previous_versions, list):
+                    raise ValueError('Pure electronicVersions must be a list')
+                entry = build_file_electronic_version(candidate, upload_key, file_name)
+                record['electronicVersions'] = list(previous_versions) + [entry]
+                put = request_write(requests.put, f'{PURE_BASE_URL}research-outputs/{record_uuid}',
+                                    headers=PURE_HEADERS, json=record, timeout=180)
+                if put.status_code not in (200, 204):
+                    return {'success': False, 'error': f'Pure rejected deposit: HTTP {put.status_code} {put.text[:200]}'}
+                logger.info(f'attached {file_name} to research output {record_uuid} for {doi}')
+                return {'success': True, 'doi': doi, 'record_uuid': record_uuid,
+                        'previous_electronic_versions': previous_versions,
+                        'upload_key': upload_key, 'file_name': file_name}
+            _run_item(filename, csv_file, [index], doi or str(row.get('doi')), 'full_text', fallback, journal, operation)
 
 
 def main():
@@ -672,8 +487,8 @@ def main():
         logger.info("script to update Pure has ended")
         sys.exit(0)
 
-    if len(json_files) > 1:
-        logger.warning(f"Multiple JSON files found in {directory}; using the first one after sorting.")
+    if len(json_files) != 1:
+        raise FatalWorkflowError(f'Expected exactly one apply JSON file in {directory}; found {len(json_files)}.')
 
     if json_files:
         big_json_data = json_files[0]

@@ -32,6 +32,7 @@ from config import (
     current_pure_credentials,
     is_excluded_organization_key,
 )
+from workflow_http import json_object, request_read
 
 _APPLY_SUPPORTED_JOB_TYPES = {
     JobType.INTERNAL_PERSONS.value,
@@ -375,16 +376,18 @@ class JobService:
             raise ValueError(f"Job {job_id} is not active")
 
         pids = self._find_active_job_pids(job)
-        if not pids:
-            raise ValueError(f"No active process found for job {job_id}")
-
-        message = "Job was cancelled by user"
+        message = "Job was cancelled by user" if pids else "Interrupted job recovered: no active process remains. Review saved results before retrying."
         log_path = self._runtime_path(job["log_path"]) if job.get("log_path") else self.logs_dir / f"{job_id}.log"
         log_path.parent.mkdir(parents=True, exist_ok=True)
         self._append_log(log_path, f"\n=== CANCELLED ===\n{message}\n")
 
         for pid in pids:
             self._terminate_pid(pid)
+
+        if job["status"] == JobStatus.APPLYING.value:
+            change_set = self.get_job_change_set(job_id)
+            if change_set:
+                self._finalize_apply_change_set(job, change_set["id"])
 
         return self.update_job(
             job_id,
@@ -396,6 +399,7 @@ class JobService:
         )
 
     def update_job(self, job_id: str, **fields: Any) -> dict | None:
+        expected_status = fields.pop("_expected_status", None)
         if not fields:
             return self.get_job(job_id)
 
@@ -423,6 +427,8 @@ class JobService:
         current_job = self.get_job(job_id)
         if current_job is None:
             return None
+        if expected_status is not None and current_job["status"] != expected_status:
+            return current_job
 
         for key, value in fields.items():
             if key == "params":
@@ -458,11 +464,52 @@ class JobService:
 
         with connect_db(self.db_path) as connection:
             connection.execute(
-                f"UPDATE jobs SET {assignments} WHERE id = :id",
-                db_fields,
+                f"UPDATE jobs SET {assignments} WHERE id = :id"
+                + (" AND status = :expected_status" if expected_status is not None else ""),
+                {**db_fields, "expected_status": expected_status},
             )
             connection.commit()
         return self.get_job(job_id)
+
+    def _finish_job(self, job_id: str, **fields: Any) -> dict | None:
+        job = self.get_job(job_id)
+        if job is None or job["status"] == JobStatus.FAILED.value:
+            return job
+        return self.update_job(job_id, _expected_status=job["status"], **fields)
+
+    def _stop_if_cancelled(self, job_id: str, process) -> None:
+        job = self.get_job(job_id)
+        if job and job["status"] == JobStatus.FAILED.value:
+            try:
+                process.terminate()
+            except ProcessLookupError:
+                pass
+
+    def _claim_job(self, job_id: str, expected: JobStatus, target: JobStatus) -> None:
+        """Only one request may start a job, even across server workers."""
+        with connect_db(self.db_path) as connection:
+            claimed = connection.execute(
+                "UPDATE jobs SET status = ? WHERE id = ? AND status = ?",
+                (target.value, job_id, expected.value),
+            ).rowcount
+            if claimed != 1:
+                raise ValueError(f"Job {job_id} has already started or changed state")
+
+    @staticmethod
+    def _failure_detail(log_path: Path, returncode: int, stderr: str = "") -> str:
+        if stderr and stderr.strip():
+            return stderr.strip()[-4000:]
+        try:
+            with log_path.open("rb") as handle:
+                handle.seek(0, os.SEEK_END)
+                handle.seek(max(0, handle.tell() - 8192))
+                lines = handle.read().decode("utf-8", errors="replace").splitlines()
+            for line in reversed(lines):
+                if line.strip() and not line.startswith("==="):
+                    return f"{_process_failure_message(returncode)}: {line.strip()[:2000]}"
+        except OSError:
+            pass
+        return _process_failure_message(returncode)
 
     def run_job(self, job_id: str) -> dict | None:
         job = self.get_job(job_id)
@@ -478,10 +525,10 @@ class JobService:
         log_path = self._runtime_path(stored_log_path)
         self.logs_dir.mkdir(parents=True, exist_ok=True)
 
+        self._claim_job(job_id, JobStatus.QUEUED, JobStatus.RUNNING)
         started_at = self._utcnow()
         self.update_job(
             job_id,
-            status=JobStatus.RUNNING,
             started_at=started_at,
             log_path=str(stored_log_path),
         )
@@ -489,7 +536,7 @@ class JobService:
         if not script_path.exists():
             message = f"Script path does not exist: {script_path}"
             self._append_log(log_path, f"ERROR {message}\n")
-            return self.update_job(
+            return self._finish_job(
                 job_id,
                 status=JobStatus.FAILED,
                 finished_at=self._utcnow(),
@@ -511,11 +558,12 @@ class JobService:
                 bufsize=1,
                 env=env,
             )
+            self._stop_if_cancelled(job_id, process)
             stdout, stderr = self._communicate_and_stream_log(process, log_path)
-        except FileNotFoundError as exc:
+        except OSError as exc:
             message = f"Could not start process: {exc}"
             self._append_log(log_path, f"ERROR {message}\n")
-            return self.update_job(
+            return self._finish_job(
                 job_id,
                 status=JobStatus.FAILED,
                 finished_at=self._utcnow(),
@@ -535,13 +583,19 @@ class JobService:
                 job.get("artifact_dir"),
                 artifact_baseline,
             )
+            if not artifact_summary["canApply"]:
+                return self._finish_job(
+                    job_id, status=JobStatus.FAILED, finished_at=finished_at,
+                    exit_code=0, artifacts=artifact_summary,
+                    error_message="Harvest exited without the required review files. Check the job log for source or file errors.",
+                )
             results_summary = self._summarize_results(
                 job["job_type"],
                 job.get("artifact_dir"),
                 artifact_summary=artifact_summary,
             )
             success_status = JobStatus.NEEDS_REVIEW if artifact_summary["canApply"] else JobStatus.COMPLETED
-            return self.update_job(
+            return self._finish_job(
                 job_id,
                 status=success_status,
                 finished_at=finished_at,
@@ -555,8 +609,8 @@ class JobService:
         if cancelled_job and cancelled_job.get("error_message") == "Job was cancelled by user":
             return cancelled_job
 
-        error_message = stderr.strip() or _process_failure_message(process.returncode)
-        return self.update_job(
+        error_message = self._failure_detail(log_path, process.returncode, stderr)
+        return self._finish_job(
             job_id,
             status=JobStatus.FAILED,
             finished_at=finished_at,
@@ -576,16 +630,18 @@ class JobService:
             raise ValueError(f"Job {job_id} has no selected updates to apply")
         if job["job_type"] not in _APPLY_SUPPORTED_JOB_TYPES:
             raise ValueError(f"Job type '{job['job_type']}' does not support apply")
+        if self.get_job_change_set(job_id) is not None:
+            raise ValueError("This job already has apply evidence. Reconcile its results before another apply.")
 
         script_path = self.project_root / "src" / "apply_updates_to_pure.py"
         log_path = self._runtime_path(job["log_path"] or Path("logs") / "jobs" / f"{job_id}.log")
         self.logs_dir.mkdir(parents=True, exist_ok=True)
-        self.update_job(job_id, status=JobStatus.APPLYING)
+        self._claim_job(job_id, JobStatus.NEEDS_REVIEW, JobStatus.APPLYING)
 
         if not script_path.exists():
             message = f"Script path does not exist: {script_path}"
             self._append_log(log_path, f"\n=== APPLY START ===\nERROR {message}\n")
-            return self.update_job(
+            return self._finish_job(
                 job_id,
                 status=JobStatus.FAILED,
                 finished_at=self._utcnow(),
@@ -600,10 +656,19 @@ class JobService:
         env["BTP_TARGET_CSV_FILES"] = ",".join(artifact_summary["artifacts"]["csv"])
         env["BTP_TARGET_JSON_FILES"] = ",".join(artifact_summary["artifacts"]["json"])
         apply_manifest_path = self._artifact_directory(job.get("artifact_dir")) / "apply_manifest.jsonl"
-        if apply_manifest_path.exists():
-            apply_manifest_path.unlink()
         env["BTP_APPLY_MANIFEST_FILE"] = str(apply_manifest_path)
-        change_set_id = self._capture_apply_change_set(job)
+        try:
+            change_set_id = self._capture_apply_change_set(job)
+        except Exception as exc:
+            message = f"Could not prepare apply tracking; no apply process was started: {exc}"
+            self._append_log(log_path, f"ERROR {message}\n")
+            return self._finish_job(
+                job_id, status=JobStatus.FAILED, finished_at=self._utcnow(),
+                exit_code=1, error_message=message,
+            )
+        current_job = self.get_job(job_id)
+        if current_job and current_job["status"] != JobStatus.APPLYING.value:
+            return current_job
         self._append_log(log_path, f"\n=== APPLY START {self._utcnow()} ===\n")
 
         try:
@@ -611,18 +676,19 @@ class JobService:
                 [self.python_executable, "-u", str(script_path)],
                 cwd=self.project_root,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
                 env=env,
             )
-            stdout, stderr = process.communicate()
-        except FileNotFoundError as exc:
+            self._stop_if_cancelled(job_id, process)
+            stdout, stderr = self._communicate_and_stream_log(process, log_path)
+        except OSError as exc:
             message = f"Could not start process: {exc}"
             self._append_log(log_path, f"ERROR {message}\n")
             if change_set_id is not None:
                 self._mark_change_set_failed(change_set_id)
-            return self.update_job(
+            return self._finish_job(
                 job_id,
                 status=JobStatus.FAILED,
                 finished_at=self._utcnow(),
@@ -649,7 +715,7 @@ class JobService:
                     "written to Pure. See the job log for the per-item errors."
                 )
                 self._append_log(log_path, f"ERROR {message}\n")
-                return self.update_job(
+                return self._finish_job(
                     job_id,
                     status=JobStatus.FAILED,
                     finished_at=finished_at,
@@ -669,7 +735,7 @@ class JobService:
                 job.get("artifact_dir"),
                 artifact_summary=job["artifact_state"],
             )
-            return self.update_job(
+            return self._finish_job(
                 job_id,
                 status=JobStatus.COMPLETED,
                 finished_at=finished_at,
@@ -681,12 +747,23 @@ class JobService:
 
         cancelled_job = self.get_job(job_id)
         if cancelled_job and cancelled_job.get("error_message") == "Job was cancelled by user":
-            return cancelled_job
+            if change_set_id is not None:
+                self._finalize_apply_change_set(job, change_set_id)
+            return self.get_job(job_id)
 
-        error_message = stderr.strip() or _process_failure_message(process.returncode)
+        error_message = self._failure_detail(log_path, process.returncode, stderr)
         if change_set_id is not None:
-            self._mark_change_set_failed(change_set_id)
-        return self.update_job(
+            # A later record can crash after earlier writes succeeded. Preserve
+            # their evidence for dashboard totals and rollback even if the job failed.
+            applied_count, tracked_count = self._finalize_apply_change_set(job, change_set_id)
+            if applied_count:
+                self._append_log(
+                    log_path,
+                    f"WARNING Applied {applied_count} of {tracked_count} selected item(s) before failure.\n",
+                )
+            else:
+                self._mark_change_set_failed(change_set_id)
+        return self._finish_job(
             job_id,
             status=JobStatus.FAILED,
             finished_at=finished_at,
@@ -707,8 +784,8 @@ class JobService:
             JobType.FULL_TEXT.value,
         }:
             raise ValueError(f"Rollback is not supported for job type {job['job_type']}")
-        if job["status"] != JobStatus.COMPLETED.value:
-            raise ValueError(f"Job {job_id} must be completed before rollback can run")
+        if job["status"] not in {JobStatus.COMPLETED.value, JobStatus.FAILED.value}:
+            raise ValueError(f"Job {job_id} must be completed or failed before rollback can run")
         existing_rollback_job = None
         if job.get("rollback_job_id"):
             existing_rollback_job = self.get_job(job["rollback_job_id"])
@@ -1627,16 +1704,11 @@ class JobService:
                     source_person = json_by_uuid.get(entity_uuid, {})
                     current_person = current_person_cache.get(entity_uuid)
                     if current_person is None:
-                        try:
-                            response = requests.get(
-                                f"{_pure_base_url()}external-persons/{entity_uuid}",
-                                headers=_pure_headers(),
-                                timeout=30,
-                            )
-                            response.raise_for_status()
-                            current_person = response.json()
-                        except requests.RequestException:
-                            current_person = {}
+                        response = request_read(
+                            requests.get, f"{_pure_base_url()}external-persons/{entity_uuid}",
+                            headers=_pure_headers(), timeout=30,
+                        )
+                        current_person = json_object(response)
                         current_person_cache[entity_uuid] = current_person
 
                     for column_name, identifier_uri in (("ORCID", ORCID_ID_URI), ("Alex_ID", OPENALEXEX_ID_URI)):
@@ -1864,9 +1936,12 @@ class JobService:
         else:
             applied_records = {}
 
+        journal = self._load_apply_journal(job)
+        created_kinds = {JobType.RESEARCH_OUTPUTS.value, JobType.DATASETS.value, JobType.FULL_TEXT.value}
+
         with connect_db(self.db_path) as connection:
             item_rows = connection.execute(
-                "SELECT id, item_key, entity_uuid FROM job_change_set_items WHERE change_set_id = ?",
+                "SELECT id, item_key, entity_uuid, new_value_json FROM job_change_set_items WHERE change_set_id = ?",
                 (change_set_id,),
             ).fetchall()
             applied_count = 0
@@ -1881,17 +1956,37 @@ class JobService:
                 else:
                     status = "applied" if row["item_key"] in applied_keys else "not_applied"
                     new_value_json = None
+                # The fsynced journal precedes CSV/manifest checkpoints. A crash
+                # between them must not lose confirmed writes or claim unknown writes failed.
+                event = journal.get(row["entity_uuid"] if job["job_type"] not in created_kinds else row["item_key"])
+                reason = None
+                if event:
+                    event_status = event.get("status")
+                    if event_status == "success" and event.get("record_uuid"):
+                        status = "applied"
+                        if job["job_type"] in created_kinds:
+                            new_value_json = json.dumps({**event, "doi": row["item_key"]}, sort_keys=True)
+                    elif status != "applied" and event_status in {"started", "unknown"}:
+                        status = "unknown"
+                        reason = "Write outcome unknown; reconcile in Pure before retrying. " + str(event.get("error") or "")
+                    elif status != "applied":
+                        reason = str(event.get("error") or "Record was not applied.")
+                    if event.get("created_external_persons") and status != "applied":
+                        payload = json.loads(row["new_value_json"])
+                        payload["created_external_persons"] = event["created_external_persons"]
+                        new_value_json = json.dumps(payload, sort_keys=True)
+                        reason = (reason or "") + " Child external persons were created; review recorded UUIDs before retrying."
                 if status == "applied":
                     applied_count += 1
                 if new_value_json is not None:
                     connection.execute(
-                        "UPDATE job_change_set_items SET apply_status = ?, new_value_json = ?, conflict_reason = NULL WHERE id = ?",
-                        (status, new_value_json, row["id"]),
+                        "UPDATE job_change_set_items SET apply_status = ?, new_value_json = ?, conflict_reason = ? WHERE id = ?",
+                        (status, new_value_json, reason, row["id"]),
                     )
                 else:
                     connection.execute(
-                        "UPDATE job_change_set_items SET apply_status = ?, conflict_reason = NULL WHERE id = ?",
-                        (status, row["id"]),
+                        "UPDATE job_change_set_items SET apply_status = ?, conflict_reason = ? WHERE id = ?",
+                        (status, reason, row["id"]),
                     )
             connection.execute(
                 """
@@ -1904,6 +1999,34 @@ class JobService:
             connection.commit()
 
         return applied_count, len(item_rows)
+
+    def _load_apply_journal(self, job: dict) -> dict[str, dict[str, Any]]:
+        path = self._artifact_directory(job.get("artifact_dir")) / "apply_journal.jsonl"
+        events: dict[str, dict[str, Any]] = {}
+        if not path.exists():
+            return events
+        with path.open(encoding="utf-8") as handle:
+            for line in handle:
+                try:
+                    event = json.loads(line)
+                except json.JSONDecodeError:
+                    # A killed writer can leave a trailing partial event. Earlier
+                    # started events still classify its outcome as unknown.
+                    continue
+                if not isinstance(event, dict) or event.get("job_type") != job["job_type"]:
+                    continue
+                key = str(event.get("item_key") or "")
+                if not key:
+                    continue
+                previous = events.setdefault(key, {})
+                children = previous.get("created_external_persons", [])
+                if event.get("status") == "child_created":
+                    previous["created_external_persons"] = children + event.get("created_external_persons", [])
+                else:
+                    events[key] = {**previous, **event}
+                    if children and not event.get("created_external_persons"):
+                        events[key]["created_external_persons"] = children
+        return events
 
     def _mark_change_set_failed(self, change_set_id: str) -> None:
         with connect_db(self.db_path) as connection:
@@ -1984,6 +2107,8 @@ class JobService:
                 try:
                     entry = json.loads(line)
                 except json.JSONDecodeError:
+                    continue
+                if not isinstance(entry, dict) or not entry.get("record_uuid"):
                     continue
                 item_key = self._normalize_doi(str(entry.get("item_key") or entry.get("doi") or ""))
                 if not item_key:

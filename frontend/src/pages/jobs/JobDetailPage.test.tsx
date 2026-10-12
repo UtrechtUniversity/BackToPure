@@ -498,12 +498,12 @@ describe("JobDetailPage", () => {
     await waitFor(() => expect(mockedApi.cancelJob).toHaveBeenCalledWith("job-001"));
   });
 
-  it("shows rollback details and starts rollback for a completed internal persons job", async () => {
+  it.each(["completed", "failed"] as const)("shows rollback details and starts rollback for a %s internal persons job", async (status) => {
     const user = userEvent.setup();
     mockedApi.getJob
       .mockResolvedValueOnce(
         makeJob({
-          status: "completed",
+          status,
           canOpen: true,
           canApply: false,
           log_path: "logs/jobs/job-001.log",
@@ -511,7 +511,7 @@ describe("JobDetailPage", () => {
       )
       .mockResolvedValueOnce(
         makeJob({
-          status: "completed",
+          status,
           canOpen: true,
           canApply: false,
           log_path: "logs/jobs/job-001.log",

@@ -5,6 +5,7 @@ import logging
 from urllib.parse import quote
 
 import requests
+from workflow_http import FatalWorkflowError, request_read, json_object, records
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -80,7 +81,7 @@ def _save_json(path, data):
 def _make_session(retries=3, backoff=0.5):
     session = requests.Session()
     retry = Retry(
-        total=retries,
+        total=0,
         backoff_factor=backoff,
         status_forcelist=[429, 500, 502, 503, 504],
         allowed_methods=["GET"],
@@ -140,15 +141,8 @@ def fetch_openalex_works_cached(dois, batch_size=10, request_delay=1.5, force_re
         results = []
         try:
             params = {"filter": f"doi:{'|'.join(batch)}", "per-page": 50}
-            response = session.get("https://api.openalex.org/works", headers=_openalex_headers(), params=params, timeout=(5, 20))
-            if response.status_code == 429:
-                retry_after = response.headers.get("Retry-After")
-                wait_seconds = int(retry_after) if retry_after and str(retry_after).isdigit() else 15
-                logger.warning(f"OpenAlex rate limit on works batch {idx}; sleeping {wait_seconds}s")
-                time.sleep(wait_seconds)
-                response = session.get("https://api.openalex.org/works", headers=_openalex_headers(), params=params, timeout=(5, 20))
-            response.raise_for_status()
-            results = response.json().get("results", [])
+            response = request_read(session.get, "https://api.openalex.org/works", headers=_openalex_headers(), params=params, timeout=(5, 20))
+            results = records(json_object(response), "results")
         except requests.RequestException as exc:
             hard_failures += 1
             logger.error(f"OpenAlex works batch failed ({batch_seed}): {exc}")
@@ -164,9 +158,9 @@ def fetch_openalex_works_cached(dois, batch_size=10, request_delay=1.5, force_re
             for doi in missing_after_batch:
                 doi_url = f"https://api.openalex.org/works/https://doi.org/{quote(doi, safe='')}"
                 try:
-                    fallback_resp = session.get(doi_url, headers=_openalex_headers(), timeout=(5, 20))
+                    fallback_resp = request_read(session.get, doi_url, allowed_status=(404,), headers=_openalex_headers(), timeout=(5, 20))
                     if fallback_resp.status_code == 200:
-                        work = fallback_resp.json()
+                        work = json_object(fallback_resp)
                         work_doi = _normalize_doi(work.get("doi"))
                         if work_doi and work_doi not in by_doi:
                             by_doi[work_doi] = work
@@ -251,15 +245,8 @@ def fetch_openalex_institutions_cached(rors, chunk_size=20, request_delay=1.0, f
         logger.info(f"OpenAlex institutions batch {idx}/{len(batches)} (seed ROR: {batch_seed})")
         try:
             params = {"filter": f"ror:{'|'.join(batch)}"}
-            response = session.get("https://api.openalex.org/institutions", headers=_openalex_headers(), params=params, timeout=(5, 20))
-            if response.status_code == 429:
-                retry_after = response.headers.get("Retry-After")
-                wait_seconds = int(retry_after) if retry_after and str(retry_after).isdigit() else 15
-                logger.warning(f"OpenAlex rate limit on institutions batch {idx}; sleeping {wait_seconds}s")
-                time.sleep(wait_seconds)
-                response = session.get("https://api.openalex.org/institutions", headers=_openalex_headers(), params=params, timeout=(5, 20))
-            response.raise_for_status()
-            results = response.json().get("results", [])
+            response = request_read(session.get, "https://api.openalex.org/institutions", headers=_openalex_headers(), params=params, timeout=(5, 20))
+            results = records(json_object(response), "results")
         except requests.RequestException as exc:
             hard_failures += 1
             logger.error(f"OpenAlex institutions batch failed ({batch_seed}): {exc}")

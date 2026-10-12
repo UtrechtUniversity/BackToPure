@@ -32,6 +32,7 @@ import logging
 import argparse
 import openalex_utils
 import requests
+from workflow_http import FatalWorkflowError, request_read, json_object, records
 import os
 import pure_researchoutputs as pure
 from logging_config import setup_logging
@@ -62,7 +63,7 @@ datetimetoday = datetime.now().strftime('%Y%m%d')
 logger = setup_logging('btp', level=logging.INFO)
 session = requests.Session()
 retry_strategy = Retry(
-    total=5,
+    total=0,
     status_forcelist=[429, 500, 502, 503, 504],
     allowed_methods=["GET", "POST"],
     backoff_factor=1,
@@ -80,9 +81,9 @@ def fetch_personroots(faculty_key):
     try:
         params = {'key': faculty_key, 'max_nr_items': '0'}
         url = RIC_BASE_URL + 'get_all_personroot_nodes'
-        response = session.get(url, params=params, timeout=30)
-        response.raise_for_status()
-        return response.json().get("results", [])
+        response = request_read(session.get, url, params=params, timeout=30)
+
+        return records(json_object(response), "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching person-roots for faculty {faculty_key}: {e}")
         return []
@@ -94,12 +95,12 @@ def select_faculties(faculty_choice):
         'value': FACULTY_PREFIX,
     }
     url = RIC_BASE_URL + 'organization/search'
-    response = session.get(url, params=params, timeout=30)
-    data = response.json()
+    response = request_read(session.get, url, params=params, timeout=30)
+    data = json_object(response)
 
     return resolve_faculty_selection(
         faculty_choice,
-        [item.get('_key') for item in data.get("results", [])],
+        [item.get('_key') for item in records(data, "results")],
     )
 
 
@@ -122,10 +123,16 @@ def select_persons_researchoutput(selected_faculties):
             outputs = select_researchoutputs(personroot_key)
             for output in outputs:
 
+                if not isinstance(output.get("_key"), str) or not output["_key"]:
+
+                    logger.warning("Skipping invalid Ricgraph record without a key")
+
+                    continue
+
                 doi = output["_key"].split("|")[0]
                 all_data.append(doi)
 
-                sources = [s.lower() for s in output.get('_source', [])]
+                sources = [s.lower() for s in (output.get('_source') or []) if isinstance(s, str)]
                 if 'pure-uu' not in sources:
                     new_data.append(doi)
                 else:
@@ -142,9 +149,9 @@ def select_researchoutputs(persoonroot_key):
     try:
         params = {'key': persoonroot_key, 'category_want': 'journal article'}
         url = RIC_BASE_URL + 'get_all_neighbor_nodes'
-        response = session.get(url, params=params, timeout=30)
+        response = request_read(session.get, url, params=params, timeout=30)
 
-        return response.json().get("results", [])
+        return records(json_object(response), "results")
 
     except requests.RequestException as e:
         logger.error(f"Error fetching person IDs for person-root {persoonroot_key}: {e}")

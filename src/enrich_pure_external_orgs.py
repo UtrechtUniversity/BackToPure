@@ -39,6 +39,7 @@ import pandas as pd
 import logging
 from logging_config import setup_logging
 import requests
+from workflow_http import FatalWorkflowError, request_read, json_object, records
 import enrich_pure_external_persons as enrich
 import json
 import argparse
@@ -86,7 +87,7 @@ headers = {
 # Set up a single session for all requests
 session = requests.Session()
 retry_strategy = Retry(
-    total=5,
+    total=0,
     status_forcelist=[429, 500, 502, 503, 504],
     allowed_methods=["HEAD", "GET", "OPTIONS", "PUT", "POST"],
     backoff_factor=1
@@ -607,7 +608,7 @@ def update_externalorg_pure(orgs, test_choice, update, org_index=None):
             data = copy.deepcopy(cached)
         else:
             try:
-                response = session.get(url, headers=headers, verify=False, timeout=30)
+                response = request_read(session.get, url, headers=headers, verify=False, timeout=30)
             except requests.exceptions.RequestException as exc:
                 logger.error(f"Failed to fetch external organization {row['uuid']}: {exc}")
                 continue
@@ -616,7 +617,7 @@ def update_externalorg_pure(orgs, test_choice, update, org_index=None):
                 logger.error(f"Failed to fetch external organization {row['uuid']}: status {response.status_code}")
                 continue
             try:
-                data = response.json()  # Parse JSON response
+                data = json_object(response)  # Parse JSON response
             except ValueError:
                 logger.error(f"Invalid JSON response while fetching external organization {row['uuid']}")
                 continue
@@ -707,9 +708,9 @@ def update_externalorg_pure(orgs, test_choice, update, org_index=None):
     #     }
     #
     #     url = PURE_BASE_URL +  'external-organizations/' + row['uuid']
-    #     response = session.get(url, headers=headers, verify=False)
+    #     response = request_read(session.get, url, headers=headers, verify=False)
     #     logging.debug(f"get org data {row['uuid']}. responsecode = {response.status_code}")
-    #     data = response.json()  # Directly parse JSON response
+    #     data = json_object(response)  # Directly parse JSON response
     #     new_ror = None
     #     if row['ror']:
     #         new_ror = {
@@ -750,11 +751,11 @@ def select_faculties(faculty_choice, test_choice):
         'value': FACULTY_PREFIX,
     }
     url = RIC_BASE_URL + 'organization/search'
-    response = requests.get(url, params=params)
-    data = response.json()
+    response = request_read(requests.get, url, params=params)
+    data = json_object(response)
     return resolve_faculty_selection(
         faculty_choice,
-        [item.get('_key') for item in data.get("results", [])],
+        [item.get('_key') for item in records(data, "results")],
     )
 
 def fetch_personroots(faculty_key):
@@ -762,9 +763,9 @@ def fetch_personroots(faculty_key):
     try:
         params = {'key': faculty_key, 'max_nr_items': '0'}
         url = RIC_BASE_URL + 'get_all_personroot_nodes'
-        response = requests.get(url, params=params)
+        response = request_read(requests.get, url, params=params)
         # response.raise_for_status()
-        return response.json().get("results", [])
+        return records(json_object(response), "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching person-roots for faculty {faculty_key}: {e}")
         return []
@@ -773,9 +774,9 @@ def fetch_personroots(faculty_key):
 def fetch_ricgraph_organization_neighbors(personroot_key):
     try:
         params = {'key': personroot_key, 'category_want': 'organization', 'max_nr_items': '0'}
-        response = session.get(RIC_BASE_URL + 'get_all_neighbor_nodes', params=params, timeout=30)
-        response.raise_for_status()
-        return response.json().get("results", [])
+        response = request_read(session.get, RIC_BASE_URL + 'get_all_neighbor_nodes', params=params, timeout=30)
+
+        return records(json_object(response), "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching organization neighbors for person-root {personroot_key}: {e}")
         return []
@@ -786,11 +787,11 @@ def select_researchoutputs(persoonroot_key):
     try:
         params = {'key': persoonroot_key, 'category_want': 'journal article'}
         url = RIC_BASE_URL + 'get_all_neighbor_nodes'
-        response = requests.get(url, params=params)
+        response = request_read(requests.get, url, params=params)
 
         # response.raise_for_status()
 
-        return response.json().get("results", [])
+        return records(json_object(response), "results")
 
     except requests.RequestException as e:
         logger.error(f"Error fetching person IDs for person-root {persoonroot_key}: {e}")
@@ -805,10 +806,13 @@ def select_persons_researchoutput(selected_faculties):
         logger.info(f"Processing faculty: {faculty}")
         personroots = fetch_personroots(faculty)
         for personroot in personroots:
-            if not personroot['_key'] == None:
+            if isinstance(personroot.get('_key'), str) and personroot['_key']:
                 personroot_key = personroot['_key']
                 outputs = select_researchoutputs(personroot_key)
                 for output in outputs:
+                    if not isinstance(output.get("_key"), str) or not output["_key"]:
+                        logger.warning("Skipping invalid Ricgraph record without a key")
+                        continue
                     doi = output["_key"].split("|")[0]
 
                     new_data.append(doi)
@@ -938,20 +942,20 @@ def fetch_pure_extorgs(uuids):
         }
         try:
             # Make the API request using the pre-configured session
-            response = session.post(
+            response = request_read(session.post,
                 url,
                 headers=headers,
                 json=json_data,
                 timeout=100
             )
-            response.raise_for_status()  # Raises an HTTPError for bad responses
+
 
             # Parse the response JSON
-            data = response.json()
-            returned_items = data.get('count')
+            data = json_object(response)
+            returned_items = len(records(data, 'items'))
             logger.debug(f"Total items found for batch {batch_index + 1}: {data.get('count', 0)}")
             total_items += returned_items
-            orgs = data.get("items", [])  # Extract the list of items
+            orgs = records(data, "items")  # Extract the list of items
 
             # Add the retrieved works to the list
             all_orgs.extend(orgs)
@@ -974,7 +978,7 @@ def get_ext_orgdata_pure(external_organization_uuids, pure_org_data, pure_org_in
     # List to store the results
     def get_result_by_uuid(data, target_uuid):
         # Iterate through all results
-        for result in data.get('results', []):
+        for result in records(data, "results"):
             # Check if the uuid matches the target uuid
             if result.get('uuid') == target_uuid:
                 return result
@@ -982,7 +986,7 @@ def get_ext_orgdata_pure(external_organization_uuids, pure_org_data, pure_org_in
     organization_details = []
 
     if pure_org_index is None:
-        pure_org_index = {result.get('uuid'): result for result in pure_org_data.get('results', []) if result.get('uuid')}
+        pure_org_index = {result.get('uuid'): result for result in records(pure_org_data, "results") if result.get('uuid')}
 
     for uuid in external_organization_uuids:
         data = pure_org_index.get(uuid)

@@ -29,6 +29,7 @@
 
 
 import requests
+from workflow_http import FatalWorkflowError, request_read, json_object
 
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
@@ -42,7 +43,7 @@ logger = setup_logging('dataset', level=logging.INFO)
 
 session = requests.Session()
 retry_strategy = Retry(
-    total=5,
+    total=0,
     status_forcelist=[429, 500, 502, 503, 504],
     allowed_methods=["GET"],
     backoff_factor=1,
@@ -66,45 +67,24 @@ def get_first_affiliation_name(affiliations):
 def fetch_data_for_doi(doi):
     """Fetch and parse data for a single DOI."""
     global NOT_FOUND_DOI_COUNT, NOT_FOUND_DOI_SAMPLES
-    wait_seconds = 1.5
-    max_attempts = 5
-    for attempt in range(1, max_attempts + 1):
-        try:
-            response = session.get(f'https://api.datacite.org/dois/{doi}', timeout=30)
-        except requests.RequestException as e:
-            logger.info(f"Failed to fetch data for DOI: {doi} ({e})")
-            time.sleep(wait_seconds)
-            wait_seconds = min(wait_seconds * 2, 30)
-            continue
-
-        if response.status_code == 200:
-            try:
-                data = response.json()['data']['attributes']
-                return parse_datacite_response(data, doi)
-            except Exception as e:
-                logger.info(f"Failed to parse DataCite response for DOI: {doi} ({e})")
-                return None
-
-        if response.status_code == 429:
-            retry_after = response.headers.get("Retry-After")
-            if retry_after and str(retry_after).isdigit():
-                wait_seconds = max(wait_seconds, int(retry_after))
-            logger.info(f"DataCite rate limit for DOI {doi} (attempt {attempt}/{max_attempts}), waiting {wait_seconds:.1f}s")
-            time.sleep(wait_seconds)
-            wait_seconds = min(wait_seconds * 2, 30)
-            continue
-
-        if response.status_code == 404:
-            NOT_FOUND_DOI_COUNT += 1
-            if len(NOT_FOUND_DOI_SAMPLES) < 10:
-                NOT_FOUND_DOI_SAMPLES.append(doi)
-            return None
-
-        logger.info(f"Failed to fetch data for DOI: {doi} (status {response.status_code})")
+    response = request_read(session.get, f'https://api.datacite.org/dois/{doi}', timeout=30, allowed_status=(404,))
+    if response.status_code == 404:
+        NOT_FOUND_DOI_COUNT += 1
+        if len(NOT_FOUND_DOI_SAMPLES) < 10:
+            NOT_FOUND_DOI_SAMPLES.append(doi)
         return None
-
-    logger.info(f"Failed to fetch data for DOI: {doi} after {max_attempts} attempts")
-    return None
+    payload = json_object(response)
+    try:
+        data = payload['data']['attributes']
+        if not isinstance(data, dict):
+            raise TypeError('attributes must be an object')
+    except (KeyError, TypeError) as exc:
+        raise FatalWorkflowError('DataCite returned an invalid metadata envelope') from exc
+    try:
+        return parse_datacite_response(data, doi)
+    except (KeyError, TypeError, ValueError, AttributeError) as exc:
+        logger.warning('Skipping malformed DataCite record for DOI %s (%s)', doi, type(exc).__name__)
+        return None
 
 def parse_datacite_response(data, doi):
     """Parse the response from DataCite API and return structured data."""

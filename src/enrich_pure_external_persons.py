@@ -37,6 +37,7 @@ import pandas as pd
 import logging
 from logging_config import setup_logging
 import requests
+from workflow_http import FatalWorkflowError, request_read, json_object, records, check_page_progress
 import json
 import argparse
 import threading
@@ -71,7 +72,7 @@ headers = {
 # Set up a single session for all requests
 session = requests.Session()
 retry_strategy = Retry(
-    total=5,
+    total=0,
     status_forcelist=[429, 500, 502, 503, 504],
     allowed_methods=["HEAD", "GET", "OPTIONS", "PUT", "POST"],
     backoff_factor=1
@@ -441,8 +442,11 @@ def update_externalpersons_pure(persons, matched_personsjson, test_choice):
         with open(output_file, 'w') as file:
             json.dump(data_to_save, file, indent=4)
         logger.info(f"Saved {len(data_to_save)} persons to {output_file}")
+    except FatalWorkflowError:
+        raise
     except Exception as e:
         logger.error(f"Error saving JSON data to file: {e}")
+        raise
 
     try:
         desired_order = ['to_be_updated', 'updated', 'Name', 'Alex_ID', 'Pure_UUID', 'ORCID', 'Source']
@@ -452,8 +456,11 @@ def update_externalpersons_pure(persons, matched_personsjson, test_choice):
             logger.info(f"Saved {len(rows_to_update)} rows to {csv_output_file}")
         else:
             logger.info(f"No rows to update. Created empty CSV with headers at {csv_output_file}.")
+    except FatalWorkflowError:
+        raise
     except Exception as e:
         logger.error(f"Error saving DataFrame to CSV: {e}")
+        raise
 
 
     logger.info(f"total external persons that can be updated: {updated_persons}")
@@ -486,6 +493,7 @@ def get_external_persons_data(persons):
         logger.debug(f"Fetching external persons for batch {batch_idx}/{len(batches)}")
 
         offset = 0
+        seen_pages = set()
         while True:
             json_body = {
                 "uuids": batch,
@@ -494,7 +502,7 @@ def get_external_persons_data(persons):
             }
 
             try:
-                resp = session.post(
+                resp = request_read(session.post,
                     PURE_BASE_URL + 'external-persons/search',
                     json=json_body,
                     headers=headers,
@@ -502,14 +510,15 @@ def get_external_persons_data(persons):
                     verify=False
                 )
                 time.sleep(0.5)
-                resp.raise_for_status()
+
             except requests.exceptions.RequestException as e:
                 logger.error(f"Error fetching batch {batch_idx} (offset {offset}): {e}")
                 break
 
-            data = resp.json()
-            items = data.get("items", [])
-            if not items:
+            data = json_object(resp)
+            items = records(data, "items")
+            check_page_progress(data["items"], seen_pages)
+            if not data["items"]:
                 # no more pages
                 break
 
@@ -517,7 +526,7 @@ def get_external_persons_data(persons):
             logger.debug(f"  Retrieved {len(items)} items (offset {offset})")
 
             # if we got fewer than page_size, that was the last page
-            if len(items) < page_size:
+            if len(data["items"]) < page_size:
                 break
 
             offset += page_size
@@ -547,15 +556,15 @@ def select_faculties(faculty_choice):
     }
     url = RIC_BASE_URL + 'organization/search'
     try:
-        response = session.get(url, params=params, timeout=REQUEST_TIMEOUT)
-        response.raise_for_status()
-        data = response.json()
+        response = request_read(session.get, url, params=params, timeout=REQUEST_TIMEOUT)
+
+        data = json_object(response)
     except requests.RequestException as e:
         logger.error(f"Error fetching faculties from Ricgraph: {e}")
         return []
     return resolve_faculty_selection(
         faculty_choice,
-        [item.get('_key') for item in data.get("results", [])],
+        [item.get('_key') for item in records(data, "results")],
     )
 
 def fetch_personroots(faculty_key):
@@ -564,10 +573,9 @@ def fetch_personroots(faculty_key):
     try:
         params = {'key': faculty_key, 'max_nr_items': '0'}
         url = RIC_BASE_URL + 'get_all_personroot_nodes'
-        response = session.get(url, params=params, timeout=REQUEST_TIMEOUT)
+        response = request_read(session.get, url, params=params, timeout=REQUEST_TIMEOUT)
 
-        response.raise_for_status()
-        return response.json().get("results", [])
+        return records(json_object(response), "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching person-roots for faculty {faculty_key}: {e}")
         return []
@@ -582,9 +590,9 @@ def select_researchoutputs(persoonroot_key):
         try:
             params = {'key': persoonroot_key, 'category_want': categorie}
             url = RIC_BASE_URL + 'get_all_neighbor_nodes'
-            response = session.get(url, params=params, timeout=REQUEST_TIMEOUT)
-            response.raise_for_status()
-            results = response.json().get("results", [])
+            response = request_read(session.get, url, params=params, timeout=REQUEST_TIMEOUT)
+
+            results = records(json_object(response), "results")
             all_results.extend(results)
         except requests.RequestException as e:
             logger.error(f"Error fetching person IDs for person-root {persoonroot_key}: {e}")
@@ -637,9 +645,15 @@ def select_persons_researchoutput(selected_faculties):
                     try:
                         outputs = future.result()
                         all_outputs.extend(outputs)
+                    except FatalWorkflowError:
+                        for pending in futures:
+                            pending.cancel()
+                        raise
                     except Exception as e:
                         logger.error(f"Error processing personroot: {e}")
 
+        except FatalWorkflowError:
+            raise
         except Exception as e:
             logger.error(f"Error fetching personroots for faculty {faculty}: {e}")
 
@@ -684,9 +698,9 @@ def fetch_ricgraph_persons_for_output(researchoutput_key):
             'category_want': 'person',
             'max_nr_items': '0',
         }
-        response = session.get(RIC_BASE_URL + 'get_all_neighbor_nodes', params=params, timeout=REQUEST_TIMEOUT)
-        response.raise_for_status()
-        return response.json().get("results", [])
+        response = request_read(session.get, RIC_BASE_URL + 'get_all_neighbor_nodes', params=params, timeout=REQUEST_TIMEOUT)
+
+        return records(json_object(response), "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching Ricgraph person neighbors for output {researchoutput_key}: {e}")
         return []
@@ -702,9 +716,9 @@ def fetch_ricgraph_person_details(person_key):
             'category_want': 'person',
             'max_nr_items': '0',
         }
-        response = session.get(RIC_BASE_URL + 'get_all_neighbor_nodes', params=params, timeout=REQUEST_TIMEOUT)
-        response.raise_for_status()
-        return response.json().get("results", [])
+        response = request_read(session.get, RIC_BASE_URL + 'get_all_neighbor_nodes', params=params, timeout=REQUEST_TIMEOUT)
+
+        return records(json_object(response), "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching Ricgraph person details for {person_key}: {e}")
         return []
@@ -803,7 +817,7 @@ def collect_ricgraph_person_matches(outputs, max_workers=10):
     def process_output(output):
         researchoutput_key = output.get("researchoutput_key")
         if not researchoutput_key:
-            return [], None, 0, 0
+            return [], None, 0, 0, None
 
         person_nodes = fetch_ricgraph_persons_for_output(researchoutput_key)
         output_matches = []
@@ -840,6 +854,10 @@ def collect_ricgraph_person_matches(outputs, max_workers=10):
                     output_missing_identifier_values,
                     output_key_with_complete_ids,
                 ) = future.result()
+            except FatalWorkflowError:
+                for pending in futures:
+                    pending.cancel()
+                raise
             except Exception as e:
                 logger.error(f"Error collecting Ricgraph person identifiers: {e}")
                 continue
@@ -934,7 +952,7 @@ from requests.adapters import HTTPAdapter
 def _make_session(retries: int = 3, backoff: float = 0.3) -> requests.Session:
     session = requests.Session()
     retry = Retry(
-        total=retries,
+        total=0,
         backoff_factor=backoff,
         status_forcelist=[429, 500, 502, 503, 504],
         allowed_methods=["GET", "POST"]
@@ -951,6 +969,7 @@ def fetch_batch(batch: List[str], url: str, headers: Dict[str, str], timeout: in
     size = 100
     offset = 0
     all_items = []
+    seen_pages = set()
 
     while True:
         json_data = {
@@ -962,17 +981,18 @@ def fetch_batch(batch: List[str], url: str, headers: Dict[str, str], timeout: in
         logger.info(f"Requesting Pure page offset {offset} for {len(batch)} DOI(s)")
 
         try:
-            response = session.post(url, headers=headers, json=json_data, timeout=timeout, verify=False)
-            response.raise_for_status()
+            response = request_read(session.post, url, headers=headers, json=json_data, timeout=timeout, verify=False)
 
-            data = response.json()
-            items = data.get("items", [])
+
+            data = json_object(response)
+            items = records(data, "items")
+            check_page_progress(data["items"], seen_pages)
             all_items.extend(items)
 
             total_results = data.get("totalElements", None)
             logger.debug(f"Fetched {len(items)} items; total results: {total_results}")
 
-            if len(items) < size:
+            if len(data["items"]) < size:
                 break  # Last page
             offset += size
 
@@ -994,13 +1014,13 @@ def fetch_pure_researchoutput_by_doi(doi: str) -> List[Dict]:
     data = {"searchString": normalized_doi}
 
     try:
-        response = session.post(api_url, headers=headers, json=data, timeout=60, verify=False)
-        response.raise_for_status()
+        response = request_read(session.post, api_url, headers=headers, json=data, timeout=60, verify=False)
+
     except requests.RequestException as e:
         logger.error(f"Failed to fetch Pure research output for DOI {normalized_doi}: {e}")
         return []
 
-    items = response.json().get("items", [])
+    items = records(json_object(response), "items")
     matches = []
     for item in items:
         for version in item.get("electronicVersions", []):
@@ -1070,12 +1090,14 @@ def fetch_pure_researchoutputs(outputs: List[Dict], batch_size: int = 500, allow
         logger.info(f"Fetching Pure research outputs batch {idx}/{len(uuid_batches)} with {len(batch)} UUIDs")
         json_data = {"uuids": batch, "size": batch_size, "offset": 0}
         try:
-            resp = session.post(url, headers=headers, json=json_data, timeout=timeout, verify=False)
-            resp.raise_for_status()
-            data = resp.json()
-            items = data.get("items", [])
+            resp = request_read(session.post, url, headers=headers, json=json_data, timeout=timeout, verify=False)
+
+            data = json_object(resp)
+            items = records(data, "items")
             logger.info(f"UUID batch {idx} returned {len(items)} results")
             results.extend(items)
+        except FatalWorkflowError:
+            raise
         except Exception as e:
             failed_uuid_batches += 1
             logger.error(f"Failed to fetch UUID batch {idx}: {e}")

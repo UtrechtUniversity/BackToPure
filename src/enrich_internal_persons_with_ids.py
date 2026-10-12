@@ -33,6 +33,7 @@
 import argparse
 import logging
 import requests
+from workflow_http import FatalWorkflowError, request_read, json_object, records
 import pandas as pd
 import math
 import json
@@ -111,9 +112,9 @@ def fetch_personroots(faculty_key):
     try:
         params = {'key': faculty_key, 'max_nr_items': '0'}
         url = RIC_BASE_URL + 'get_all_personroot_nodes'
-        response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
-        response.raise_for_status()
-        return response.json().get("results", [])
+        response = request_read(requests.get, url, params=params, timeout=REQUEST_TIMEOUT)
+
+        return records(json_object(response), "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching person-roots for faculty {faculty_key}: {e}")
         return []
@@ -122,9 +123,9 @@ def fetch_person_ids(persoonroot_key):
     try:
         params = {'key': persoonroot_key, 'category_want': 'person'}
         url = RIC_BASE_URL + 'get_all_neighbor_nodes'
-        response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
-        response.raise_for_status()
-        return response.json().get("results", [])
+        response = request_read(requests.get, url, params=params, timeout=REQUEST_TIMEOUT)
+
+        return records(json_object(response), "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching person IDs for person-root {persoonroot_key}: {e}")
         return []
@@ -133,9 +134,9 @@ def checkenrichement(persoonroot_key):
     try:
         params = {'key': persoonroot_key, 'source_system': 'pure uu', 'max_nr_items': 0}
         url = RIC_BASE_URL + 'person/enrich'
-        response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
-        response.raise_for_status()
-        return response.json().get("results", [])
+        response = request_read(requests.get, url, params=params, timeout=REQUEST_TIMEOUT)
+
+        return records(json_object(response), "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching person IDs for person-root {persoonroot_key}: {e}")
         return []
@@ -156,11 +157,15 @@ def select_persons(faculties, faculty_choice):
             count += 1
             if count % 250 == 0:
                 logger.debug(f"Processed {str(count)} persons in ricgraph")
+            if not isinstance(personroot.get('_key'), str) or not personroot['_key']:
+                logger.warning('Skipping invalid person root without a key')
+                continue
             personids = fetch_person_ids(personroot['_key'])
-            persons.extend([
-                [personroot['_key'], personid['name'], personid['value']]
-                for personid in personids
-            ])
+            for personid in personids:
+                if not isinstance(personid.get('name'), str) or not isinstance(personid.get('value'), str):
+                    logger.warning('Skipping invalid identifier for person root %s', personroot['_key'])
+                    continue
+                persons.append([personroot['_key'], personid['name'], personid['value']])
 
 
     df = pd.DataFrame(persons, columns=['person_id', 'id_name', 'id_value'])
@@ -259,10 +264,23 @@ def fetch_person_data(person_df, batch_size):
         url = PURE_BASE_URL + 'persons/search/'
 
         try:
-            response = requests.post(url, headers=PURE_HEADERS, json=json_data, timeout=REQUEST_TIMEOUT)
-            response.raise_for_status()
-            response_data = response.json()
-            batch_data = response_data.get('items', [])
+            response = request_read(requests.post, url, headers=PURE_HEADERS, json=json_data, timeout=REQUEST_TIMEOUT)
+
+            response_data = json_object(response)
+            batch_data = response_data.get("items")
+            if not isinstance(batch_data, list):
+                raise FatalWorkflowError("Source response field items must be a list")
+            valid_records = [
+                item for item in batch_data
+                if isinstance(item, dict) and item.get('uuid')
+            ]
+            invalid_count = len(batch_data) - len(valid_records)
+            if invalid_count:
+                logger.warning(
+                    "Pure returned %s invalid person records at offset %s; skipping them",
+                    invalid_count, offset,
+                )
+            batch_data = valid_records
             datatotal.extend(batch_data)  # Append batch response to datatotal
             total_found += len(batch_data)
             logger.debug(f"processing personnodes {len(batch_data)}, for {len(batch)} uuids")
@@ -284,7 +302,10 @@ def update_persons(person_df, datatotal):
     result_list = []
     # Create DataFrames to store rows for new IDs and no new IDs
     no_new_ids_df = pd.DataFrame()
-    datatotal_by_uuid = {item.get('uuid'): item for item in datatotal if item.get('uuid') is not None}
+    datatotal_by_uuid = {
+        item['uuid']: item for item in datatotal
+        if isinstance(item, dict) and item.get('uuid')
+    }
 
     for index, row in person_df.iterrows():
         count += 1

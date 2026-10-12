@@ -33,6 +33,8 @@
 import pandas as pd
 import json
 import requests
+from apply_state import request_write, created_uuid, record_child
+from workflow_http import request_read, json_object, records, FatalWorkflowError
 from datetime import datetime
 import configparser
 import os
@@ -51,9 +53,9 @@ logger = setup_logging('btp', level=logging.INFO)
 
 session = requests.Session()
 retry_strategy = Retry(
-    total=5,
+    total=0,
     status_forcelist=[429, 500, 502, 503, 504],
-    allowed_methods=["GET", "POST", "PUT"],
+    allowed_methods=["GET", "HEAD", "OPTIONS"],
     backoff_factor=1,
 )
 session.mount("https://", HTTPAdapter(max_retries=retry_strategy))
@@ -66,9 +68,9 @@ def _normalize_doi(doi_value):
 def get_researchoutput(uuid):
     headers = PURE_HEADERS
     api_url = PURE_BASE_URL + 'research-outputs/' + uuid
-    response = session.get(api_url, headers=headers, timeout=30)
+    response = request_read(session.get, api_url, headers=headers, timeout=30)
     if response.status_code == 200:
-        data = response.json()
+        data = json_object(response)
         return data
     else:
         logger.error(f"Error searching for research output {uuid}: {response.status_code} - {response.text}")
@@ -117,11 +119,10 @@ def create_external_person(first_name, last_name, orcid, openalex):
     json_data = json.dumps(data)
 
     try:
-        response = session.put(api_url, headers=PURE_HEADERS, data=json_data, timeout=30)
+        response = request_write(session.put, api_url, headers=PURE_HEADERS, data=json_data, timeout=30)
 
         if response.status_code in [200, 201]:
-            external_person = response.json()
-            return external_person.get('uuid')
+            return created_uuid(response)
         else:
             logger.error(f"Error creating external person: {response.status_code} - {response.text}")
     except requests.RequestException as e:
@@ -164,12 +165,12 @@ def find_external_person(person_ids):
         logger.debug(f"Searching for {id_type}: {id_value} with payload: {data}")
 
         try:
-            response = session.post(api_url, headers=PURE_HEADERS, json=data, timeout=30)  # Using json=data
+            response = request_read(session.post, api_url, headers=PURE_HEADERS, json=data, timeout=30)  # Using json=data
             logger.debug(f"Response status code: {response.status_code}")
 
             if response.status_code == 200:
-                response_data = response.json()
-                items = response_data.get('items', [])
+                response_data = json_object(response)
+                items = records(response_data, 'items')
 
                 if items:
                     first_uuid = items[0].get('uuid')
@@ -200,10 +201,10 @@ def find_extenal_orgs(affiliations):
         json_data = json.dumps(data)
         api_url = PURE_BASE_URL + 'external-organizations/search/'
         try:
-            response = session.post(api_url, headers=PURE_HEADERS, data=json_data, timeout=30)
+            response = request_read(session.post, api_url, headers=PURE_HEADERS, data=json_data, timeout=30)
             if response.status_code == 200:
-                data = response.json()
-                items = data.get('items', [])
+                data = json_object(response)
+                items = records(data, 'items')
 
                 if items:
                     if len(items) == 1:
@@ -294,9 +295,9 @@ def get_journal_uuid(issn):
     data = {"searchString": issn}
     json_data = json.dumps(data)
     headers = PURE_HEADERS
-    response = requests.post(url, headers=headers, data=json_data)
-    data = response.json()
-    items = data.get('items', [])
+    response = request_read(requests.post, url, headers=headers, data=json_data)
+    data = json_object(response)
+    items = records(data, 'items')
 
     if items:
         for item in items:
@@ -631,8 +632,10 @@ def _ensure_research_output_external_people(research_output_json):
                     }
                 )
 
+                record_child(created_external_people[-1])
+
         if not external_person_uuid:
-            raise RuntimeError(
+            raise ValueError(
                 f"Could not resolve or create external person for "
                 f"{pending.get('first_name', '')} {pending.get('last_name', '')}".strip()
             )
@@ -646,32 +649,17 @@ def _ensure_research_output_external_people(research_output_json):
 
 
 def create_research_output(research_output_json):
-    url = PURE_BASE_URL + 'research-outputs'
     payload = json.loads(json.dumps(research_output_json))
-    created_external_people = _ensure_research_output_external_people(payload)
-    json_data = json.dumps(payload)
-    headers = PURE_HEADERS
-    response = session.put(url, headers=headers, data=json_data, timeout=30)
-    if response.status_code in [200, 201]:
-        response_data = response.json()
-        logger.debug(f"created researchoutput: {response.status_code} ")
-        return {
-            "success": True,
-            "uuid": response_data.get("uuid"),
-            "created_external_persons": created_external_people,
-        }
-    else:
-        output_file = "research_output.jsonerror"
-
-        # Write the dictionary to a JSON file
-        with open(output_file, 'w') as json_file:
-            json.dump(research_output_json, json_file, indent=4)
-        logger.error(f"Error creating research output: {response.status_code} - {response.text}")
-    return {
-        "success": False,
-        "uuid": None,
-        "created_external_persons": created_external_people,
-    }
+    if not isinstance(payload, dict):
+        raise ValueError('Record must be a JSON object')
+    people = _ensure_research_output_external_people(payload)
+    response = request_write(session.put, PURE_BASE_URL + 'research-outputs',
+                             headers=PURE_HEADERS, data=json.dumps(payload), timeout=30)
+    if response.status_code in (200, 201):
+        return {'success': True, 'uuid': created_uuid(response),
+                'created_external_persons': people}
+    return {'success': False, 'uuid': None, 'created_external_persons': people,
+            'error': f'HTTP {response.status_code}: {response.text[:300]}'}
 
 
 def get_supervisors(supervisors, ref_date):
@@ -816,12 +804,12 @@ def check_research_in_pure(doi):
     json_data = json.dumps(data)
     api_url = PURE_BASE_URL + 'research-outputs/search/'
 
-    response = session.post(api_url, headers=headers, data=json_data, timeout=30)
+    response = request_read(session.post, api_url, headers=headers, data=json_data, timeout=30)
 
     if response.status_code == 200:
-        data = response.json()
+        data = json_object(response)
 
-        items = data.get('items', [])
+        items = records(data, 'items')
 
         for item in items:
             electronic_versions = item.get('electronicVersions', [])

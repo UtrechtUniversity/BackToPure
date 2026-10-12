@@ -13,6 +13,7 @@ import os
 
 import pandas as pd
 import requests
+from workflow_http import FatalWorkflowError, request_read, json_object
 
 import enrich_pure_external_persons as enrich
 from config import OPENALEX_HEADERS
@@ -148,12 +149,16 @@ def fetch_openalex_work(doi, session=None):
     """
     getter = session.get if session is not None else requests.get
     try:
-        response = getter(
+        response = request_read(getter,
             f"https://api.openalex.org/works/doi:{doi}",
             headers=OPENALEX_HEADERS,
             timeout=60,
+            allowed_status=(404,),
         )
-    except requests.RequestException as exc:
+    except FatalWorkflowError as exc:
+        status = getattr(getattr(exc.__cause__, 'response', None), 'status_code', None)
+        if status in (401, 403):
+            raise
         logger.debug(f"OpenAlex lookup failed for {doi}: {exc}")
         raise OpenAlexLookupError(f"OpenAlex lookup failed: {exc}") from exc
     if response.status_code == 404:
@@ -161,8 +166,8 @@ def fetch_openalex_work(doi, session=None):
     if response.status_code != 200:
         raise OpenAlexLookupError(f"OpenAlex lookup failed: HTTP {response.status_code}")
     try:
-        return response.json()
-    except ValueError as exc:
+        return json_object(response)
+    except FatalWorkflowError as exc:
         raise OpenAlexLookupError("OpenAlex lookup failed: could not parse response") from exc
 
 
