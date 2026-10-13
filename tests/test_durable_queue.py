@@ -264,3 +264,160 @@ def test_recovery_restores_confirmed_apply_evidence_without_replaying(service):
         assert service.get_results_dashboard(days=30)['totals']['net_entities'] == 1
     finally:
         worker.close()
+
+def test_delete_and_enqueue_are_one_serialized_decision(service, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError
+    import threading
+    import app.task_queue as queue
+    job = service.create_job(job_id='delete_race', created_at=service._utcnow(), job_type='internal_persons')
+    checked = threading.Event()
+    resume = threading.Event()
+    original = queue.has_active_task
+
+    def pause_delete_check(*args):
+        result = original(*args)
+        if threading.current_thread().name.startswith('delete'):
+            checked.set()
+            assert resume.wait(5)
+        return result
+
+    monkeypatch.setattr(queue, 'has_active_task', pause_delete_check)
+    with ThreadPoolExecutor(max_workers=1, thread_name_prefix='delete') as deletes, ThreadPoolExecutor(max_workers=1) as accepts:
+        deletion = deletes.submit(service.delete_job, job['id'])
+        assert checked.wait(5)
+        acceptance = accepts.submit(service.enqueue_action, job['id'], 'run')
+        try:
+            accepted = acceptance.result(timeout=.2)
+        except TimeoutError:
+            accepted = None
+        finally:
+            resume.set()
+        assert deletion.result(timeout=5)
+        accepted = acceptance.result(timeout=5)
+    assert accepted is None or service.get_job(job['id']) is not None, 'Deletion removed an accepted durable task owner'
+
+
+def test_heartbeat_retries_transient_sqlite_busy_and_still_observes_cancel(service, monkeypatch):
+    import sqlite3
+    import threading
+    import time
+    import app.worker as worker_module
+    job = service.create_job(job_id='busy_monitor', created_at=service._utcnow(), job_type='internal_persons')
+    service.enqueue_action(job['id'], 'run')
+    worker = worker_module.Worker(service)
+    assert worker.acquire()
+    original = worker_module.connect_db
+    busy_raised = threading.Event()
+    observed = []
+    main_thread = threading.current_thread()
+
+    def sometimes_busy(path):
+        if threading.current_thread() is not main_thread and not busy_raised.is_set():
+            busy_raised.set()
+            raise sqlite3.OperationalError('database is locked')
+        return original(path)
+
+    def execution(_):
+        assert busy_raised.wait(2)
+        service.cancel_job(job['id'])
+        deadline = time.monotonic() + 2
+        while not service.cancellation_requested and time.monotonic() < deadline:
+            time.sleep(.02)
+        observed.append(service.cancellation_requested)
+
+    monkeypatch.setattr(worker_module, 'connect_db', sometimes_busy)
+    monkeypatch.setattr(service, 'run_job', execution)
+    try:
+        worker.run_once()
+        assert observed == [True], 'Transient SQLite busy permanently killed cancellation monitoring'
+    finally:
+        worker.close()
+
+def test_persistent_cancellation_read_failure_stops_execution_and_blocks_replay(service, monkeypatch):
+    import sqlite3
+    import threading
+    import time
+    import app.worker as worker_module
+    job = service.create_job(job_id='blind_monitor', created_at=service._utcnow(), job_type='internal_persons')
+    service.enqueue_action(job['id'], 'run')
+    worker = worker_module.Worker(service)
+    assert worker.acquire()
+    original = worker_module.connect_db
+    main_thread = threading.current_thread()
+    stopped = []
+
+    def unavailable_to_monitor(path):
+        if threading.current_thread() is not main_thread:
+            raise sqlite3.OperationalError('database is locked')
+        return original(path)
+
+    def execution(_):
+        deadline = time.monotonic() + 3
+        while not service.cancellation_requested and time.monotonic() < deadline:
+            time.sleep(.02)
+        stopped.append(service.cancellation_requested)
+
+    monkeypatch.setattr(worker_module, 'connect_db', unavailable_to_monitor)
+    monkeypatch.setattr(service, 'run_job', execution)
+    try:
+        worker.run_once()
+        assert stopped == [True], 'Worker kept executing with no functioning cancellation channel'
+        with connect_db(service.db_path) as db:
+            task = db.execute('SELECT * FROM execution_tasks').fetchone()
+        assert task['state'] == 'interrupted'
+        assert 'cancellation' in task['error_message']
+        assert worker.claim() is None
+    finally:
+        worker.close()
+
+def test_heartbeat_write_contention_does_not_disable_healthy_cancellation_reads(service, monkeypatch):
+    import sqlite3
+    import threading
+    import time
+    import app.worker as worker_module
+    job = service.create_job(job_id='heartbeat_busy', created_at=service._utcnow(), job_type='internal_persons')
+    service.enqueue_action(job['id'], 'run')
+    worker = worker_module.Worker(service)
+    assert worker.acquire()
+    original = worker_module.connect_db
+    main_thread = threading.current_thread()
+    writes = []
+    observed = []
+
+    class BusyHeartbeat:
+        def __init__(self, db):
+            self.db = db
+        def __enter__(self):
+            self.db.__enter__()
+            return self
+        def __exit__(self, *args):
+            return self.db.__exit__(*args)
+        def execute(self, sql, *args):
+            if sql.startswith('UPDATE execution_tasks SET heartbeat='):
+                writes.append(True)
+                raise sqlite3.OperationalError('database is locked')
+            return self.db.execute(sql, *args)
+
+    def heartbeat_busy(path):
+        db = original(path)
+        return db if threading.current_thread() is main_thread else BusyHeartbeat(db)
+
+    def execution(_):
+        deadline = time.monotonic() + 3
+        while len(writes) < 6 and time.monotonic() < deadline:
+            time.sleep(.02)
+        observed.append(len(writes) >= 6 and not service.cancellation_requested)
+        service.cancel_job(job['id'])
+        deadline = time.monotonic() + 2
+        while not service.cancellation_requested and time.monotonic() < deadline:
+            time.sleep(.02)
+        observed.append(service.cancellation_requested)
+
+    monkeypatch.setattr(worker_module, 'connect_db', heartbeat_busy)
+    monkeypatch.setattr(service, 'run_job', execution)
+    try:
+        worker.run_once()
+        assert observed == [True, True]
+        assert service.monitor_failure is None
+    finally:
+        worker.close()

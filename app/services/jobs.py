@@ -364,27 +364,25 @@ class JobService:
         }
 
     def delete_job(self, job_id: str) -> bool:
-        job = self.get_job(job_id)
-        if job is None:
-            return False
         from app.task_queue import has_active_task
-        if has_active_task(self.db_path, job_id):
-            raise ValueError(f"Job {job_id} has an unfinished execution task")
-        if job["status"] in {
-            JobStatus.RUNNING.value,
-            JobStatus.APPLYING.value,
-        }:
-            raise ValueError(f"Job {job_id} cannot be deleted while it is active")
-
-        log_path = self._runtime_path(job["log_path"]) if job.get("log_path") else None
+        # Acceptance and deletion must decide under the same SQLite write lock.
+        # Otherwise an accepted task can lose its job and tracking in this gap.
         with connect_db(self.db_path) as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            job = self.get_job(job_id)
+            if job is None:
+                return False
+            if has_active_task(self.db_path, job_id):
+                raise ValueError(f"Job {job_id} has an unfinished execution task")
+            if job["status"] in {JobStatus.RUNNING.value, JobStatus.APPLYING.value}:
+                raise ValueError(f"Job {job_id} cannot be deleted while it is active")
+            log_path = self._runtime_path(job["log_path"]) if job.get("log_path") else None
             connection.execute(
                 "DELETE FROM job_change_set_items WHERE change_set_id IN (SELECT id FROM job_change_sets WHERE job_id = ?)",
                 (job_id,),
             )
             connection.execute("DELETE FROM job_change_sets WHERE job_id = ?", (job_id,))
             connection.execute("DELETE FROM jobs WHERE id = ?", (job_id,))
-            connection.commit()
 
         if log_path and log_path.exists():
             log_path.unlink()

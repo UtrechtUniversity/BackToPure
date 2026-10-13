@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import sys
 import subprocess
+import sqlite3
 import threading
 import time
 import uuid
@@ -91,11 +92,33 @@ class Worker:
 
         def monitor():
             cancellation_started = None
+            cancelled = False
+            read_failures = 0
             while not stop.wait(.2):
-                with connect_db(service.db_path) as db:
-                    db.execute('UPDATE execution_tasks SET heartbeat=? WHERE id=? AND owner=?', (service._utcnow(), task['id'], self.owner))
-                    row = db.execute('SELECT cancel_requested FROM execution_tasks WHERE id=?', (task['id'],)).fetchone()
-                if row and row['cancel_requested']:
+                # Cancellation reads precede best-effort heartbeat writes. A
+                # writer holding SQLite cannot permanently kill this channel.
+                try:
+                    with connect_db(service.db_path) as db:
+                        db.execute('PRAGMA busy_timeout=200')
+                        row = db.execute('SELECT cancel_requested FROM execution_tasks WHERE id=?', (task['id'],)).fetchone()
+                        if row is None:
+                            raise sqlite3.OperationalError('Execution task disappeared')
+                        cancelled = cancelled or bool(row['cancel_requested'])
+                        read_failures = 0
+                except sqlite3.OperationalError as exc:
+                    read_failures += 1
+                    if read_failures >= 5:
+                        # Losing cancellation visibility must not permit blind
+                        # writes indefinitely. Stop and require reconciliation.
+                        service.monitor_failure = f'Worker cannot read cancellation state: {exc}'
+                        cancelled = True
+                try:
+                    with connect_db(service.db_path) as db:
+                        db.execute('PRAGMA busy_timeout=200')
+                        db.execute('UPDATE execution_tasks SET heartbeat=? WHERE id=? AND owner=?', (service._utcnow(), task['id'], self.owner))
+                except sqlite3.OperationalError:
+                    pass  # Heartbeats are diagnostics, never execution leases.
+                if cancelled:
                     process = service.active_process
                     if process is not None and process.poll() is None:
                         cancellation_started = cancellation_started or time.monotonic()
@@ -110,6 +133,7 @@ class Worker:
                     service.cancellation_requested = True
 
         service.cancellation_requested = False
+        service.monitor_failure = None
         thread = threading.Thread(target=monitor, daemon=True)
         thread.start()
         state = 'finished'
@@ -119,6 +143,8 @@ class Worker:
                 cancelled = db.execute('SELECT cancel_requested FROM execution_tasks WHERE id=?', (task['id'],)).fetchone()[0]
             if not cancelled:
                 getattr(service, task['action'] + '_job')(task['job_id'])
+            if service.monitor_failure:
+                raise RuntimeError(service.monitor_failure)
         except Exception as exc:
             state = 'interrupted'
             error = f'Execution interrupted: {exc}. Reconcile saved evidence before retrying.'
