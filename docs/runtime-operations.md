@@ -125,3 +125,61 @@ or interrupted remote request can have reached Pure; its outcome must be checked
 
 Rollback also executes in the separate worker; its per-item cancellation and
 reconciliation behavior is described in the rollback safety documentation.
+
+## DOI reservations and operator reconciliation
+
+Research output and dataset creation reserve each normalized DOI per Pure tenant
+in the shared `BTP_DATA_DIR/jobs.sqlite` database before lookup or contributor
+creation. Both record types are checked in current Pure. All web/worker instances
+must use the same database. When invoking the apply script directly, set
+`BTP_RUNTIME_DB` to that absolute database path; creation refuses to use an
+implicit database. Reservations do not coordinate unrelated Pure clients or
+installations using another database.
+
+To inspect reservations and interrupted actions without changing the database,
+replace the example path with the configured database. Opening with `mode=ro`
+also prevents accidentally creating a database at the wrong path:
+
+```sh
+python - /srv/backtopure/runtime/data/jobs.sqlite <<'PY'
+import sqlite3
+import sys
+from pathlib import Path
+
+uri = Path(sys.argv[1]).resolve().as_uri() + '?mode=ro'
+with sqlite3.connect(uri, uri=True) as db:
+    for row in db.execute('SELECT id, job_id, action, state, error_message '
+                          'FROM execution_tasks WHERE state = "interrupted"'):
+        print('Task:', row)
+    exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                        "AND name='doi_write_reservations'").fetchone()
+    if exists:
+        for row in db.execute('SELECT tenant, doi, job_id, kind, state, record_uuid, '
+                              'error, updated_at FROM doi_write_reservations '
+                              'ORDER BY updated_at DESC'):
+            print('Reservation:', row)
+PY
+```
+
+Before any operator repair, stop the relevant execution, verify no workflow
+process remains alive, and back up the database and corresponding job artifacts.
+Match the reservation's tenant and owner job to its log, change set,
+`apply_journal.jsonl`, `apply_manifest.jsonl`, and Pure audit history. Verify the
+exact DOI and any recorded parent/contributor UUIDs in the original target Pure.
+A `reserved` state can mean interruption during lookup; `writing` or `unknown`
+can mean Pure accepted a write without returning an acknowledgement. A `rejected`
+parent can still have created contributors. An empty search result is insufficient
+proof of noncreation because search indexing may lag.
+
+Never clear reservations or interrupted queue tasks based on elapsed time,
+heartbeat expiry, or a desire to retry. Determine and record every remote outcome
+and ownership before an administrator performs a controlled state repair. Unknown
+outcomes remain blocked; there is no automatic unlock endpoint or supported
+blanket reset command. Successful `created`/`existing` reservations need no reset:
+a subsequent job verifies the same UUID and DOI in current Pure and handles it as
+existing, with zero writes and no rollback ownership. Missing or mismatched
+records remain blocked for investigation.
+
+A successful creation records the server version when Pure returns one. Preserve
+that evidence and the recorded target tenant: an acknowledged UUID alone does
+not prove a record is still safe to delete after later edits.
