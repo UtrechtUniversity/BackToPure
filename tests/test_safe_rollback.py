@@ -352,3 +352,23 @@ def test_cancellation_of_last_inflight_write_keeps_success_count_in_result(servi
     assert states(service) == ['rolled_back']
     assert 'acknowledged 1 item(s)' in result['error_message']
     assert '0 cancelled item(s)' in result['error_message']
+
+
+@pytest.mark.parametrize('status', [202, 204, 206])
+def test_undocumented_success_response_is_unknown_without_dashboard_decrement(service, monkeypatch, status):
+    seed(service, 'internal_persons', [identifier()])
+    monkeypatch.setattr(requests, 'get', lambda *a, **k: response(get_person()))
+    writes = []
+    def put(*a, **k):
+        writes.append(k['json'])
+        return response(status=status)
+    monkeypatch.setattr(requests, 'put', put)
+    result = service.rollback_job('source')
+    assert result['status'] == 'failed'
+    assert states(service) == ['unknown']
+    totals = service.get_results_dashboard()['totals']
+    assert totals['rolled_back_items'] == 0
+    assert totals['net_items'] == 1
+    with pytest.raises(ValueError):
+        service.rollback_job('source')
+    assert len(writes) == 1

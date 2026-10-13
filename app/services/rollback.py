@@ -227,7 +227,10 @@ class RollbackExecutor:
             return
         # Persistence/logging failures are execution failures, never transport
         # uncertainty. Do not downgrade an acknowledgement already committed.
-        if 200 <= code < 300:
+        # The inspected Pure PUT contract documents completed success as 200.
+        # Accepted (202), undocumented no-content (204), or other unexpected
+        # responses cannot prove the mutation completed.
+        if code == 200:
             self.outcome(accepted, 'rolled_back', attempt=attempt)
         elif 400 <= code < 500 and code not in {408, 429}:
             self.outcome(accepted, 'rejected', f'Pure definitively rejected rollback: HTTP {code}', attempt)

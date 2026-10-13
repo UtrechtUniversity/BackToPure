@@ -230,7 +230,10 @@ with change sets and execution tasks. No SQLite transaction spans a Pure HTTP
 request. Success commits before the next group begins. Worker recovery changes
 unacknowledged `writing` items/attempts to `unknown`, preserving earlier successes,
 and never automatically replays them. Network errors, HTTP 5xx/408/429, and other
-uncertain write responses also become `unknown`. Only definitive ordinary HTTP
+uncertain write responses also become `unknown`. Only the documented PUT HTTP
+200 response acknowledges completed rollback; HTTP 202 Accepted and undocumented
+204/other success-class responses remain unknown and do not reduce dashboard
+net counts. Only definitive ordinary HTTP
 4xx rejection (`rejected`), failures before any write (`read_failed`), cancelled
 unsent items, and untouched pending items can be considered by a later rollback
 request. Historical generic `failed` writes are blocked because their delivery
