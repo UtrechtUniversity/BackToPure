@@ -46,6 +46,8 @@ Files: app/services/jobs.py and focused rollback helpers, apply snapshots, tests
 - [x] Verify all rollback types and historical evidence handling; run full backend/frontend suites and build; commit.
 
 ## Integration review
-- [ ] Independent code review of aggregate diff and reproduce any important findings.
-- [ ] Fix findings and rerun affected tests.
-- [ ] Report verified behavior and remaining deployment/reconciliation limitations accurately.
+- [x] Independent code review of aggregate diff and reproduce any important findings.
+- [x] Fix findings and rerun affected tests.
+- [x] Report verified behavior and remaining deployment/reconciliation limitations accurately.
+
+Final verification: 576 backend tests passed, five optional Ricgraph smoke tests skipped, 26 subtests passed; 73 frontend tests passed; production build and CI lint passed. Independent aggregate review and scoped follow-ups approved through `32226fa`, including six deferred-action navigation regressions. Tests made no live Pure writes.
