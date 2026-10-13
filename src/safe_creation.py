@@ -87,14 +87,26 @@ class Reservation:
 def find_exact_doi(session, base_url, headers, kind, doi):
     endpoint = {'research_outputs': 'research-outputs', 'datasets': 'data-sets'}[kind]
     offset, full_count, matches, seen = 0, None, [], set()
+    seen_uuids = set()
+    requested_size = 100
     doi = normalize_doi(doi)
     while True:
         response = request_read(session.post, f'{base_url.rstrip("/")}/{endpoint}/search', headers=headers,
-                                json={'searchString': doi, 'size': 100, 'offset': offset})
+                                json={'searchString': doi, 'size': requested_size, 'offset': offset})
         body = json_object(response)
         count, items = body.get('count'), body.get('items')
         if type(count) is not int or count < 0 or not isinstance(items, list):
             raise FatalWorkflowError('Malformed Pure DOI lookup count/items; creation stopped.')
+        if 'pageInformation' in body:
+            page = body['pageInformation']
+            if not isinstance(page, dict):
+                raise FatalWorkflowError('Malformed Pure DOI lookup pagination metadata; creation stopped.')
+            if 'offset' in page and (type(page['offset']) is not int or page['offset'] != offset):
+                raise FatalWorkflowError('Pure DOI lookup pagination offset does not match the requested page; creation stopped.')
+            if 'size' in page and (type(page['size']) is not int or not 0 < page['size'] <= requested_size or len(items) > page['size']):
+                raise FatalWorkflowError('Inconsistent Pure DOI lookup pagination size; creation stopped.')
+        if len(items) > requested_size:
+            raise FatalWorkflowError('Pure DOI lookup pagination exceeded the requested size; creation stopped.')
         if full_count is not None and count != full_count:
             raise FatalWorkflowError('Pure DOI lookup changed during pagination; creation stopped.')
         full_count = count
@@ -104,6 +116,10 @@ def find_exact_doi(session, base_url, headers, kind, doi):
         for item in items:
             if not isinstance(item, dict) or not isinstance(item.get('uuid'), str) or not item['uuid']:
                 raise FatalWorkflowError('Malformed Pure DOI lookup record; creation stopped.')
+            record_uuid = item['uuid'].strip().lower()
+            if not record_uuid or record_uuid in seen_uuids:
+                raise FatalWorkflowError('Pure DOI lookup repeated a record across pagination; creation stopped.')
+            seen_uuids.add(record_uuid)
             if kind == 'datasets':
                 field = item.get('doi')
                 if field is not None and not isinstance(field, dict):

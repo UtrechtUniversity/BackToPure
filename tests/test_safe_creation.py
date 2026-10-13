@@ -137,3 +137,41 @@ def test_missing_uuid_after_acknowledgement_stays_reserved():
     with pytest.raises(FatalWorkflowError, match='reserved'):
         create_once(session, 'https://pure/', {}, 'research_outputs', '10.1/a', create)
     assert create.call_count == 1
+
+
+@pytest.mark.parametrize('second_metadata', [{'offset': 1, 'size': 100}, {'offset': 2, 'size': 100}, None])
+def test_overlapping_search_pages_never_authorize_create(second_metadata):
+    from safe_creation import create_once
+    session, create = Mock(), Mock(return_value={'success': True, 'uuid': 'created'})
+    pages = [{'count': 4, 'items': [{'uuid': 'a'}, {'uuid': 'b'}], 'pageInformation': {'offset': 0, 'size': 100}},
+             {'count': 4, 'items': [{'uuid': 'b'}, {'uuid': 'c'}]}]
+    if second_metadata is not None:
+        pages[1]['pageInformation'] = second_metadata
+    session.post.side_effect = [Mock(status_code=200, json=lambda page=page: page) for page in pages] + [response([])]
+    with pytest.raises(FatalWorkflowError, match='pagination|repeated'):
+        create_once(session, 'https://pure/', {}, 'research_outputs', '10.1/a', create)
+    create.assert_not_called()
+
+
+@pytest.mark.parametrize('metadata', [{'offset': 1}, {'offset': '0'}, {'offset': False}, {'size': 0}, {'size': -1}, {'size': True}, {'size': 101}, {'size': 1}, [], None])
+def test_inconsistent_supplied_page_metadata_fails_closed(metadata):
+    session = Mock()
+    session.post.return_value = Mock(status_code=200, json=lambda: {
+        'count': 2, 'items': [{'uuid': 'a'}, {'uuid': 'b'}], 'pageInformation': metadata})
+    with pytest.raises(FatalWorkflowError, match='pagination'):
+        find_exact_doi(session, 'https://pure/', {}, 'research_outputs', '10.1/a')
+
+
+def test_duplicate_uuid_in_same_page_fails_closed():
+    session = Mock()
+    session.post.return_value = response([{'uuid': 'a'}, {'uuid': 'A'}])
+    with pytest.raises(FatalWorkflowError, match='repeated'):
+        find_exact_doi(session, 'https://pure/', {}, 'research_outputs', '10.1/a')
+
+
+def test_consistent_supplied_pagination_metadata_reaches_exact_match():
+    session = Mock()
+    pages = [{'count': 4, 'items': [{'uuid': 'a'}, {'uuid': 'b'}], 'pageInformation': {'offset': 0, 'size': 100}},
+             {'count': 4, 'items': [{'uuid': 'c'}, {'uuid': 'd', 'doi': {'doi': '10.1/a'}}], 'pageInformation': {'offset': 2, 'size': 100}}]
+    session.post.side_effect = [Mock(status_code=200, json=lambda page=page: page) for page in pages]
+    assert [item['uuid'] for item in find_exact_doi(session, 'https://pure/', {}, 'datasets', '10.1/a')] == ['d']
