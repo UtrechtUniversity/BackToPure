@@ -97,6 +97,7 @@ describe("JobDetailPage", () => {
         { _rowIndex: 1, to_be_updated: "", updated: "X", PURE_UUID_PERS: "uuid-2", FULL_NAME: "Beta" },
       ],
       rowCount: 2,
+      revision: "review-v1",
       selectionColumn: "to_be_updated",
       editableColumns: ["to_be_updated"],
     });
@@ -1122,6 +1123,7 @@ describe("JobDetailPage", () => {
         { _rowIndex: 1, to_be_updated: "", FULL_NAME: "Beta" },
       ],
       rowCount: 2,
+      revision: "review-v1",
       selectionColumn: "to_be_updated",
       editableColumns: ["to_be_updated"],
     });
@@ -1169,6 +1171,7 @@ describe("JobDetailPage", () => {
         },
       ],
       rowCount: 1,
+      revision: "review-v1",
       selectionColumn: null,
       editableColumns: [],
     });
@@ -1216,6 +1219,7 @@ describe("JobDetailPage", () => {
         },
       ],
       rowCount: 1,
+      revision: "review-v1",
       selectionColumn: null,
       editableColumns: [],
     });
@@ -1263,6 +1267,7 @@ describe("JobDetailPage", () => {
         { _rowIndex: 1, to_be_updated: "", FULL_NAME: "Beta" },
       ],
       rowCount: 2,
+      revision: "review-v1",
       selectionColumn: "to_be_updated",
       editableColumns: ["to_be_updated"],
     });
@@ -1329,6 +1334,7 @@ describe("JobDetailPage", () => {
       columns: ["to_be_updated", "updated", "doi", "title"],
       rows: [],
       rowCount: 0,
+      revision: "review-v1",
       selectionColumn: "to_be_updated",
       editableColumns: ["to_be_updated"],
     });
@@ -1375,6 +1381,7 @@ describe("JobDetailPage", () => {
         FULL_NAME: `Person ${index + 1}`,
       })),
       rowCount: 160,
+      revision: "review-v1",
       selectionColumn: "to_be_updated",
       editableColumns: ["to_be_updated"],
     });
@@ -1437,6 +1444,7 @@ describe("JobDetailPage", () => {
         },
       ],
       rowCount: 1,
+      revision: "review-v1",
       selectionColumn: "to_be_updated",
       editableColumns: ["to_be_updated"],
     });
@@ -1513,6 +1521,7 @@ describe("JobDetailPage", () => {
           { _rowIndex: 1, to_be_updated: "", FULL_NAME: "Beta" },
         ],
         rowCount: 2,
+        revision: "review-v1",
         selectionColumn: "to_be_updated",
         editableColumns: ["to_be_updated"],
       })
@@ -1525,6 +1534,7 @@ describe("JobDetailPage", () => {
           { _rowIndex: 1, to_be_updated: "X", FULL_NAME: "Beta" },
         ],
         rowCount: 2,
+        revision: "review-v1",
         selectionColumn: "to_be_updated",
         editableColumns: ["to_be_updated"],
       });
@@ -1537,6 +1547,7 @@ describe("JobDetailPage", () => {
         { _rowIndex: 1, to_be_updated: "X", FULL_NAME: "Beta" },
       ],
       rowCount: 2,
+      revision: "review-v1",
       selectionColumn: "to_be_updated",
       editableColumns: ["to_be_updated"],
     });
@@ -1556,16 +1567,55 @@ describe("JobDetailPage", () => {
     expect(screen.getByText("No unsaved review changes")).toBeInTheDocument();
     await user.click(betaCheckbox);
     expect(await screen.findByText("1 row changed")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply Updates" })).toBeDisabled();
     await user.click(screen.getByRole("button", { name: "Save Review" }));
 
     await waitFor(() =>
       expect(mockedApi.updateJobReviewTable).toHaveBeenCalledWith("job-001", {
         fileName: "personstobeupdated_20260420.csv",
         expectedRowCount: 2,
+        expectedRevision: "review-v1",
         updates: [{ rowIndex: 1, to_be_updated: "X" }],
       }),
     );
     await waitFor(() => expect(mockedApi.getJob).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(mockedApi.getJobReviewTable).toHaveBeenCalledTimes(2));
   });
+  it("locks Apply and row controls while saving, and locks accepted queued Apply immediately", async () => {
+    const user = userEvent.setup();
+    const job = makeJob({ status: "needs_review", canApply: true, canOpen: true });
+    const table = {
+      jobId: "job-001", fileName: "review.csv", revision: "v1",
+      columns: ["to_be_updated", "FULL_NAME"],
+      rows: [{ _rowIndex: 0, to_be_updated: "X", FULL_NAME: "Alpha" },
+             { _rowIndex: 1, to_be_updated: "", FULL_NAME: "Beta" }],
+      rowCount: 2, selectionColumn: "to_be_updated", editableColumns: ["to_be_updated"],
+    };
+    mockedApi.getJob.mockResolvedValue(job);
+    mockedApi.getJobReviewTable.mockResolvedValue(table);
+    mockedApi.getJobLogs.mockResolvedValue({ jobId: "job-001", logPath: null, content: "" });
+    mockedApi.getJobArtifacts.mockResolvedValue({ jobId: "job-001", directory: "", items: [] });
+    mockedApi.getJobChangeSet.mockResolvedValue(null);
+    let finishSave!: (value: typeof table) => void;
+    mockedApi.updateJobReviewTable.mockImplementation(() => new Promise(resolve => { finishSave = resolve; }));
+    renderWithRouter({ routes: [{ path: "/", element: <AppShell />, children: [{ path: "jobs/:jobId", element: <JobDetailPage /> }] }], initialEntries: ["/jobs/job-001"] });
+    await user.click(await screen.findByRole("checkbox", { name: "Select row 2" }));
+    await user.click(screen.getByRole("button", { name: "Save Review" }));
+    expect(screen.getByRole("button", { name: "Apply Updates" })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "Select row 1" })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "Select row 2" })).toBeDisabled();
+    const saved = { ...table, revision: "v2", rows: table.rows.map(row => ({ ...row, to_be_updated: "X" })) };
+    mockedApi.getJobReviewTable.mockResolvedValue(saved);
+    finishSave(saved);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Apply Updates" })).toBeEnabled());
+    // Accepted response locks immediately, even while the follow-up GET waits.
+    mockedApi.applyJob.mockResolvedValue({ ...job, status: "applying" });
+    mockedApi.getJob.mockImplementation(() => new Promise(() => {}));
+    await user.click(screen.getByRole("button", { name: "Apply Updates" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Apply Updates" })).not.toBeInTheDocument());
+    expect(screen.getByRole("checkbox", { name: "Select row 1" })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "Select row 2" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save Review" })).toBeDisabled();
+  });
+
 });

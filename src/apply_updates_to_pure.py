@@ -1,5 +1,7 @@
 
 import logging
+import hashlib
+import io
 import time
 import sys
 import pure_researchoutputs
@@ -93,6 +95,16 @@ def _append_apply_manifest_entry(entry):
     append_jsonl(manifest_path, entry)
 
 
+def _read_apply_input(path):
+    content = Path(path).read_bytes()
+    hashes = json.loads(os.environ.get("BTP_INPUT_HASHES", "{}"))
+    if os.environ.get("BTP_INPUT_DIR"):
+        expected = hashes.get(Path(path).name)
+        if not expected or hashlib.sha256(content).hexdigest() != expected:
+            raise FatalWorkflowError(f"Frozen apply input hash mismatch: {Path(path).name}")
+    return content
+
+
 def get_csv_files(directory, allowed_filenames=None):
     """
     Reads all CSV files from the given directory that contain 'update' in the filename and returns a list of DataFrames.
@@ -116,7 +128,7 @@ def get_csv_files(directory, allowed_filenames=None):
         if filename.endswith(".csv") and 'update' in filename:
             file_path = os.path.join(directory, filename)
             try:
-                df = pd.read_csv(file_path)
+                df = pd.read_csv(io.BytesIO(_read_apply_input(file_path)))
                 if df.empty:
                     logger.warning(f"File {filename} is empty. Skipping...")
                     continue
@@ -159,9 +171,8 @@ def get_json_files(directory, allowed_filenames=None):
         if filename.endswith(".json"):
             file_path = os.path.join(directory, filename)
             try:
-                with open(file_path, "r") as json_file:
-                    json_data = json.load(json_file)
-                    json_files.append(json_data)
+                json_data = json.loads(_read_apply_input(file_path))
+                json_files.append(json_data)
             except (OSError, ValueError) as e:
                 raise FatalWorkflowError(f'Cannot read apply JSON file {filename}: {e}') from e
     if allowed_filenames:
@@ -490,7 +501,7 @@ def main():
     allowed_json_filenames = _parse_target_filenames(os.environ.get('BTP_TARGET_JSON_FILES'))
 
     csv_files, json_files = read_directory_files(
-        directory,
+        os.environ.get("BTP_INPUT_DIR") or directory,
         allowed_csv_filenames=allowed_csv_filenames,
         allowed_json_filenames=allowed_json_filenames,
     )

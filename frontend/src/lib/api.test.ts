@@ -168,6 +168,7 @@ describe("api client", () => {
     await api.updateJobReviewTable("job-001", {
       fileName: "review.csv",
       expectedRowCount: 2,
+      expectedRevision: "review-v1",
       updates: [{ rowIndex: 1, to_be_updated: "X" }],
     });
 

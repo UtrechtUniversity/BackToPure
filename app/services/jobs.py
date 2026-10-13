@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import csv
+import hashlib
+import io
+import tempfile
 import json
 import os
 import signal
@@ -646,25 +649,77 @@ class JobService:
             error_message=error_message,
         )
 
+    def _freeze_apply_inputs(self, job: dict) -> str:
+        """Called only under the acceptance/save SQLite write lock."""
+        source = self._artifact_directory(job.get("artifact_dir"))
+        names = (job["artifact_state"]["artifacts"]["csv"] +
+                 job["artifact_state"]["artifacts"]["json"])
+        if not names:
+            raise ValueError("No saved apply inputs are available")
+        destination = source / ".apply_inputs" / uuid.uuid4().hex
+        destination.mkdir(parents=True)
+        hashes = {}
+        for name in names:
+            if Path(name).name != name:
+                raise ValueError("Invalid apply input filename")
+            content = (source / name).read_bytes()
+            with (destination / name).open("xb") as handle:
+                handle.write(content)
+                handle.flush()
+                os.fsync(handle.fileno())
+            hashes[name] = hashlib.sha256(content).hexdigest()
+        # Directory entries must also survive a host restart after acceptance.
+        for directory in (destination, destination.parent, source):
+            fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+        results = self._summarize_results(job["job_type"], str(destination), artifact_summary=job["artifact_state"])
+        if not results["ready_count"]:
+            raise ValueError("Job has no saved selected updates to apply")
+        return json.dumps({"directory": str(destination.resolve()), "hashes": hashes,
+                           "csv": job["artifact_state"]["artifacts"]["csv"],
+                           "json": job["artifact_state"]["artifacts"]["json"]}, sort_keys=True)
+
+    @staticmethod
+    def _validate_apply_snapshot(snapshot: dict) -> None:
+        directory = Path(snapshot["directory"])
+        for name, digest in snapshot["hashes"].items():
+            if hashlib.sha256((directory / name).read_bytes()).hexdigest() != digest:
+                raise ValueError(f"Frozen apply input hash mismatch: {name}")
+
     def apply_job(self, job_id: str) -> dict | None:
-        job = self.get_job(job_id)
-        if job is None:
-            return None
-        if job["status"] != JobStatus.NEEDS_REVIEW.value and not getattr(self, "execution_task", None):
-            raise ValueError(f"Job {job_id} must be in needs_review before apply can run")
-        if not job["canApply"]:
-            raise ValueError(f"Job {job_id} is not ready to apply")
-        if job["results"]["ready_count"] == 0:
-            raise ValueError(f"Job {job_id} has no selected updates to apply")
-        if job["job_type"] not in _APPLY_SUPPORTED_JOB_TYPES:
-            raise ValueError(f"Job type '{job['job_type']}' does not support apply")
-        if self.get_job_change_set(job_id) is not None:
-            raise ValueError("This job already has apply evidence. Reconcile its results before another apply.")
+        # Direct synchronous callers use the same atomic freeze/claim as enqueue.
+        # Worker calls consume the already accepted snapshot; they never recopy.
+        with connect_db(self.db_path) as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            job = self.get_job(job_id)
+            if job is None:
+                return None
+            task = getattr(self, "execution_task", None)
+            if task:
+                if task["job_id"] != job_id or task["action"] != "apply" or job["status"] != "applying":
+                    raise ValueError("Apply execution does not own this job")
+            else:
+                from app.task_queue import has_active_task
+                if job["status"] != "needs_review" or has_active_task(self.db_path, job_id):
+                    raise ValueError(f"Job {job_id} must be in needs_review before apply can run")
+                if not job["canApply"] or not job["results"]["ready_count"]:
+                    raise ValueError(f"Job {job_id} has no selected updates to apply")
+            if job["job_type"] not in _APPLY_SUPPORTED_JOB_TYPES:
+                raise ValueError(f"Job type '{job['job_type']}' does not support apply")
+            if self.get_job_change_set(job_id) is not None:
+                raise ValueError("This job already has apply evidence. Reconcile its results before another apply.")
+            if not task:
+                snapshot_json = self._freeze_apply_inputs(job)
+                connection.execute("UPDATE jobs SET status='applying',apply_snapshot_json=? WHERE id=?", (snapshot_json, job_id))
+            else:
+                snapshot_json = connection.execute("SELECT apply_snapshot_json FROM jobs WHERE id=?", (job_id,)).fetchone()[0]
 
         script_path = self.project_root / "src" / "apply_updates_to_pure.py"
         log_path = self._runtime_path(job["log_path"] or self.logs_dir / f"{job_id}.log")
         self.logs_dir.mkdir(parents=True, exist_ok=True)
-        self._claim_job(job_id, JobStatus.NEEDS_REVIEW, JobStatus.APPLYING)
 
         if not script_path.exists():
             message = f"Script path does not exist: {script_path}"
@@ -687,9 +742,22 @@ class JobService:
         env["BTP_APPLY_MANIFEST_FILE"] = str(apply_manifest_path)
         env["BTP_RUNTIME_DB"] = str(self.db_path.resolve())
         env["BTP_JOB_ID"] = job_id
+        change_set_id = None
         try:
+            snapshot = json.loads(snapshot_json)
+            self._validate_apply_snapshot(snapshot)
+            job["_apply_input_dir"] = snapshot["directory"]
+            job["artifact_state"] = {**job["artifact_state"], "artifacts": {
+                **job["artifact_state"]["artifacts"], "csv": snapshot["csv"], "json": snapshot["json"]}}
+            env["BTP_TARGET_CSV_FILES"] = ",".join(snapshot["csv"])
+            env["BTP_TARGET_JSON_FILES"] = ",".join(snapshot["json"])
+            env["BTP_INPUT_DIR"] = snapshot["directory"]
+            env["BTP_INPUT_HASHES"] = json.dumps(snapshot["hashes"], sort_keys=True)
             change_set_id = self._capture_apply_change_set(job)
+            self._validate_apply_snapshot(snapshot)
         except Exception as exc:
+            if change_set_id is not None:
+                self._mark_change_set_failed(change_set_id)
             message = f"Could not prepare apply tracking; no apply process was started: {exc}"
             self._append_log(log_path, f"ERROR {message}\n")
             return self._finish_job(
@@ -944,7 +1012,8 @@ class JobService:
         if not csv_path.exists() or not csv_path.is_file():
             raise FileNotFoundError(primary_csv_name)
 
-        with open(csv_path, "r", encoding="utf-8", newline="") as handle:
+        content = csv_path.read_bytes()
+        with io.StringIO(content.decode("utf-8"), newline="") as handle:
             reader = csv.DictReader(handle)
             columns = list(reader.fieldnames or [])
             rows = []
@@ -957,6 +1026,7 @@ class JobService:
 
         editable_columns = ["to_be_updated"] if "to_be_updated" in columns else []
         return {
+            "revision": hashlib.sha256(content).hexdigest(),
             "jobId": job_id,
             "fileName": primary_csv_name,
             "columns": columns,
@@ -973,64 +1043,87 @@ class JobService:
         file_name: str,
         expected_row_count: int,
         updates: list[dict[str, Any]],
+        expected_revision: str | None = None,
     ) -> dict | None:
-        job = self.get_job(job_id)
-        if job is None:
-            return None
+        with connect_db(self.db_path) as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            job = self.get_job(job_id)
+            if job is None:
+                return None
 
-        definition = get_job_type_definition(job["job_type"])
-        primary_csv_name = self._primary_review_csv_name(definition, job["artifact_state"])
-        if primary_csv_name is None:
-            raise FileNotFoundError("No review CSV is available for this job")
-        if file_name != primary_csv_name:
-            raise ValueError(f"Only the primary review CSV can be updated for this job: {primary_csv_name}")
+            from app.task_queue import has_active_task
+            if job["status"] != "needs_review" or has_active_task(self.db_path, job_id):
+                raise ValueError("Review selection cannot be saved after an action is accepted")
 
-        csv_path = self._artifact_directory(job.get("artifact_dir")) / primary_csv_name
-        if not csv_path.exists() or not csv_path.is_file():
-            raise FileNotFoundError(primary_csv_name)
+            definition = get_job_type_definition(job["job_type"])
+            primary_csv_name = self._primary_review_csv_name(definition, job["artifact_state"])
+            if primary_csv_name is None:
+                raise FileNotFoundError("No review CSV is available for this job")
+            if file_name != primary_csv_name:
+                raise ValueError(f"Only the primary review CSV can be updated for this job: {primary_csv_name}")
 
-        with open(csv_path, "r", encoding="utf-8", newline="") as handle:
-            reader = csv.DictReader(handle)
-            columns = list(reader.fieldnames or [])
-            rows = list(reader)
+            csv_path = self._artifact_directory(job.get("artifact_dir")) / primary_csv_name
+            if not csv_path.exists() or not csv_path.is_file():
+                raise FileNotFoundError(primary_csv_name)
 
-        if "to_be_updated" not in columns:
-            raise ValueError("This review CSV does not support inline selection editing")
-        if len(rows) != expected_row_count:
-            raise ValueError("The review CSV changed while you were editing it. Refresh the table and try again.")
+            content = csv_path.read_bytes()
+            if expected_revision is not None and hashlib.sha256(content).hexdigest() != expected_revision:
+                raise ValueError("The review CSV changed while you were editing it. Refresh the table and try again.")
+            with io.StringIO(content.decode("utf-8"), newline="") as handle:
+                reader = csv.DictReader(handle)
+                columns = list(reader.fieldnames or [])
+                rows = list(reader)
 
-        normalized_updates: dict[int, str] = {}
-        for update in updates:
-            if not isinstance(update, dict):
-                raise ValueError("Each review-table update must be an object")
-            unknown_fields = set(update) - {"rowIndex", "to_be_updated"}
-            if unknown_fields:
-                raise ValueError(f"Unsupported review-table fields: {sorted(unknown_fields)}")
-            row_index = update.get("rowIndex")
-            if not isinstance(row_index, int):
-                raise ValueError("Each review-table update must include an integer rowIndex")
-            if row_index < 0 or row_index >= len(rows):
-                raise ValueError(f"Row index out of range: {row_index}")
-            marker = "X" if self._marker_is_selected(update.get("to_be_updated")) else ""
-            normalized_updates[row_index] = marker
+            if "to_be_updated" not in columns:
+                raise ValueError("This review CSV does not support inline selection editing")
+            if len(rows) != expected_row_count:
+                raise ValueError("The review CSV changed while you were editing it. Refresh the table and try again.")
 
-        if normalized_updates:
-            for row_index, marker in normalized_updates.items():
-                rows[row_index]["to_be_updated"] = marker
+            normalized_updates: dict[int, str] = {}
+            for update in updates:
+                if not isinstance(update, dict):
+                    raise ValueError("Each review-table update must be an object")
+                unknown_fields = set(update) - {"rowIndex", "to_be_updated"}
+                if unknown_fields:
+                    raise ValueError(f"Unsupported review-table fields: {sorted(unknown_fields)}")
+                row_index = update.get("rowIndex")
+                if not isinstance(row_index, int):
+                    raise ValueError("Each review-table update must include an integer rowIndex")
+                if row_index < 0 or row_index >= len(rows):
+                    raise ValueError(f"Row index out of range: {row_index}")
+                marker = "X" if self._marker_is_selected(update.get("to_be_updated")) else ""
+                normalized_updates[row_index] = marker
 
-            with open(csv_path, "w", encoding="utf-8", newline="") as handle:
-                writer = csv.DictWriter(handle, fieldnames=columns)
-                writer.writeheader()
-                writer.writerows(rows)
+            if normalized_updates:
+                for row_index, marker in normalized_updates.items():
+                    rows[row_index]["to_be_updated"] = marker
 
-            refreshed_results = self._summarize_results(
-                job["job_type"],
-                job.get("artifact_dir"),
-                artifact_summary=job["artifact_state"],
-            )
-            self.update_job(job_id, results=refreshed_results)
+                fd, temporary = tempfile.mkstemp(prefix=".review-", suffix=".csv", dir=csv_path.parent)
+                try:
+                    with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
+                        writer = csv.DictWriter(handle, fieldnames=columns)
+                        writer.writeheader()
+                        writer.writerows(rows)
+                        handle.flush()
+                        os.fsync(handle.fileno())
+                    os.replace(temporary, csv_path)
+                    directory_fd = os.open(csv_path.parent, os.O_RDONLY | os.O_DIRECTORY)
+                    try:
+                        os.fsync(directory_fd)
+                    finally:
+                        os.close(directory_fd)
+                finally:
+                    if os.path.exists(temporary):
+                        os.unlink(temporary)
 
-        return self.get_job_review_table(job_id)
+                refreshed_results = self._summarize_results(
+                    job["job_type"],
+                    job.get("artifact_dir"),
+                    artifact_summary=job["artifact_state"],
+                )
+                connection.execute("UPDATE jobs SET results_json=? WHERE id=?", (json.dumps(refreshed_results), job_id))
+
+            return self.get_job_review_table(job_id)
 
     def get_job_change_set(self, job_id: str) -> dict | None:
         with connect_db(self.db_path) as connection:
@@ -1664,7 +1757,7 @@ class JobService:
             return []
 
         definition = get_job_type_definition(job["job_type"])
-        artifact_dir = self._artifact_directory(job.get("artifact_dir"))
+        artifact_dir = self._artifact_directory(job.get("_apply_input_dir") or job.get("artifact_dir"))
         json_by_uuid: dict[str, dict[str, Any]] = {}
         for filename in tracked_json:
             json_path = artifact_dir / filename
@@ -1718,7 +1811,7 @@ class JobService:
             return []
 
         definition = get_job_type_definition(job["job_type"])
-        artifact_dir = self._artifact_directory(job.get("artifact_dir"))
+        artifact_dir = self._artifact_directory(job.get("_apply_input_dir") or job.get("artifact_dir"))
         json_by_uuid: dict[str, dict[str, Any]] = {}
         for filename in tracked_json:
             json_path = artifact_dir / filename
@@ -1780,7 +1873,7 @@ class JobService:
             return []
 
         definition = get_job_type_definition(job["job_type"])
-        artifact_dir = self._artifact_directory(job.get("artifact_dir"))
+        artifact_dir = self._artifact_directory(job.get("_apply_input_dir") or job.get("artifact_dir"))
         json_by_uuid: dict[str, dict[str, Any]] = {}
         for filename in tracked_json:
             json_path = artifact_dir / filename
@@ -1853,7 +1946,7 @@ class JobService:
             return []
 
         definition = get_job_type_definition(job["job_type"])
-        artifact_dir = self._artifact_directory(job.get("artifact_dir"))
+        artifact_dir = self._artifact_directory(job.get("_apply_input_dir") or job.get("artifact_dir"))
         changes: list[dict[str, Any]] = []
         for csv_path in self._matching_csv_paths(artifact_dir, definition, tracked_names=tracked_csv):
             with open(csv_path, "r", encoding="utf-8", newline="") as handle:
@@ -1890,7 +1983,7 @@ class JobService:
             return []
 
         definition = get_job_type_definition(job["job_type"])
-        artifact_dir = self._artifact_directory(job.get("artifact_dir"))
+        artifact_dir = self._artifact_directory(job.get("_apply_input_dir") or job.get("artifact_dir"))
         changes: list[dict[str, Any]] = []
         for csv_path in self._matching_csv_paths(artifact_dir, definition, tracked_names=tracked_csv):
             with open(csv_path, "r", encoding="utf-8", newline="") as handle:

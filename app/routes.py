@@ -270,6 +270,7 @@ def init_app(app):
         file_name = payload.get('fileName')
         updates = payload.get('updates')
         expected_row_count = payload.get('expectedRowCount')
+        expected_revision = payload.get('expectedRevision')
         if not isinstance(file_name, str) or not file_name:
             return jsonify({'error': 'fileName is required'}), 400
         if not isinstance(updates, list):
@@ -277,12 +278,15 @@ def init_app(app):
         if not isinstance(expected_row_count, int):
             return jsonify({'error': 'expectedRowCount must be an integer'}), 400
 
+        if not isinstance(expected_revision, str) or not expected_revision:
+            return jsonify({'error': 'expectedRevision is required'}), 400
         service = _job_service()
         try:
             review_table = service.update_job_review_table(
                 job_id,
                 file_name=file_name,
                 expected_row_count=expected_row_count,
+                expected_revision=expected_revision,
                 updates=updates,
             )
         except FileNotFoundError as exc:

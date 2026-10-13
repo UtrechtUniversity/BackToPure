@@ -38,6 +38,7 @@ export interface JobReviewTableRow {
 }
 
 export interface JobReviewTableResponse {
+  revision: string;
   jobId: string;
   fileName: string;
   columns: string[];

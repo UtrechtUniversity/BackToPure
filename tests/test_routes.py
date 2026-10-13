@@ -491,6 +491,7 @@ class FlaskRouteTests(unittest.TestCase):
             json={
                 "fileName": "personstobeupdated_20260421.csv",
                 "expectedRowCount": 2,
+                "expectedRevision": service.get_job_review_table("job-001")["revision"],
                 "updates": [
                     {"rowIndex": 0, "to_be_updated": ""},
                     {"rowIndex": 1, "to_be_updated": "X"},
@@ -905,7 +906,7 @@ class FlaskRouteTests(unittest.TestCase):
             "w",
             encoding="utf-8",
         ) as handle:
-            handle.write("id\n1\n")
+            handle.write("to_be_updated,updated,PURE_UUID_PERS,new_id,new_value\nX,,p,orcid,123\n")
         with open(
             os.path.join(self.tempdir.name, "output", "internal_persons", "datatotal.json"),
             "w",
@@ -915,6 +916,12 @@ class FlaskRouteTests(unittest.TestCase):
 
         mock_process = MagicMock()
         mock_process.communicate.return_value = ("apply ok\n", "")
+        def finish_apply():
+            path = os.path.join(self.tempdir.name, "output", "internal_persons", "personstobeupdated_20260420.csv")
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write("to_be_updated,updated,PURE_UUID_PERS,new_id,new_value\n,X,p,orcid,123\n")
+            return "apply ok\n", ""
+        mock_process.communicate.side_effect = finish_apply
         mock_process.returncode = 0
         mock_popen.return_value = mock_process
 

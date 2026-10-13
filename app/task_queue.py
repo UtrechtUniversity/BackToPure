@@ -27,6 +27,8 @@ def enqueue(service, job_id, action):
                 raise ValueError('Job must have selected review updates before apply')
             if service.get_job_change_set(job_id) is not None:
                 raise ValueError('This job already has apply evidence. Reconcile before another apply.')
+            snapshot = service._freeze_apply_inputs(job)
+            db.execute('UPDATE jobs SET apply_snapshot_json=? WHERE id=?', (snapshot, job_id))
         if action == 'rollback':
             service._validate_rollback(job)
         result_id = f'rollback_{uuid.uuid4().hex[:12]}' if action == 'rollback' else job_id

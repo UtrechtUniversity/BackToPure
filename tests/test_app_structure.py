@@ -3093,6 +3093,12 @@ class ApplyReportsFailureWhenNothingWasWrittenTests(unittest.TestCase):
             params={"faculty_choice": "uu faculty: faculteit test|organization_name"},
             created_at="2026-04-20T13:00:00Z",
         )
+        job = service.get_job("job-apply-1")
+        directory = service._artifact_directory(job["artifact_dir"])
+        directory.mkdir(parents=True)
+        (directory / "personstobeupdated_test.csv").write_text("to_be_updated,updated,PURE_UUID_PERS,new_id,new_value\nX,,p,orcid,123\n")
+        (directory / "datatotal.json").write_text('[{"uuid":"p"}]')
+        service.update_job("job-apply-1", artifacts={"canOpen": True, "canApply": True, "artifacts": {"directory": job["artifact_dir"], "csv": ["personstobeupdated_test.csv"], "json": ["datatotal.json"]}})
         return service
 
     def _run_apply(self, service, applied, tracked):
@@ -3113,7 +3119,7 @@ class ApplyReportsFailureWhenNothingWasWrittenTests(unittest.TestCase):
         ), patch.object(
             service, "_finalize_apply_change_set", return_value=(applied, tracked)
         ), patch("app.services.jobs.subprocess.Popen", return_value=completed), patch.object(
-            service, "_summarize_results", return_value={}
+            service, "_summarize_results", return_value={"ready_count": 1}
         ):
             return service.apply_job("job-apply-1")
 

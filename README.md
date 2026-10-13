@@ -230,7 +230,9 @@ in the background; the job page shows its log while it works.
 ### 4. Review, apply, roll back
 - Every row a job examined appears in its review file, either proposed for
   update or with a reason it was not usable.
-- Untick anything you do not want. The review table is editable in the UI.
+- Untick anything you do not want, then click **Save Review**. Apply stays disabled while selection changes are unsaved or saving. A stale review tab must refresh before saving over a newer selection.
+- Apply acceptance freezes the saved CSV and corresponding JSON under the same local database lock used by saving. Review controls lock immediately; later saves are rejected. The worker consumes this stored snapshot after restarts and verifies its SHA-256 hashes before execution. Result CSVs, journal, and manifest remain in the original job artifact directory.
+- Frozen inputs are retained under the job artifact directory in `.apply_inputs/`; queued cancellation retains this evidence and does not reopen editing. Do not edit these files. Hash failures stop Apply before remote writes.
 - Apply sends only the ticked rows to Pure.
 - An applied job can be rolled back. Rollback restores what the job replaced,
   and refuses with a conflict if the record changed in the meantime.

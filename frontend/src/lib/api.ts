@@ -139,7 +139,7 @@ export const api = {
 
   updateJobReviewTable(
     jobId: string,
-    input: { fileName: string; expectedRowCount: number; updates: JobReviewTableUpdate[] },
+    input: { fileName: string; expectedRowCount: number; expectedRevision: string; updates: JobReviewTableUpdate[] },
   ): Promise<JobReviewTableResponse> {
     return request<JobReviewTableResponse>(`/jobs/${jobId}/review-table`, {
       method: "POST",

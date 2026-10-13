@@ -137,7 +137,6 @@ def test_mixed_internal_rows_checkpoint_only_actual_changes(tmp_path, monkeypatc
 
 def test_rejected_rows_without_trackable_fields_fail_job(service):
     job, directory, filename = reviewed_job(service, 'internal_persons')
-    (directory / 'datatotal.json').unlink()
     process = Mock(returncode=0, stdout=None)
     def finish():
         (directory / filename).write_text('to_be_updated,updated,PURE_UUID_PERS,apply_status\nX,,p,failed\n')

@@ -90,6 +90,7 @@ def initialize_database(db_path: Path) -> None:
         )""")
         connection.execute("""CREATE UNIQUE INDEX IF NOT EXISTS execution_tasks_active
             ON execution_tasks(job_id) WHERE state IN ('queued', 'running', 'interrupted')""")
+        _ensure_column(connection, "jobs", "apply_snapshot_json", "apply_snapshot_json TEXT")
         connection.execute(JOB_CHANGE_SETS_SCHEMA)
         connection.execute(JOB_CHANGE_SET_ITEMS_SCHEMA)
         _ensure_column(

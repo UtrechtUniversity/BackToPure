@@ -62,6 +62,11 @@ def test_apply_capture_error_does_not_leave_job_applying(service):
                              status=JobStatus.NEEDS_REVIEW, created_at=service._utcnow())
     (service.project_root / 'src').mkdir()
     (service.project_root / 'src/apply_updates_to_pure.py').write_text('')
+    directory = service._artifact_directory(job['artifact_dir'])
+    directory.mkdir(parents=True)
+    (directory / 'to_be_updated.csv').write_text('to_be_updated,updated,doi\nX,,10.1/a\n')
+    (directory / 'datatotal.json').write_text('[]')
+    job['artifact_state']['artifacts'].update(csv=['to_be_updated.csv'], json=['datatotal.json'])
     real_get_job = service.get_job
     with patch.object(service, 'get_job', wraps=real_get_job) as get_job:
         ready = dict(job, canApply=True, results=dict(job['results'], ready_count=1))

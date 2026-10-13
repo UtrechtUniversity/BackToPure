@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useRef, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError, api } from "../../lib/api";
@@ -205,6 +205,7 @@ export function JobDetailPage() {
   const [jobActionInProgress, setJobActionInProgress] = useState(false);
   const { jobId = "" } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const deferredReviewSearch = useDeferredValue(reviewSearch);
   const reviewTableRef = useRef<HTMLDivElement | null>(null);
 
@@ -317,7 +318,8 @@ export function JobDetailPage() {
       setJobActionInProgress(true);
       void logsQuery.refetch();
     },
-    onSuccess: () => {
+    onSuccess: (acceptedJob) => {
+      queryClient.setQueryData(["job", jobId], acceptedJob);
       void jobQuery.refetch();
       void logsQuery.refetch();
       void artifactsQuery.refetch();
@@ -386,12 +388,13 @@ export function JobDetailPage() {
       return api.updateJobReviewTable(jobId, {
         fileName: reviewTable.fileName,
         expectedRowCount: reviewTable.rowCount,
+        expectedRevision: reviewTable.revision,
         updates,
       });
     },
-    onSuccess: () => {
-      void reviewTableQuery.refetch();
-      void jobQuery.refetch();
+    onSuccess: async (savedTable) => {
+      queryClient.setQueryData(["jobReviewTable", jobId], savedTable);
+      await Promise.all([reviewTableQuery.refetch(), jobQuery.refetch()]);
     },
   });
 
@@ -503,6 +506,7 @@ export function JobDetailPage() {
       return [{ rowIndex: row._rowIndex, to_be_updated: currentSelected ? "X" : "" }];
     }) ?? [];
   const reviewHasUnsavedChanges = reviewSelectionUpdates.length > 0;
+  const selectionLocked = job.status !== "needs_review" || saveReviewTableMutation.isPending || applyJobMutation.isPending;
   const applyErrorLines = logContent
     .split("\n")
     .filter(
@@ -626,7 +630,7 @@ export function JobDetailPage() {
                 className={`primary-action ${!hasSelectedUpdates ? "disabled-action" : ""}`}
                 type="button"
                 onClick={() => applyJobMutation.mutate()}
-                disabled={applyJobMutation.isPending || !hasSelectedUpdates}
+                disabled={applyJobMutation.isPending || !hasSelectedUpdates || reviewHasUnsavedChanges || saveReviewTableMutation.isPending}
               >
                 {applyJobMutation.isPending ? "Applying..." : "Apply Updates"}
               </button>
@@ -886,7 +890,7 @@ export function JobDetailPage() {
                               return nextSelection;
                             });
                           }}
-                          disabled={!filteredReviewRows?.length || saveReviewTableMutation.isPending}
+                          disabled={!filteredReviewRows?.length || selectionLocked}
                         >
                           Select Filtered Rows
                         </button>
@@ -905,7 +909,7 @@ export function JobDetailPage() {
                               return nextSelection;
                             });
                           }}
-                          disabled={!filteredReviewRows?.length || saveReviewTableMutation.isPending}
+                          disabled={!filteredReviewRows?.length || selectionLocked}
                         >
                           Deselect Filtered Rows
                         </button>
@@ -915,7 +919,7 @@ export function JobDetailPage() {
                       className="primary-action"
                       type="button"
                       onClick={() => saveReviewTableMutation.mutate()}
-                      disabled={!reviewHasUnsavedChanges || saveReviewTableMutation.isPending}
+                      disabled={!reviewHasUnsavedChanges || selectionLocked}
                     >
                       {saveReviewTableMutation.isPending ? "Saving..." : "Save Review"}
                     </button>
@@ -933,7 +937,7 @@ export function JobDetailPage() {
                         }
                         setReviewSelection(resetSelection);
                       }}
-                      disabled={!reviewHasUnsavedChanges || saveReviewTableMutation.isPending}
+                      disabled={!reviewHasUnsavedChanges || selectionLocked}
                     >
                       Reset Changes
                     </button>
@@ -987,6 +991,7 @@ export function JobDetailPage() {
                                   {isEditableSelection ? (
                                     <input
                                       type="checkbox"
+                                      disabled={selectionLocked}
                                       checked={String(row[column] ?? "").trim().toUpperCase() === "X"}
                                       onChange={(event) => {
                                         const checked = event.target.checked;
