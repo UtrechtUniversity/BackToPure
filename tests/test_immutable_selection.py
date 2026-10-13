@@ -5,10 +5,11 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from app.db import initialize_database, connect_db
+from app.db import connect_db, initialize_database
 from app.services.jobs import JobService
 from app.worker import Worker
 from tests.test_safe_apply_integration import reviewed_job
+
 
 @pytest.fixture
 def service(tmp_path):

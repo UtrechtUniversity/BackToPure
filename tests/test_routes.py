@@ -9,6 +9,7 @@ import config as btp_config
 from app import create_app, routes
 from app.db import connect_db, init_db
 from app.services import JobService
+from tests.rollback_fixtures import acknowledged_evidence
 
 
 class FakeStream:
@@ -978,8 +979,8 @@ class FlaskRouteTests(unittest.TestCase):
             mock_popen.call_args.kwargs["env"]["BTP_OUTPUT_DIR"],
         )
 
-    @patch("app.services.jobs.requests.put")
-    @patch("app.services.jobs.requests.get")
+    @patch("app.services.rollback.requests.put")
+    @patch("app.services.rollback.requests.get")
     def test_api_rollback_job_executes_safe_internal_person_rollback(self, mock_get, mock_put):
         service = JobService(
             self.app.extensions["btp_db"]["db_path"],
@@ -1035,11 +1036,12 @@ class FlaskRouteTests(unittest.TestCase):
             service.get_job_change_set("job-rollback-source")["id"],
         )
 
-        get_response = MagicMock()
-        get_response.json.return_value = {"uuid": "pers-1", "orcid": "0000-0001", "identifiers": []}
+        get_response = MagicMock(status_code=200)
+        get_response.json.return_value = {"uuid": "pers-1", "version": "fresh-v1", "orcid": "0000-0001", "identifiers": []}
         mock_get.return_value = get_response
-        mock_put.return_value = MagicMock()
+        mock_put.return_value = MagicMock(status_code=200)
 
+        acknowledged_evidence(service, "job-rollback-source")
         result = self.client.post("/api/jobs/job-rollback-source/rollback")
 
         self.assertEqual(202, result.status_code)

@@ -34,6 +34,8 @@ from config import (
     RIC_BASE_URL,
     ROR_ID_URI,
 )
+from safe_creation import tenant_key
+from tests.rollback_fixtures import acknowledged_evidence
 
 
 class FakeCompletedProcess:
@@ -1970,8 +1972,8 @@ class AppStructureTests(unittest.TestCase):
         self.assertEqual(["X"], csv_file["updated"].dropna().unique().tolist())
         self.assertEqual([], [value for value in csv_file["to_be_updated"].fillna("").tolist() if value])
 
-    @patch("app.services.jobs.requests.put")
-    @patch("app.services.jobs.requests.get")
+    @patch("app.services.rollback.requests.put")
+    @patch("app.services.rollback.requests.get")
     def test_job_service_rollback_job_reverts_internal_person_orcid_change(self, mock_get, mock_put):
         with tempfile.TemporaryDirectory() as tmpdir:
             app = create_app()
@@ -2030,12 +2032,13 @@ class AppStructureTests(unittest.TestCase):
                 )
             service._finalize_apply_change_set(service.get_job("job-020"), service.get_job_change_set("job-020")["id"])
 
-            get_response = MagicMock()
-            get_response.json.return_value = {"uuid": "pers-1", "orcid": "0000-0001", "identifiers": []}
+            get_response = MagicMock(status_code=200)
+            get_response.json.return_value = {"uuid": "pers-1", "version": "fresh-v1", "orcid": "0000-0001", "identifiers": []}
             mock_get.return_value = get_response
-            put_response = MagicMock()
+            put_response = MagicMock(status_code=200)
             mock_put.return_value = put_response
 
+            acknowledged_evidence(service, "job-020")
             rollback_job = service.rollback_job("job-020")
             refreshed = service.get_job("job-020")
             change_set = service.get_job_change_set("job-020")
@@ -2046,7 +2049,7 @@ class AppStructureTests(unittest.TestCase):
             self.assertEqual("rolled_back", change_set["items"][0]["rollback_status"])
             self.assertEqual("0000-0000", mock_put.call_args.kwargs["json"]["orcid"])
 
-    @patch("app.services.jobs.requests.get")
+    @patch("app.services.rollback.requests.get")
     def test_job_service_captures_and_finalizes_external_person_change_set(self, mock_get):
         with tempfile.TemporaryDirectory() as tmpdir:
             app = create_app()
@@ -2132,8 +2135,8 @@ class AppStructureTests(unittest.TestCase):
             self.assertEqual(2, change_set["applied_item_count"])
             self.assertEqual({"applied"}, {item["apply_status"] for item in change_set["items"]})
 
-    @patch("app.services.jobs.requests.put")
-    @patch("app.services.jobs.requests.get")
+    @patch("app.services.rollback.requests.put")
+    @patch("app.services.rollback.requests.get")
     def test_job_service_rollback_job_reverts_external_person_identifier_changes(self, mock_get, mock_put):
         with tempfile.TemporaryDirectory() as tmpdir:
             app = create_app()
@@ -2168,18 +2171,18 @@ class AppStructureTests(unittest.TestCase):
                     )
                 )
 
-            first_get_response = MagicMock()
+            first_get_response = MagicMock(status_code=200)
             first_get_response.json.return_value = {"uuid": "ext-1", "identifiers": []}
-            second_get_response = MagicMock()
+            second_get_response = MagicMock(status_code=200)
             second_get_response.json.return_value = {
-                "uuid": "ext-1",
+                "uuid": "ext-1", "version": "fresh-v1",
                 "identifiers": [
                     {"id": "0000-0001", "type": {"uri": ORCID_ID_URI}},
                     {"id": "A1", "type": {"uri": OPENALEXEX_ID_URI}},
                 ],
             }
             mock_get.side_effect = [second_get_response, second_get_response]
-            put_response = MagicMock()
+            put_response = MagicMock(status_code=200)
             mock_put.return_value = put_response
 
             service.create_job(
@@ -2220,6 +2223,7 @@ class AppStructureTests(unittest.TestCase):
                 )
             service._finalize_apply_change_set(service.get_job("job-031"), change_set_id)
 
+            acknowledged_evidence(service, "job-031")
             rollback_job = service.rollback_job("job-031")
             change_set = service.get_job_change_set("job-031")
 
@@ -2317,8 +2321,8 @@ class AppStructureTests(unittest.TestCase):
             self.assertEqual(2, change_set["applied_item_count"])
             self.assertEqual({"applied"}, {item["apply_status"] for item in change_set["items"]})
 
-    @patch("app.services.jobs.requests.put")
-    @patch("app.services.jobs.requests.get")
+    @patch("app.services.rollback.requests.put")
+    @patch("app.services.rollback.requests.get")
     def test_job_service_rollback_job_reverts_external_org_changes(self, mock_get, mock_put):
         with tempfile.TemporaryDirectory() as tmpdir:
             app = create_app()
@@ -2358,14 +2362,14 @@ class AppStructureTests(unittest.TestCase):
                     )
                 )
 
-            get_response = MagicMock()
+            get_response = MagicMock(status_code=200)
             get_response.json.return_value = {
-                "uuid": "org-1",
+                "uuid": "org-1", "version": "fresh-v1",
                 "identifiers": [{"id": "01abc", "type": {"uri": ROR_ID_URI}}],
                 "address": {"city": "Utrecht"},
             }
             mock_get.return_value = get_response
-            mock_put.return_value = MagicMock()
+            mock_put.return_value = MagicMock(status_code=200)
 
             service.create_job(
                 job_id="job-033",
@@ -2407,6 +2411,7 @@ class AppStructureTests(unittest.TestCase):
                 )
             service._finalize_apply_change_set(service.get_job("job-033"), change_set_id)
 
+            acknowledged_evidence(service, "job-033")
             rollback_job = service.rollback_job("job-033")
             refreshed = service.get_job("job-033")
             change_set = service.get_job_change_set("job-033")
@@ -2420,9 +2425,9 @@ class AppStructureTests(unittest.TestCase):
             self.assertEqual([], payload["identifiers"])
             self.assertEqual({"city": "Amsterdam"}, payload["address"])
 
-    @patch("app.services.jobs.requests.put")
-    @patch("app.services.jobs.requests.get")
-    def test_job_service_rollback_job_retries_failed_external_person_rollback(self, mock_get, mock_put):
+    @patch("app.services.rollback.requests.put")
+    @patch("app.services.rollback.requests.get")
+    def test_job_service_rollback_job_retries_definitively_rejected_external_person_rollback(self, mock_get, mock_put):
         with tempfile.TemporaryDirectory() as tmpdir:
             app = create_app()
             app.config["BTP_DATA_DIR"] = os.path.join(tmpdir, "data")
@@ -2508,20 +2513,21 @@ class AppStructureTests(unittest.TestCase):
                         "null",
                         json.dumps({"id": "A1", "uri": OPENALEXEX_ID_URI}),
                         "applied",
-                        "failed",
+                        "rejected",
                         "409 conflict",
                     ),
                 )
                 connection.commit()
 
-            get_response = MagicMock()
+            get_response = MagicMock(status_code=200)
             get_response.json.return_value = {
-                "uuid": "ext-1",
+                "uuid": "ext-1", "version": "fresh-v1",
                 "identifiers": [{"id": "A1", "type": {"uri": OPENALEXEX_ID_URI}}],
             }
             mock_get.return_value = get_response
-            mock_put.return_value = MagicMock()
+            mock_put.return_value = MagicMock(status_code=200)
 
+            acknowledged_evidence(service, "job-031b")
             rollback_job = service.rollback_job("job-031b")
             refreshed = service.get_job("job-031b")
             change_set = service.get_job_change_set("job-031b")
@@ -2613,8 +2619,8 @@ class AppStructureTests(unittest.TestCase):
             self.assertEqual(0, job["results"]["updated_count"])
             self.assertEqual(1, job["results"]["rolled_back_count"])
 
-    @patch("app.services.jobs.requests.put")
-    @patch("app.services.jobs.requests.get")
+    @patch("app.services.rollback.requests.put")
+    @patch("app.services.rollback.requests.get")
     def test_job_service_rollback_job_clears_internal_person_orcid_with_null_when_old_value_missing(self, mock_get, mock_put):
         with tempfile.TemporaryDirectory() as tmpdir:
             app = create_app()
@@ -2673,12 +2679,13 @@ class AppStructureTests(unittest.TestCase):
                 )
             service._finalize_apply_change_set(service.get_job("job-020b"), service.get_job_change_set("job-020b")["id"])
 
-            get_response = MagicMock()
-            get_response.json.return_value = {"uuid": "pers-1", "orcid": "0000-0001", "identifiers": []}
+            get_response = MagicMock(status_code=200)
+            get_response.json.return_value = {"uuid": "pers-1", "version": "fresh-v1", "orcid": "0000-0001", "identifiers": []}
             mock_get.return_value = get_response
-            put_response = MagicMock()
+            put_response = MagicMock(status_code=200)
             mock_put.return_value = put_response
 
+            acknowledged_evidence(service, "job-020b")
             rollback_job = service.rollback_job("job-020b")
             change_set = service.get_job_change_set("job-020b")
 
@@ -2688,8 +2695,8 @@ class AppStructureTests(unittest.TestCase):
             self.assertIn("orcid", mock_put.call_args.kwargs["json"])
             self.assertIsNone(mock_put.call_args.kwargs["json"]["orcid"])
 
-    @patch("app.services.jobs.requests.put")
-    @patch("app.services.jobs.requests.get")
+    @patch("app.services.rollback.requests.put")
+    @patch("app.services.rollback.requests.get")
     def test_job_service_rollback_job_skips_conflict_when_current_value_changed(self, mock_get, mock_put):
         with tempfile.TemporaryDirectory() as tmpdir:
             app = create_app()
@@ -2748,14 +2755,15 @@ class AppStructureTests(unittest.TestCase):
                 )
             service._finalize_apply_change_set(service.get_job("job-021"), service.get_job_change_set("job-021")["id"])
 
-            get_response = MagicMock()
-            get_response.json.return_value = {"uuid": "pers-1", "orcid": "9999-9999", "identifiers": []}
+            get_response = MagicMock(status_code=200)
+            get_response.json.return_value = {"uuid": "pers-1", "version": "fresh-v1", "orcid": "9999-9999", "identifiers": []}
             mock_get.return_value = get_response
 
+            acknowledged_evidence(service, "job-021")
             rollback_job = service.rollback_job("job-021")
             change_set = service.get_job_change_set("job-021")
 
-            self.assertEqual("completed", rollback_job["status"])
+            self.assertEqual("failed", rollback_job["status"])
             self.assertEqual("rolled_back_with_conflicts", change_set["status"])
             self.assertEqual("conflict", change_set["items"][0]["rollback_status"])
             mock_put.assert_not_called()
@@ -2838,9 +2846,9 @@ class AppStructureTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 service.delete_job("job-001")
 
-    @patch("app.services.jobs.requests.delete")
-    @patch("app.services.jobs.requests.get")
-    def test_job_service_rolls_back_research_output_and_created_external_person(self, mock_get, mock_delete):
+    @patch("app.services.rollback.requests.delete")
+    @patch("app.services.rollback.requests.get")
+    def test_job_service_preserves_created_output_and_child_without_conditional_delete(self, mock_get, mock_delete):
         with tempfile.TemporaryDirectory() as tmpdir:
             app = create_app()
             app.config["BTP_DATA_DIR"] = os.path.join(tmpdir, "data")
@@ -2907,28 +2915,22 @@ class AppStructureTests(unittest.TestCase):
                 )
                 connection.commit()
 
-            mock_get.side_effect = [
-                MagicMock(json=lambda: {"electronicVersions": [{"doi": "10.1/test"}]}, raise_for_status=MagicMock()),
-                MagicMock(json=lambda: {"name": {"firstName": "Ext", "lastName": "Person"}}, raise_for_status=MagicMock()),
-            ]
-            mock_delete.side_effect = [
-                MagicMock(raise_for_status=MagicMock()),
-                MagicMock(raise_for_status=MagicMock()),
-            ]
+            mock_get.return_value = MagicMock(status_code=200, json=lambda: {"uuid": "ro-uuid-1", "version": "created-v1", "electronicVersions": [{"doi": "10.1/test"}]})
+            acknowledged_evidence(service, "job-ro-rb", created_version="created-v1", disposition="created")
 
             rollback_job = service.rollback_job("job-ro-rb")
             change_set = service.get_job_change_set("job-ro-rb")
 
-            self.assertEqual("completed", rollback_job["status"])
-            self.assertEqual("rolled_back", change_set["status"])
-            self.assertEqual("rolled_back", change_set["items"][0]["rollback_status"])
-            deleted_urls = [call.args[0] for call in mock_delete.call_args_list]
-            self.assertIn(f"{PURE_BASE_URL}research-outputs/ro-uuid-1", deleted_urls)
-            self.assertIn(f"{PURE_BASE_URL}external-persons/ext-uuid-1", deleted_urls)
+            self.assertEqual("failed", rollback_job["status"])
+            self.assertEqual("rolled_back_with_conflicts", change_set["status"])
+            self.assertEqual("conflict", change_set["items"][0]["rollback_status"])
+            mock_delete.assert_not_called()
+            self.assertIn("conditional DELETE", change_set["items"][0]["conflict_reason"])
+            self.assertEqual("ext-uuid-1", change_set["items"][0]["new_value"]["created_external_persons"][0]["uuid"])
 
-    @patch("app.services.jobs.requests.delete")
-    @patch("app.services.jobs.requests.get")
-    def test_job_service_rolls_back_dataset_creation(self, mock_get, mock_delete):
+    @patch("app.services.rollback.requests.delete")
+    @patch("app.services.rollback.requests.get")
+    def test_job_service_preserves_created_dataset_without_conditional_delete(self, mock_get, mock_delete):
         with tempfile.TemporaryDirectory() as tmpdir:
             app = create_app()
             app.config["BTP_DATA_DIR"] = os.path.join(tmpdir, "data")
@@ -2994,18 +2996,20 @@ class AppStructureTests(unittest.TestCase):
                 connection.commit()
 
             mock_get.return_value = MagicMock(
-                json=lambda: {"doi": {"doi": "10.2/test"}},
+                status_code=200, json=lambda: {"uuid": "ds-uuid-1", "version": "created-v1", "doi": {"doi": "10.2/test"}},
                 raise_for_status=MagicMock(),
             )
             mock_delete.return_value = MagicMock(raise_for_status=MagicMock())
 
+            acknowledged_evidence(service, "job-ds-rb", created_version="created-v1", disposition="created")
             rollback_job = service.rollback_job("job-ds-rb")
             change_set = service.get_job_change_set("job-ds-rb")
 
-            self.assertEqual("completed", rollback_job["status"])
-            self.assertEqual("rolled_back", change_set["status"])
-            self.assertEqual("rolled_back", change_set["items"][0]["rollback_status"])
-            self.assertEqual(f"{PURE_BASE_URL}data-sets/ds-uuid-1", mock_delete.call_args.args[0])
+            self.assertEqual("failed", rollback_job["status"])
+            self.assertEqual("rolled_back_with_conflicts", change_set["status"])
+            self.assertEqual("conflict", change_set["items"][0]["rollback_status"])
+            mock_delete.assert_not_called()
+            self.assertIn("conditional DELETE", change_set["items"][0]["conflict_reason"])
 
 
 class DissertationsAreNotImportedTests(unittest.TestCase):
@@ -3449,8 +3453,7 @@ class FullTextVersionPolicyParamTests(unittest.TestCase):
 
 
 class FullTextRollbackTests(unittest.TestCase):
-    """Restoring the snapshot is the whole rollback: Pure has no delete for an
-    uploaded file, and electronicVersions replaces on PUT (verified on staging)."""
+    """Remove the exact owned attachment; preserve other electronic versions."""
 
     def _change_set(self, rollback_status="pending", apply_status="applied"):
         return {
@@ -3464,6 +3467,8 @@ class FullTextRollbackTests(unittest.TestCase):
                         "doi": "10.1/a",
                         "record_uuid": "rec-1",
                         "previous_electronic_versions": [{"typeDiscriminator": "DoiElectronicVersion"}],
+                        "added_electronic_version": {"pureId": 42, "typeDiscriminator": "FileElectronicVersion"},
+                        "target_tenant": tenant_key(PURE_BASE_URL),
                     },
                 }
             ]
@@ -3480,15 +3485,15 @@ class FullTextRollbackTests(unittest.TestCase):
         )
 
     def test_restores_the_previous_electronic_versions(self):
-        deposited = {"uuid": "rec-1", "electronicVersions": [
+        deposited = {"uuid": "rec-1", "version": "fresh-v1", "electronicVersions": [
             {"typeDiscriminator": "DoiElectronicVersion"},
-            {"typeDiscriminator": "FileElectronicVersion"},
+            {"pureId": 42, "typeDiscriminator": "FileElectronicVersion"},
         ]}
         with tempfile.TemporaryDirectory() as tmpdir:
             service = self._service(tmpdir)
             log_path = Path(tmpdir) / "rollback.log"
-            with patch("app.services.jobs.requests.get", return_value=MagicMock(status_code=200, json=lambda: deposited)), patch(
-                "app.services.jobs.requests.put", return_value=MagicMock(status_code=200)
+            with patch("app.services.rollback.requests.get", return_value=MagicMock(status_code=200, json=lambda: deposited)), patch(
+                "app.services.rollback.requests.put", return_value=MagicMock(status_code=200)
             ) as put:
                 stats = service._execute_full_text_rollback(self._change_set(), log_path)
 
@@ -3499,7 +3504,7 @@ class FullTextRollbackTests(unittest.TestCase):
     def test_unapplied_items_are_skipped(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             service = self._service(tmpdir)
-            with patch("app.services.jobs.requests.put") as put:
+            with patch("app.services.rollback.requests.put") as put:
                 stats = service._execute_full_text_rollback(
                     self._change_set(apply_status="not_applied"), Path(tmpdir) / "r.log"
                 )
@@ -3510,8 +3515,8 @@ class FullTextRollbackTests(unittest.TestCase):
     def test_a_missing_record_is_a_conflict_not_a_failure_to_notice(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             service = self._service(tmpdir)
-            with patch("app.services.jobs.requests.get", return_value=MagicMock(status_code=404)), patch(
-                "app.services.jobs.requests.put"
+            with patch("app.services.rollback.requests.get", return_value=MagicMock(status_code=404)), patch(
+                "app.services.rollback.requests.put"
             ) as put:
                 stats = service._execute_full_text_rollback(self._change_set(), Path(tmpdir) / "r.log")
 
@@ -3519,14 +3524,13 @@ class FullTextRollbackTests(unittest.TestCase):
         self.assertEqual(0, stats["rolled_back"])
         self.assertGreaterEqual(stats["conflicts"] + stats["failed"], 1)
 
-    def test_missing_snapshot_is_a_conflict_rather_than_an_empty_put(self):
-        """Without a snapshot there is nothing to restore; PUTing an empty list
-        would strip electronicVersions the deposit never touched."""
+    def test_missing_owned_attachment_is_a_conflict_rather_than_an_empty_put(self):
+        """A historical snapshot alone cannot authorize attachment removal."""
         change_set = self._change_set()
-        change_set["items"][0]["new_value"].pop("previous_electronic_versions")
+        change_set["items"][0]["new_value"].pop("added_electronic_version")
         with tempfile.TemporaryDirectory() as tmpdir:
             service = self._service(tmpdir)
-            with patch("app.services.jobs.requests.put") as put:
+            with patch("app.services.rollback.requests.get", return_value=MagicMock(status_code=200, json=lambda: {"uuid": "rec-1", "version": "fresh-v1", "electronicVersions": []})), patch("app.services.rollback.requests.put") as put:
                 stats = service._execute_full_text_rollback(change_set, Path(tmpdir) / "r.log")
 
         put.assert_not_called()

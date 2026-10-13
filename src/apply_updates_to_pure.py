@@ -472,6 +472,9 @@ def process_full_text(filename, csv_file, json_data=None):
                 if not isinstance(previous_versions, list):
                     raise ValueError('Pure electronicVersions must be a list')
                 entry = build_file_electronic_version(candidate, upload_key, file_name)
+                from copy import deepcopy
+                from fulltext_deposit import persisted_attachment_evidence
+                before_deposit = deepcopy(record)
                 record['electronicVersions'] = list(previous_versions) + [entry]
                 put = request_write(requests.put, f'{PURE_BASE_URL}research-outputs/{record_uuid}',
                                     headers=PURE_HEADERS, json=record, timeout=180)
@@ -480,7 +483,8 @@ def process_full_text(filename, csv_file, json_data=None):
                 logger.info(f'attached {file_name} to research output {record_uuid} for {doi}')
                 return {'success': True, 'doi': doi, 'record_uuid': record_uuid,
                         'previous_electronic_versions': previous_versions,
-                        'upload_key': upload_key, 'file_name': file_name}
+                        'upload_key': upload_key, 'file_name': file_name,
+                        **persisted_attachment_evidence(put, before_deposit)}
             _run_item(filename, csv_file, [index], doi or str(row.get('doi')), 'full_text', fallback, journal, operation)
 
 

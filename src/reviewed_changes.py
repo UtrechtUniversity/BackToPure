@@ -24,7 +24,7 @@ def _identifiers(record):
     for value in values:
         if not isinstance(value, dict):
             raise ValueError('Malformed identifier evidence')
-        if value.get('typeDiscriminator') == 'PrimaryId':
+        if value.get('typeDiscriminator') in {'PrimaryId', 'Id'}:
             continue
         if not isinstance(value.get('type'), dict) or not value['type'].get('uri') or not value.get('id'):
             raise ValueError('Malformed identifier evidence')

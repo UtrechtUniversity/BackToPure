@@ -524,12 +524,17 @@ export function JobDetailPage() {
   const remainingRollbackItems =
     changeSet?.items.filter(
       (item) =>
-        item.apply_status === "applied" && !["rolled_back", "conflict", "skipped"].includes(item.rollback_status ?? ""),
+        item.apply_status === "applied" && ["pending", "rejected", "read_failed", "cancelled"].includes(item.rollback_status ?? ""),
     ).length ?? 0;
   const rolledBackItems = changeSet?.items.filter((item) => item.rollback_status === "rolled_back").length ?? 0;
   const conflictItems = changeSet?.items.filter((item) => item.rollback_status === "conflict").length ?? 0;
+  const unknownRollbackItems = changeSet?.items.filter((item) =>
+    item.apply_status === "applied" && ["unknown", "writing", "failed"].includes(item.rollback_status),
+  ).length ?? 0;
   const rollbackUnavailableReason =
-    supportsRollback && changeSet && rollbackableItems === 0
+    unknownRollbackItems > 0
+      ? "Reconcile unknown rollback outcomes in Pure before retrying. These changes cannot be retried automatically."
+      : supportsRollback && changeSet && rollbackableItems === 0
       ? "Rollback is not available because 0 changes were applied successfully."
       : supportsRollback && changeSet && rollbackableItems > 0 && remainingRollbackItems === 0
         ? "Rollback is not available because there are no remaining applied changes to roll back."
@@ -1120,6 +1125,12 @@ export function JobDetailPage() {
                     <span>Conflicts skipped</span>
                     <strong>{conflictItems}</strong>
                   </article>
+                  {unknownRollbackItems > 0 ? (
+                    <article className="result-metric-card">
+                      <span>Unknown rollback outcomes</span>
+                      <strong>{unknownRollbackItems}</strong>
+                    </article>
+                  ) : null}
                 </div>
                 <div className="info-strip compact">
                   <strong>Rollback status</strong>

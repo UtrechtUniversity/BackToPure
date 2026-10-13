@@ -163,7 +163,7 @@ def test_apply_snapshot_defers_network_to_fresh_apply_read(service):
     job['artifact_state']['artifacts'].update(csv=['ext_pers_update.csv'], json=['people.json'])
     response = Mock(status_code=401)
     response.raise_for_status.side_effect = requests.HTTPError(response=response)
-    with patch('app.services.jobs.requests.get', return_value=response) as get:
+    with patch('app.services.rollback.requests.get', return_value=response) as get:
         assert service._collect_external_persons_apply_changes(job) == []
         get.assert_not_called()
 

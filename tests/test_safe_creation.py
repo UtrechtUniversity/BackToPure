@@ -1,11 +1,10 @@
-import json
 import multiprocessing
 from unittest.mock import Mock
 
 import pytest
 
-from workflow_http import FatalWorkflowError
 from safe_creation import Reservation, find_exact_doi, normalize_doi, tenant_key
+from workflow_http import FatalWorkflowError
 
 
 def response(items, count=None):

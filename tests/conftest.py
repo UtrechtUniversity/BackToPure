@@ -21,8 +21,9 @@ def isolated_write_reservations(tmp_path, monkeypatch):
 def reject_unmocked_remote_requests(monkeypatch, request):
     if request.module.__name__.endswith("test_retry_adapter_integration"):
         return  # This module mocks the socket exchange to exercise the real adapter.
-    import requests
     from urllib.parse import urlsplit
+
+    import requests
     original = requests.adapters.HTTPAdapter.send
     def send(adapter, request, **kwargs):
         if urlsplit(request.url).hostname not in {'localhost', '127.0.0.1', '::1'}:

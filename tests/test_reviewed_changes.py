@@ -1,8 +1,9 @@
 from copy import deepcopy
 
 import pytest
-from config import ORCID_ID_URI, OPENALEXEX_ID_URI, ROR_ID_URI
-from reviewed_changes import merge_reviewed_changes, capture_apply_baseline
+
+from config import OPENALEXEX_ID_URI, ORCID_ID_URI, ROR_ID_URI
+from reviewed_changes import capture_apply_baseline, merge_reviewed_changes
 
 
 def ident(value, uri=ORCID_ID_URI):
@@ -199,6 +200,7 @@ def test_internal_row_uuid_checked_and_nan_not_appended():
 
 def test_external_person_harvest_captures_baseline_before_first_of_repeated_matches(tmp_path, monkeypatch):
     import json
+
     import enrich_pure_external_persons as harvest
     monkeypatch.setenv('BTP_OUTPUT_DIR', str(tmp_path))
     person = {'uuid': 'u', 'version': '1', 'identifiers': []}
@@ -233,3 +235,26 @@ def test_internal_orcid_normalized_value_retains_original_review_key():
     assert payload['orcid'] == '0000-0000-0000-1234'
     assert owned[0]['item_key'] == f'u|orcid|{value}'
     assert owned[0]['new_value'] == {'value': '0000-0000-0000-1234'}
+
+
+@pytest.mark.parametrize('kind', ['internal_persons', 'external_persons', 'external_orgs'])
+def test_plain_id_entries_are_preserved_without_becoming_classified_identifiers(kind):
+    plain = {'typeDiscriminator': 'Id', 'idSource': 'local-system', 'value': 'existing-primary'}
+    current = {'uuid': 'u', 'version': 'fresh-opaque', 'identifiers': [plain]}
+    source = deepcopy(current)
+    capture_apply_baseline(source)
+    if kind == 'internal_persons':
+        rows = [{'new_id': 'other', 'new_value': 'job-added', 'uri': '/other'}]
+        wanted = {'typeDiscriminator': 'ClassifiedId', 'id': 'job-added', 'type': {'uri': '/other'}}
+    elif kind == 'external_persons':
+        source['identifiers'].append(ident('job-added'))
+        rows = [{'ORCID': 'job-added'}]
+        wanted = ident('job-added')
+    else:
+        source['identifiers'].append(ident('job-added', ROR_ID_URI))
+        rows = [{'needs_ror_update': True, 'ror': 'job-added'}]
+        wanted = ident('job-added', ROR_ID_URI)
+    payload, owned = merge_reviewed_changes(kind, source, rows, current)
+    assert payload['identifiers'] == [plain, wanted]
+    assert len(owned) == 1
+    assert owned[0]['new_value']['id'] == 'job-added'

@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
+import pytest
 
 import fulltext_deposit as fd
 
@@ -301,3 +302,45 @@ class ProcessFullTextTests(unittest.TestCase):
 
         download.assert_not_called()
         self.assertEqual([], entries)
+
+
+@pytest.mark.parametrize('ack_problem', [None, 'no_body', 'missing_identity', 'later_version', 'ambiguous_added'])
+def test_deposit_records_only_verified_persisted_attachment_evidence(tmp_path, monkeypatch, ack_problem):
+    import copy
+
+    import requests
+
+    import apply_updates_to_pure as apply_mod
+    original = {'uuid': 'rec-1', 'version': 'before-opaque', 'electronicVersions': [{'pureId': 1, 'doi': '10.1000/a'}]}
+    persisted = {'pureId': 2, 'typeDiscriminator': 'FileElectronicVersion', 'file': {'pureId': 3, 'fileId': 'owned-file', 'fileName': 'a.pdf'}}
+    accepted = {'uuid': 'rec-1', 'version': 'ack-opaque', 'electronicVersions': original['electronicVersions'] + [copy.deepcopy(persisted)]}
+    if ack_problem == 'missing_identity':
+        accepted['electronicVersions'][-1].pop('pureId')
+    elif ack_problem == 'later_version':
+        accepted['version'] = 'before-opaque'
+    elif ack_problem == 'ambiguous_added':
+        accepted['electronicVersions'].append({'pureId': 7, 'typeDiscriminator': 'FileElectronicVersion'})
+    class Reply:
+        status_code = 200
+        def json(self):
+            if ack_problem == 'no_body':
+                raise ValueError('No body')
+            return accepted
+    entries = []
+    monkeypatch.setattr(apply_mod, '_resolve_output_directory', lambda *a: str(tmp_path))
+    monkeypatch.setattr(apply_mod, 'download_and_validate', lambda *a: (b'%PDF-', 'a.pdf'))
+    monkeypatch.setattr(apply_mod, 'upload_pdf', lambda *a: 'transient-key')
+    monkeypatch.setattr(requests, 'get', lambda *a, **k: _response(body=copy.deepcopy(original)))
+    monkeypatch.setattr(requests, 'put', lambda *a, **k: Reply())
+    monkeypatch.setattr(apply_mod, '_append_apply_manifest_entry', entries.append)
+    frame = ProcessFullTextTests()._csv()
+    apply_mod.process_full_text('to_be_updated.csv', frame)
+    assert frame.loc[0, 'updated'] == 'x', 'A missing rollback identity must not discard an acknowledged deposit'
+    assert len(entries) == 1
+    if ack_problem is None:
+        assert entries[0]['added_electronic_version'] == persisted
+        assert entries[0]['applied_version'] == 'ack-opaque'
+        assert 'uploadedFile' not in entries[0]['added_electronic_version']['file']
+    else:
+        assert entries[0].get('added_electronic_version') is None
+        assert entries[0]['rollback_evidence_warning']

@@ -890,7 +890,7 @@ describe("JobDetailPage", () => {
     expect((await screen.findAllByText("1")).length).toBeGreaterThan(0);
   });
 
-  it("allows retrying rollback after a failed rollback job when changes remain", async () => {
+  it("allows retrying definitively rejected rollback after a failed rollback job", async () => {
     mockedApi.getJob
       .mockResolvedValueOnce(
         makeJob({
@@ -962,7 +962,7 @@ describe("JobDetailPage", () => {
           old_value: null,
           new_value: { id: "A1", uri: "openalex-uri" },
           apply_status: "applied",
-          rollback_status: "failed",
+          rollback_status: "rejected",
           conflict_reason: "409 conflict",
         },
       ],
@@ -1616,6 +1616,25 @@ describe("JobDetailPage", () => {
     expect(screen.getByRole("checkbox", { name: "Select row 1" })).toBeDisabled();
     expect(screen.getByRole("checkbox", { name: "Select row 2" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Save Review" })).toBeDisabled();
+  });
+
+  it.each(["unknown", "writing", "failed"])("blocks automatic rollback retry for %s delivery evidence", async (rollbackStatus) => {
+    mockedApi.getJob.mockResolvedValue(makeJob({ status: "completed" }));
+    mockedApi.getJobLogs.mockResolvedValue({ jobId: "job-001", logPath: "logs/job.log", content: "" });
+    mockedApi.getJobArtifacts.mockResolvedValue({ jobId: "job-001", directory: "output", items: [] });
+    mockedApi.getJobChangeSet.mockResolvedValue({
+      id: "cs", job_id: "job-001", job_type: "internal_persons", status: "applied",
+      created_at: "2026-10-13", applied_at: "2026-10-13", item_count: 1, applied_item_count: 1,
+      items: [{
+        id: 1, change_set_id: "cs", item_key: "p|orcid", entity_uuid: "p", entity_label: "P",
+        field_name: "orcid", identifier_type: "orcid", old_value: null, new_value: { value: "id" },
+        apply_status: "applied", rollback_status: rollbackStatus, conflict_reason: "Uncertain delivery",
+      }],
+    });
+    renderWithRouter({ routes: [{ path: "/jobs/:jobId", element: <JobDetailPage /> }], initialEntries: ["/jobs/job-001"] });
+    expect(await screen.findByText("Unknown rollback outcomes")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Rollback Updates" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Reconcile unknown rollback outcomes in Pure before retrying/)).toBeInTheDocument();
   });
 
 });

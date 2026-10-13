@@ -1,6 +1,6 @@
 # Runtime Operations
 
-Last updated: 2026-05-12
+Last updated: 2026-10-13
 
 ## Runtime Layout
 
@@ -124,7 +124,7 @@ database and job artifact directories together before manual repair. A canceled
 or interrupted remote request can have reached Pure; its outcome must be checked.
 
 Rollback also executes in the separate worker; its per-item cancellation and
-reconciliation behavior is described in the rollback safety documentation.
+reconciliation behavior is described in [Rollback safety and cleanup](#rollback-safety-and-cleanup).
 
 ## DOI reservations and operator reconciliation
 
@@ -183,3 +183,63 @@ records remain blocked for investigation.
 A successful creation records the server version when Pure returns one. Preserve
 that evidence and the recorded target tenant: an acknowledged UUID alone does
 not prove a record is still safe to delete after later edits.
+
+
+## Rollback safety and cleanup
+
+Rollback restores only acknowledged, job-owned changes on the same configured
+Pure tenant. Every logical update uses a fresh UUID and opaque version token;
+PUT preserves that token for Pure's normal version validation. ORCID is restored
+only while it still equals the applied value. Exact added identifiers are removed
+without replacing another identifier. Address rollback restores changed leaves,
+nulls job-added leaves (Pure merges them), and preserves unrelated later fields.
+Country classifications are compared/restored as one value; a later classification
+edit produces a conflict. Missing historical tenant/version/ownership evidence
+produces a conflict and requires operator review.
+
+Full-text apply records the exact persisted attachment, including its `pureId`,
+from the acknowledged PUT response when that response unambiguously identifies
+one addition. A filename or temporary upload key does not establish ownership.
+Rollback removes only that exact, unchanged attachment and keeps all other current
+electronic versions, including later human attachments. Deposits lacking this
+identity remain acknowledged applies but cannot be rolled back automatically.
+The uploaded file can remain unreferenced in Pure's file store; its API exposes
+no file deletion here.
+
+**Created research outputs and datasets require operator cleanup.** The inspected
+Pure API documents UUID-only DELETE with no conditional version parameter/header.
+Even an unchanged creation version on GET cannot prevent another client's edit
+between GET and DELETE. BackToPure therefore sends no automatic parent DELETE,
+reports a rollback conflict, and preserves recorded creation version/UUID evidence.
+It also preserves every created child external person: parent ownership does not
+prove that a child is unchanged or unshared. Review current record history and
+references before any separately authorized cleanup.
+
+HTTP and legacy synchronous rollback calls share durable queue acceptance and
+exclusive worker ownership. Cancellation synchronously reads the execution task
+before each GET and PUT and again after GET. It cannot recall an in-flight request;
+a successful response is still acknowledged even if cancellation arrives during
+that request. Remaining items are recorded as cancelled. Rollback logs and failed
+result messages report acknowledged success, conflicts, rejected/read-failed items,
+unknown outcomes, and cancellation separately. Dashboard net counts subtract only
+acknowledged rollback successes; conflicts remain applied.
+
+`rollback_attempts` holds each group of item IDs, target tenant, PUT URL, full
+payload/version, committed write intent, and acknowledgement. Back up this table
+with change sets and execution tasks. No SQLite transaction spans a Pure HTTP
+request. Success commits before the next group begins. Worker recovery changes
+unacknowledged `writing` items/attempts to `unknown`, preserving earlier successes,
+and never automatically replays them. Network errors, HTTP 5xx/408/429, and other
+uncertain write responses also become `unknown`. Only definitive ordinary HTTP
+4xx rejection (`rejected`), failures before any write (`read_failed`), cancelled
+unsent items, and untouched pending items can be considered by a later rollback
+request. Historical generic `failed` writes are blocked because their delivery
+outcomes were not durably distinguished.
+
+For interrupted or unknown rollback, inspect the existing execution task, item
+old/new values, saved attempt payload/version, log, and Pure audit/current record
+before operator reconciliation. Do not delete intents, clear unknown status, or
+release queue ownership based on elapsed time or an apparently restored record
+alone. There is no automated reconciliation/unlock endpoint. A mixed rollback may
+acknowledge some updates while others remain blocked; it reports a failed result
+requiring review, rather than claiming everything was restored.

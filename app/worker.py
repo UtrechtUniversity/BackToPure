@@ -6,13 +6,13 @@ script prevents replacement recovery. Heartbeats are diagnostic, never leases.
 import argparse
 import fcntl
 import os
-from pathlib import Path
-import sys
-import subprocess
 import sqlite3
+import subprocess
+import sys
 import threading
 import time
 import uuid
+from pathlib import Path
 
 from app.db import connect_db
 
@@ -45,6 +45,10 @@ class Worker:
                 del self.service.worker_lock_fd
 
     def reconcile_apply(self, task):
+        if task['action'] == 'rollback':
+            from app.services.rollback import recover_rollback
+            recover_rollback(self.service, task['job_id'])
+            return
         if task['action'] != 'apply':
             return
         job = self.service.get_job(task['job_id'])
@@ -69,20 +73,22 @@ class Worker:
                 db.execute("UPDATE execution_tasks SET state='interrupted',finished_at=?,error_message=? WHERE id=?", (self.service._utcnow(), message, row['id']))
                 db.execute("UPDATE jobs SET status='failed',finished_at=?,error_message=? WHERE id=?", (self.service._utcnow(), message, row['result_job_id']))
 
-    def claim(self):
+    def claim(self, task_id=None):
         if self.lock is None:
             raise RuntimeError('Claim requires exclusive worker lock')
         with connect_db(self.service.db_path) as db:
             db.execute('BEGIN IMMEDIATE')
-            row = db.execute("SELECT * FROM execution_tasks WHERE state='queued' ORDER BY created_at,id LIMIT 1").fetchone()
+            row = db.execute("SELECT * FROM execution_tasks WHERE state='queued' AND (? IS NULL OR id=?) ORDER BY created_at,id LIMIT 1", (task_id, task_id)).fetchone()
             if row is None:
                 return None
             now = self.service._utcnow()
             db.execute("UPDATE execution_tasks SET state='running',owner=?,heartbeat=?,started_at=? WHERE id=? AND state='queued'", (self.owner, now, now, row['id']))
-            return dict(row)
+            claimed = dict(row)
+            claimed.update(state='running', owner=self.owner, heartbeat=now, started_at=now)
+            return claimed
 
-    def run_once(self):
-        task = self.claim()
+    def run_once(self, task_id=None):
+        task = self.claim(task_id)
         if task is None:
             return False
         service = self.service
@@ -172,7 +178,12 @@ class Worker:
                 cancelled = db.execute('SELECT cancel_requested FROM execution_tasks WHERE id=?', (task['id'],)).fetchone()[0]
                 if cancelled:
                     state = 'cancelled'
-                    db.execute("UPDATE jobs SET status='failed',finished_at=?,error_message='Job was cancelled by user' WHERE id=?", (service._utcnow(), task['result_job_id']))
+                    cancellation_message = 'Job was cancelled by user'
+                    if task['action'] == 'rollback':
+                        result = db.execute('SELECT error_message FROM jobs WHERE id=?', (task['result_job_id'],)).fetchone()
+                        if result and result['error_message']:
+                            cancellation_message = result['error_message'] + ' Cancellation requested by user.'
+                    db.execute("UPDATE jobs SET status='failed',finished_at=?,error_message=? WHERE id=?", (service._utcnow(), cancellation_message, task['result_job_id']))
                 db.execute('UPDATE execution_tasks SET state=?,finished_at=?,error_message=? WHERE id=? AND owner=?', (state, service._utcnow(), error, task['id'], self.owner))
             service.execution_task = None
             service.active_process = None

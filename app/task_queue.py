@@ -1,5 +1,6 @@
 """Durable acceptance; no execution in an HTTP process."""
 import uuid
+
 from app.db import connect_db
 
 ACTIVE = ('queued', 'running', 'interrupted')

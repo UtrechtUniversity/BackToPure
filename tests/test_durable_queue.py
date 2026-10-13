@@ -1,7 +1,10 @@
 from pathlib import Path
+
 import pytest
-from app.db import initialize_database, connect_db
+
+from app.db import connect_db, initialize_database
 from app.services.jobs import JobService
+
 
 @pytest.fixture
 def service(tmp_path):
@@ -62,9 +65,9 @@ def _wait_until(predicate):
 
 
 def _subprocess_worker(service):
+    import os
     import subprocess
     import sys
-    import os
     # A real worker against a harmless temporary script; never production jobs.
     code = '''from pathlib import Path
 import sys
@@ -98,7 +101,7 @@ while not (out / 'release').exists(): time.sleep(.02)
 def test_request_process_death_does_not_kill_durable_work(service):
     import subprocess
     import sys
-    from app.worker import Worker
+
     _harmless_script(service)
     job = service.create_job(job_id='job_test', created_at=service._utcnow(), job_type='internal_persons')
     # The enqueue owner is a different process, as with an HTTP worker.
@@ -201,6 +204,7 @@ def test_restart_waits_for_orphan_then_recovers_without_another_restart(service)
     import os
     import subprocess
     import sys
+
     from app.worker import Worker
     job = service.create_job(job_id='job_test', created_at=service._utcnow(), job_type='internal_persons')
     service.enqueue_action(job['id'], 'run')
@@ -243,6 +247,7 @@ def test_cancel_accepted_after_claim_prevents_process_launch(service, monkeypatc
 
 def test_recovery_restores_confirmed_apply_evidence_without_replaying(service):
     import json
+
     from app.worker import Worker
     job = service.create_job(job_id='apply_test', created_at=service._utcnow(), job_type='research_outputs', status='needs_review')
     out = service._artifact_directory(job['artifact_dir'])
@@ -266,8 +271,9 @@ def test_recovery_restores_confirmed_apply_evidence_without_replaying(service):
         worker.close()
 
 def test_delete_and_enqueue_are_one_serialized_decision(service, monkeypatch):
-    from concurrent.futures import ThreadPoolExecutor, TimeoutError
     import threading
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError
+
     import app.task_queue as queue
     job = service.create_job(job_id='delete_race', created_at=service._utcnow(), job_type='internal_persons')
     checked = threading.Event()
@@ -301,6 +307,7 @@ def test_heartbeat_retries_transient_sqlite_busy_and_still_observes_cancel(servi
     import sqlite3
     import threading
     import time
+
     import app.worker as worker_module
     job = service.create_job(job_id='busy_monitor', created_at=service._utcnow(), job_type='internal_persons')
     service.enqueue_action(job['id'], 'run')
@@ -337,6 +344,7 @@ def test_persistent_cancellation_read_failure_stops_execution_and_blocks_replay(
     import sqlite3
     import threading
     import time
+
     import app.worker as worker_module
     job = service.create_job(job_id='blind_monitor', created_at=service._utcnow(), job_type='internal_persons')
     service.enqueue_action(job['id'], 'run')
@@ -374,6 +382,7 @@ def test_heartbeat_write_contention_does_not_disable_healthy_cancellation_reads(
     import sqlite3
     import threading
     import time
+
     import app.worker as worker_module
     job = service.create_job(job_id='heartbeat_busy', created_at=service._utcnow(), job_type='internal_persons')
     service.enqueue_action(job['id'], 'run')

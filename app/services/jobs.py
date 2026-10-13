@@ -3,19 +3,17 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
-import tempfile
 import json
 import os
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-
-import requests
 
 from app.db import connect_db
 from app.models import (
@@ -35,7 +33,6 @@ from config import (
     current_pure_credentials,
     is_excluded_organization_key,
 )
-from workflow_http import json_object, request_read
 from safe_creation import normalize_doi
 
 _APPLY_SUPPORTED_JOB_TYPES = {
@@ -396,12 +393,13 @@ class JobService:
         job = self.get_job(job_id)
         if job is None:
             return None
-        if job["status"] not in {JobStatus.RUNNING.value, JobStatus.APPLYING.value}:
-            raise ValueError(f"Job {job_id} is not active")
-
         from app.task_queue import cancel
+        # A rollback source remains completed; cancellation can address either
+        # source or result ID when its durable execution task is active.
         if cancel(self, job_id):
             return self.get_job(job_id)
+        if job["status"] not in {JobStatus.RUNNING.value, JobStatus.APPLYING.value}:
+            raise ValueError(f"Job {job_id} is not active")
         pids = self._find_active_job_pids(job)
         message = "Job was cancelled by user" if pids else "Interrupted job recovered: no active process remains. Review saved results before retrying."
         log_path = self._runtime_path(job["log_path"]) if job.get("log_path") else self.logs_dir / f"{job_id}.log"
@@ -878,29 +876,30 @@ class JobService:
         if job is None:
             return None
         task = getattr(self, "execution_task", None)
-        if task:
-            change_set = self.get_job_change_set(job_id)
-        else:
-            self._validate_rollback(job)
-            change_set = self.get_job_change_set(job_id)
-
-        if task:
-            rollback_job_id = task["result_job_id"]
-            rollback_log_path = self._storage_path(self.logs_dir / f"{rollback_job_id}.log")
-        else:
-            rollback_job_id = f"rollback_{uuid.uuid4().hex[:12]}"
-            rollback_log_path = self._storage_path(self.logs_dir / f"{rollback_job_id}.log")
-            self.create_job(
-                job_id=rollback_job_id,
-                job_type=job["job_type"],
-                status=JobStatus.APPLYING,
-                params={},
-                created_at=self._utcnow(),
-                started_at=self._utcnow(),
-                log_path=str(rollback_log_path),
-                artifact_dir=job.get("artifact_dir"),
-            )
-            self.update_job(job_id, rollback_job_id=rollback_job_id)
+        if not task:
+            # Legacy synchronous callers must reserve the same durable queue and
+            # OS execution ownership as HTTP/worker callers.
+            from app.worker import Worker
+            worker = Worker(self)
+            if not worker.acquire():
+                raise ValueError("Execution worker already owns rollback; use the durable queue")
+            try:
+                accepted = self.enqueue_action(job_id, "rollback")
+                with connect_db(self.db_path) as db:
+                    queued = db.execute("SELECT id FROM execution_tasks WHERE result_job_id=? AND state='queued'", (accepted['id'],)).fetchone()
+                worker.run_once(task_id=queued['id'])
+                return self.get_job(accepted['id'])
+            finally:
+                worker.close()
+        with connect_db(self.db_path) as db:
+            owner = db.execute("SELECT * FROM execution_tasks WHERE id=?", (task['id'],)).fetchone()
+        if (not getattr(self, 'worker_lock_fd', None) or owner is None
+                or owner['job_id'] != job_id or owner['action'] != 'rollback'
+                or owner['state'] != 'running' or owner['owner'] != task.get('owner')):
+            raise ValueError("Rollback execution requires the owning running worker task")
+        change_set = self.get_job_change_set(job_id)
+        rollback_job_id = task["result_job_id"]
+        rollback_log_path = self._storage_path(self.logs_dir / f"{rollback_job_id}.log")
 
         log_path = self._runtime_path(rollback_log_path)
         self.logs_dir.mkdir(parents=True, exist_ok=True)
@@ -913,12 +912,18 @@ class JobService:
 
         error_message = None
         rollback_status = JobStatus.COMPLETED
-        if stats["failed"] > 0:
+        incomplete = sum(stats.get(key, 0) for key in ('failed', 'conflicts', 'unknown', 'cancelled'))
+        with connect_db(self.db_path) as db:
+            cancelled = db.execute('SELECT cancel_requested FROM execution_tasks WHERE id=?', (task['id'],)).fetchone()[0]
+        if incomplete or cancelled:
             rollback_status = JobStatus.FAILED
-            error_message = "One or more rollback updates failed"
+            error_message = (f"Rollback acknowledged {stats['rolled_back']} item(s); "
+                             f"{stats.get('conflicts', 0)} conflict(s), {stats.get('failed', 0)} rejection/read failure(s), "
+                             f"{stats.get('unknown', 0)} unknown outcome(s), {stats.get('cancelled', 0)} cancelled item(s). "
+                             "Review rollback log and saved evidence; operator reconciliation/cleanup may be required.")
 
         updated_change_set_status = "rolled_back"
-        if stats["failed"] > 0 or stats["conflicts"] > 0:
+        if incomplete:
             updated_change_set_status = "rolled_back_with_conflicts"
 
         with connect_db(self.db_path) as connection:
@@ -963,7 +968,7 @@ class JobService:
         retryable_items = [
             item
             for item in change_set["items"]
-            if item["apply_status"] == "applied" and item["rollback_status"] not in {"rolled_back", "conflict", "skipped"}
+            if item["apply_status"] == "applied" and item["rollback_status"] in {"pending", "rejected", "read_failed", "cancelled"}
         ]
         if change_set["status"] not in {"applied", "rolled_back_with_conflicts"}:
             raise ValueError(f"Job {job_id} does not have an applied change set ready for rollback")
@@ -1646,7 +1651,7 @@ class JobService:
         remaining_updated_entities = {
             item["entity_uuid"]
             for item in applied_items
-            if item["rollback_status"] not in {"rolled_back", "conflict", "skipped"}
+            if item["rollback_status"] != "rolled_back"
         }
         rolled_back_entities = {
             item["entity_uuid"] for item in applied_items if item["rollback_status"] == "rolled_back"
@@ -2019,17 +2024,6 @@ class JobService:
             return source_person.get("orcid"), {"value": new_value}, "orcid"
 
         target_uri = str(row.get("uri") or "").strip()
-        old_identifier = None
-        for entry in source_person.get("identifiers", []):
-            if not isinstance(entry, dict):
-                continue
-            entry_uri = ((entry.get("type") or {}).get("uri") or "").strip()
-            if target_uri and entry_uri == target_uri:
-                old_identifier = {
-                    "id": entry.get("id"),
-                    "uri": entry_uri,
-                }
-                break
         return None, {"id": new_value, "uri": target_uri}, "identifier"
 
     def _finalize_apply_change_set(self, job: dict, change_set_id: str) -> tuple[int, int]:
@@ -2332,503 +2326,29 @@ class JobService:
             "conflict_reason": row["conflict_reason"],
         }
 
-    def _execute_internal_persons_rollback(self, change_set: dict[str, Any], log_path: Path) -> dict[str, int]:
-        persons_cache: dict[str, dict[str, Any]] = {}
-        stats = {"checked": 0, "rolled_back": 0, "conflicts": 0, "failed": 0}
+    def _execute_internal_persons_rollback(self, change_set, log_path):
+        from app.services.rollback import RollbackExecutor
+        return RollbackExecutor(self, change_set, log_path, "internal_persons").run()
 
-        with connect_db(self.db_path) as connection:
-            for item in change_set["items"]:
-                if item["apply_status"] != "applied":
-                    connection.execute(
-                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                        ("skipped", "apply_status_not_applied", item["id"]),
-                    )
-                    continue
+    def _execute_external_persons_rollback(self, change_set, log_path):
+        from app.services.rollback import RollbackExecutor
+        return RollbackExecutor(self, change_set, log_path, "external_persons").run()
 
-                stats["checked"] += 1
-                entity_uuid = item["entity_uuid"]
-                person = persons_cache.get(entity_uuid)
-                if person is None:
-                    try:
-                        response = requests.get(
-                            f"{_pure_base_url()}persons/{entity_uuid}",
-                            headers=_pure_headers(),
-                            timeout=30,
-                        )
-                        response.raise_for_status()
-                        person = response.json()
-                        persons_cache[entity_uuid] = person
-                    except requests.RequestException as exc:
-                        stats["failed"] += 1
-                        connection.execute(
-                            "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                            ("failed", str(exc), item["id"]),
-                        )
-                        self._append_log(log_path, f"ERROR Could not load person {entity_uuid}: {exc}\n")
-                        continue
+    def _execute_external_orgs_rollback(self, change_set, log_path):
+        from app.services.rollback import RollbackExecutor
+        return RollbackExecutor(self, change_set, log_path, "external_orgs").run()
 
-                if item["field_name"] == "orcid":
-                    current_value = person.get("orcid")
-                    expected_value = (item["new_value"] or {}).get("value")
-                    if current_value != expected_value:
-                        stats["conflicts"] += 1
-                        reason = f"Current ORCID does not match job-applied value for {entity_uuid}"
-                        connection.execute(
-                            "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                            ("conflict", reason, item["id"]),
-                        )
-                        self._append_log(log_path, f"SKIP {reason}\n")
-                        continue
-                    if item["old_value"] in {None, ""}:
-                        person["orcid"] = None
-                    else:
-                        person["orcid"] = item["old_value"]
-                else:
-                    identifiers = person.get("identifiers", [])
-                    new_identifier = item["new_value"] or {}
-                    new_id = new_identifier.get("id")
-                    new_uri = new_identifier.get("uri")
-                    match_index = next(
-                        (
-                            index
-                            for index, entry in enumerate(identifiers)
-                            if isinstance(entry, dict)
-                            and entry.get("id") == new_id
-                            and ((entry.get("type") or {}).get("uri")) == new_uri
-                        ),
-                        None,
-                    )
-                    if match_index is None:
-                        stats["conflicts"] += 1
-                        reason = f"Current identifier does not match job-applied value for {entity_uuid}"
-                        connection.execute(
-                            "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                            ("conflict", reason, item["id"]),
-                        )
-                        self._append_log(log_path, f"SKIP {reason}\n")
-                        continue
+    def _execute_research_outputs_rollback(self, change_set, log_path):
+        from app.services.rollback import RollbackExecutor
+        return RollbackExecutor(self, change_set, log_path, "research_outputs").run()
 
-                    old_identifier = item["old_value"]
-                    if old_identifier:
-                        identifiers[match_index]["id"] = old_identifier.get("id")
-                        identifiers[match_index].setdefault("type", {})["uri"] = old_identifier.get("uri")
-                    else:
-                        identifiers.pop(match_index)
-                    person["identifiers"] = identifiers
+    def _execute_datasets_rollback(self, change_set, log_path):
+        from app.services.rollback import RollbackExecutor
+        return RollbackExecutor(self, change_set, log_path, "datasets").run()
 
-                try:
-                    response = requests.put(
-                        f"{_pure_base_url()}persons/{entity_uuid}",
-                        headers=_pure_headers(),
-                        json=person,
-                        timeout=30,
-                    )
-                    response.raise_for_status()
-                    stats["rolled_back"] += 1
-                    connection.execute(
-                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = NULL WHERE id = ?",
-                        ("rolled_back", item["id"]),
-                    )
-                    self._append_log(log_path, f"ROLLED BACK {entity_uuid} {item['identifier_type']}\n")
-                except requests.RequestException as exc:
-                    stats["failed"] += 1
-                    connection.execute(
-                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                        ("failed", str(exc), item["id"]),
-                    )
-                    self._append_log(log_path, f"ERROR Could not rollback {entity_uuid}: {exc}\n")
-                    continue
-
-            connection.commit()
-
-        self._append_log(
-            log_path,
-            (
-                f"Rollback checked {stats['checked']} items, "
-                f"rolled back {stats['rolled_back']}, "
-                f"skipped {stats['conflicts']} conflicts, "
-                f"failed {stats['failed']}.\n"
-            ),
-        )
-        return stats
-
-    def _execute_external_persons_rollback(self, change_set: dict[str, Any], log_path: Path) -> dict[str, int]:
-        persons_cache: dict[str, dict[str, Any]] = {}
-        stats = {"checked": 0, "rolled_back": 0, "conflicts": 0, "failed": 0}
-
-        with connect_db(self.db_path) as connection:
-            grouped_items: dict[str, list[dict[str, Any]]] = {}
-            for item in change_set["items"]:
-                if item["apply_status"] != "applied":
-                    connection.execute(
-                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                        ("skipped", "apply_status_not_applied", item["id"]),
-                    )
-                    continue
-                if item["rollback_status"] in {"rolled_back", "conflict", "skipped"}:
-                    continue
-                grouped_items.setdefault(item["entity_uuid"], []).append(item)
-
-            for entity_uuid, entity_items in grouped_items.items():
-                stats["checked"] += len(entity_items)
-                person = persons_cache.get(entity_uuid)
-                if person is None:
-                    try:
-                        response = requests.get(
-                            f"{_pure_base_url()}external-persons/{entity_uuid}",
-                            headers=_pure_headers(),
-                            timeout=30,
-                        )
-                        response.raise_for_status()
-                        person = response.json()
-                        persons_cache[entity_uuid] = person
-                    except requests.RequestException as exc:
-                        stats["failed"] += 1
-                        connection.execute(
-                            "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                            ("failed", str(exc), item["id"]),
-                        )
-                        self._append_log(log_path, f"ERROR Could not load external person {entity_uuid}: {exc}\n")
-                        continue
-
-                identifiers = person.get("identifiers", [])
-                removable_indexes: list[tuple[int, dict[str, Any]]] = []
-                for item in entity_items:
-                    new_identifier = item["new_value"] or {}
-                    new_id = new_identifier.get("id")
-                    new_uri = new_identifier.get("uri")
-                    match_index = next(
-                        (
-                            index
-                            for index, entry in enumerate(identifiers)
-                            if isinstance(entry, dict)
-                            and entry.get("id") == new_id
-                            and ((entry.get("type") or {}).get("uri")) == new_uri
-                        ),
-                        None,
-                    )
-                    if match_index is None:
-                        stats["conflicts"] += 1
-                        reason = f"Current external-person identifier does not match job-applied value for {entity_uuid}"
-                        connection.execute(
-                            "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                            ("conflict", reason, item["id"]),
-                        )
-                        self._append_log(log_path, f"SKIP {reason}\n")
-                        continue
-                    removable_indexes.append((match_index, item))
-
-                if not removable_indexes:
-                    continue
-
-                updated_identifiers = [
-                    entry
-                    for index, entry in enumerate(identifiers)
-                    if index not in {match_index for match_index, _item in removable_indexes}
-                ]
-                person["identifiers"] = updated_identifiers
-
-                try:
-                    response = requests.put(
-                        f"{_pure_base_url()}external-persons/{entity_uuid}",
-                        headers=_pure_headers(),
-                        json=person,
-                        timeout=30,
-                    )
-                    response.raise_for_status()
-                    stats["rolled_back"] += len(removable_indexes)
-                    for _match_index, item in removable_indexes:
-                        connection.execute(
-                            "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = NULL WHERE id = ?",
-                            ("rolled_back", item["id"]),
-                        )
-                        self._append_log(log_path, f"ROLLED BACK {entity_uuid} {item['identifier_type']}\n")
-                except requests.RequestException as exc:
-                    stats["failed"] += len(removable_indexes)
-                    for _match_index, item in removable_indexes:
-                        connection.execute(
-                            "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                            ("failed", str(exc), item["id"]),
-                        )
-                    self._append_log(log_path, f"ERROR Could not rollback external person {entity_uuid}: {exc}\n")
-                    continue
-
-            connection.commit()
-
-        self._append_log(
-            log_path,
-            (
-                f"Rollback checked {stats['checked']} items, "
-                f"rolled back {stats['rolled_back']}, "
-                f"skipped {stats['conflicts']} conflicts, "
-                f"failed {stats['failed']}.\n"
-            ),
-        )
-        return stats
-
-    def _execute_external_orgs_rollback(self, change_set: dict[str, Any], log_path: Path) -> dict[str, int]:
-        org_cache: dict[str, dict[str, Any]] = {}
-        stats = {"checked": 0, "rolled_back": 0, "conflicts": 0, "failed": 0}
-
-        with connect_db(self.db_path) as connection:
-            grouped_items: dict[str, list[dict[str, Any]]] = {}
-            for item in change_set["items"]:
-                if item["apply_status"] != "applied":
-                    connection.execute(
-                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                        ("skipped", "apply_status_not_applied", item["id"]),
-                    )
-                    continue
-                if item["rollback_status"] in {"rolled_back", "conflict", "skipped"}:
-                    continue
-                grouped_items.setdefault(item["entity_uuid"], []).append(item)
-
-            for entity_uuid, entity_items in grouped_items.items():
-                stats["checked"] += len(entity_items)
-                org = org_cache.get(entity_uuid)
-                if org is None:
-                    try:
-                        response = requests.get(
-                            f"{_pure_base_url()}external-organizations/{entity_uuid}",
-                            headers=_pure_headers(),
-                            timeout=30,
-                        )
-                        response.raise_for_status()
-                        org = response.json()
-                        org_cache[entity_uuid] = org
-                    except requests.RequestException as exc:
-                        stats["failed"] += len(entity_items)
-                        for item in entity_items:
-                            connection.execute(
-                                "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                                ("failed", str(exc), item["id"]),
-                            )
-                        self._append_log(log_path, f"ERROR Could not load external organization {entity_uuid}: {exc}\n")
-                        continue
-
-                conflict_items: list[dict[str, Any]] = []
-                rollback_items: list[dict[str, Any]] = []
-                for item in entity_items:
-                    if item["identifier_type"] == "ror":
-                        new_identifier = item["new_value"] or {}
-                        if not self._identifier_exists(org.get("identifiers", []), new_identifier.get("id"), new_identifier.get("uri")):
-                            conflict_items.append(item)
-                            continue
-                    elif item["identifier_type"] == "address":
-                        field_name = (item["new_value"] or {}).get("field") or item["field_name"]
-                        current_value = org.get(field_name)
-                        expected_value = (item["new_value"] or {}).get("value")
-                        if current_value != expected_value:
-                            conflict_items.append(item)
-                            continue
-                    rollback_items.append(item)
-
-                for item in conflict_items:
-                    stats["conflicts"] += 1
-                    reason = f"Current external-organization value does not match job-applied value for {entity_uuid}"
-                    connection.execute(
-                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                        ("conflict", reason, item["id"]),
-                    )
-                    self._append_log(log_path, f"SKIP {reason}\n")
-
-                if not rollback_items:
-                    continue
-
-                updated_org = dict(org)
-                identifiers = list(updated_org.get("identifiers", []) or [])
-                for item in rollback_items:
-                    if item["identifier_type"] == "ror":
-                        new_identifier = item["new_value"] or {}
-                        identifiers = [
-                            entry for entry in identifiers
-                            if not (
-                                isinstance(entry, dict)
-                                and entry.get("id") == new_identifier.get("id")
-                                and ((entry.get("type") or {}).get("uri")) == new_identifier.get("uri")
-                            )
-                        ]
-                    elif item["identifier_type"] == "address":
-                        old_value = item["old_value"] or {}
-                        new_value = item["new_value"] or {}
-                        field_name = old_value.get("field") or new_value.get("field") or item["field_name"]
-                        restored = old_value.get("value")
-                        if restored:
-                            # Pure MERGES address sub-fields on PUT: a key that is
-                            # simply absent keeps its current value and still returns
-                            # HTTP 200. Restoring the pre-apply address therefore has
-                            # to null out every sub-field the apply added, or the
-                            # rollback silently leaves data behind while reporting
-                            # success.
-                            updated_org[field_name] = _address_with_cleared_additions(
-                                restored, new_value.get("value")
-                            )
-                        else:
-                            updated_org[field_name] = None
-                updated_org["identifiers"] = identifiers
-
-                try:
-                    response = requests.put(
-                        f"{_pure_base_url()}external-organizations/{entity_uuid}",
-                        headers=_pure_headers(),
-                        json=updated_org,
-                        timeout=30,
-                    )
-                    response.raise_for_status()
-                    org_cache[entity_uuid] = updated_org
-                    stats["rolled_back"] += len(rollback_items)
-                    for item in rollback_items:
-                        connection.execute(
-                            "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = NULL WHERE id = ?",
-                            ("rolled_back", item["id"]),
-                        )
-                        self._append_log(log_path, f"ROLLED BACK {entity_uuid} {item['identifier_type']}\n")
-                except requests.RequestException as exc:
-                    stats["failed"] += len(rollback_items)
-                    for item in rollback_items:
-                        connection.execute(
-                            "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                            ("failed", str(exc), item["id"]),
-                        )
-                    self._append_log(log_path, f"ERROR Could not rollback external organization {entity_uuid}: {exc}\n")
-
-            connection.commit()
-
-        self._append_log(
-            log_path,
-            (
-                f"Rollback checked {stats['checked']} items, "
-                f"rolled back {stats['rolled_back']}, "
-                f"skipped {stats['conflicts']} conflicts, "
-                f"failed {stats['failed']}.\n"
-            ),
-        )
-        return stats
-
-    def _execute_research_outputs_rollback(self, change_set: dict[str, Any], log_path: Path) -> dict[str, int]:
-        return self._execute_created_record_rollback(
-            change_set,
-            log_path,
-            endpoint="research-outputs",
-            doi_getter=self._research_output_dois,
-            label="research output",
-        )
-
-    def _execute_datasets_rollback(self, change_set: dict[str, Any], log_path: Path) -> dict[str, int]:
-        return self._execute_created_record_rollback(
-            change_set,
-            log_path,
-            endpoint="data-sets",
-            doi_getter=self._dataset_dois,
-            label="dataset",
-        )
-
-    def _execute_full_text_rollback(self, change_set: dict[str, Any], log_path: Path) -> dict[str, int]:
-        """Put back the electronicVersions the deposit replaced.
-
-        Pure exposes no delete for an uploaded file, so the file itself may
-        remain in Pure's store, unreferenced and unreachable through the API.
-        Restoring the record is the whole of what we can do.
-        """
-        stats = {"checked": 0, "rolled_back": 0, "conflicts": 0, "failed": 0}
-
-        with connect_db(self.db_path) as connection:
-            for item in change_set["items"]:
-                if item["apply_status"] != "applied":
-                    connection.execute(
-                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                        ("skipped", "apply_status_not_applied", item["id"]),
-                    )
-                    continue
-                if item["rollback_status"] in {"rolled_back", "conflict", "skipped"}:
-                    continue
-
-                stats["checked"] += 1
-                payload = item.get("new_value") or {}
-                record_uuid = str(payload.get("record_uuid") or "").strip()
-                previous = payload.get("previous_electronic_versions")
-
-                if not record_uuid or previous is None:
-                    stats["conflicts"] += 1
-                    reason = f"No deposit snapshot was recorded for {item['entity_uuid']}"
-                    self._append_log(log_path, f"CONFLICT {reason}\n")
-                    connection.execute(
-                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                        ("conflict", reason, item["id"]),
-                    )
-                    continue
-
-                try:
-                    response = requests.get(
-                        f"{_pure_base_url()}research-outputs/{record_uuid}",
-                        headers=_pure_headers(),
-                        timeout=30,
-                    )
-                except Exception as exc:
-                    stats["failed"] += 1
-                    reason = f"Could not load research output {record_uuid}: {exc}"
-                    self._append_log(log_path, f"ERROR {reason}\n")
-                    connection.execute(
-                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                        ("failed", reason, item["id"]),
-                    )
-                    continue
-
-                if response.status_code == 404:
-                    stats["conflicts"] += 1
-                    reason = f"Research output {record_uuid} no longer exists in Pure"
-                    self._append_log(log_path, f"CONFLICT {reason}\n")
-                    connection.execute(
-                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                        ("conflict", reason, item["id"]),
-                    )
-                    continue
-
-                try:
-                    response.raise_for_status()
-                    record = response.json()
-                except Exception as exc:
-                    stats["failed"] += 1
-                    reason = f"Could not load research output {record_uuid}: {exc}"
-                    self._append_log(log_path, f"ERROR {reason}\n")
-                    connection.execute(
-                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                        ("failed", reason, item["id"]),
-                    )
-                    continue
-
-                record["electronicVersions"] = previous
-                try:
-                    put = requests.put(
-                        f"{_pure_base_url()}research-outputs/{record_uuid}",
-                        headers=_pure_headers(),
-                        json=record,
-                        timeout=180,
-                    )
-                    put.raise_for_status()
-                except Exception as exc:
-                    stats["failed"] += 1
-                    reason = f"Could not restore research output {record_uuid}: {exc}"
-                    self._append_log(log_path, f"ERROR {reason}\n")
-                    connection.execute(
-                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                        ("failed", reason, item["id"]),
-                    )
-                    continue
-
-                stats["rolled_back"] += 1
-                self._append_log(
-                    log_path,
-                    f"ROLLED BACK full text on {record_uuid} ({payload.get('doi')}); "
-                    "the uploaded file remains in Pure's file store (Pure exposes no delete for it)\n",
-                )
-                connection.execute(
-                    "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = NULL WHERE id = ?",
-                    ("rolled_back", item["id"]),
-                )
-            connection.commit()
-
-        return stats
+    def _execute_full_text_rollback(self, change_set, log_path):
+        from app.services.rollback import RollbackExecutor
+        return RollbackExecutor(self, change_set, log_path, "full_text").run()
 
     def _rollback_executor_for(self, job_type: str):
         """Return the bound rollback executor for a job type.
@@ -2852,149 +2372,6 @@ class JobService:
         # rollback deletes records, and an unrecognised job type reaching
         # it would delete records it never created.
         raise ValueError(f"Job type '{job_type}' has no rollback implementation")
-
-    def _execute_created_record_rollback(
-        self,
-        change_set: dict[str, Any],
-        log_path: Path,
-        *,
-        endpoint: str,
-        doi_getter,
-        label: str,
-    ) -> dict[str, int]:
-        stats = {"checked": 0, "rolled_back": 0, "conflicts": 0, "failed": 0}
-
-        with connect_db(self.db_path) as connection:
-            for item in change_set["items"]:
-                if item["apply_status"] != "applied":
-                    connection.execute(
-                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                        ("skipped", "apply_status_not_applied", item["id"]),
-                    )
-                    continue
-                if item["rollback_status"] in {"rolled_back", "conflict", "skipped"}:
-                    continue
-
-                stats["checked"] += 1
-                item_payload = item.get("new_value") or {}
-                if item_payload.get("disposition") in {"existing", "noop"}:
-                    stats["conflicts"] += 1
-                    connection.execute("UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                                       ("conflict", "This record was not created by this job.", item["id"]))
-                    continue
-                record_uuid = str(item_payload.get("record_uuid") or "").strip()
-                expected_doi = self._normalize_doi(str(item_payload.get("doi") or item["entity_uuid"] or ""))
-                if not record_uuid:
-                    stats["conflicts"] += 1
-                    reason = f"No created {label} UUID was recorded for {item['entity_uuid']}"
-                    connection.execute(
-                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                        ("conflict", reason, item["id"]),
-                    )
-                    continue
-
-                try:
-                    response = requests.get(
-                        f"{_pure_base_url()}{endpoint}/{record_uuid}",
-                        headers=_pure_headers(),
-                        timeout=30,
-                    )
-                    response.raise_for_status()
-                    current_record = response.json()
-                except requests.RequestException as exc:
-                    stats["failed"] += 1
-                    connection.execute(
-                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                        ("failed", str(exc), item["id"]),
-                    )
-                    self._append_log(log_path, f"ERROR Could not load {label} {record_uuid}: {exc}\n")
-                    continue
-
-                current_dois = {self._normalize_doi(doi) for doi in doi_getter(current_record)}
-                if expected_doi and expected_doi not in current_dois:
-                    stats["conflicts"] += 1
-                    reason = f"Current {label} DOI does not match job-applied DOI for {record_uuid}"
-                    connection.execute(
-                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                        ("conflict", reason, item["id"]),
-                    )
-                    continue
-
-                try:
-                    delete_response = requests.delete(
-                        f"{_pure_base_url()}{endpoint}/{record_uuid}",
-                        headers=_pure_headers(),
-                        timeout=30,
-                    )
-                    delete_response.raise_for_status()
-                except requests.RequestException as exc:
-                    stats["failed"] += 1
-                    connection.execute(
-                        "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
-                        ("failed", str(exc), item["id"]),
-                    )
-                    self._append_log(log_path, f"ERROR Could not delete {label} {record_uuid}: {exc}\n")
-                    continue
-
-                for person in item_payload.get("created_external_persons", []) or []:
-                    self._delete_job_created_external_person(person, log_path)
-
-                stats["rolled_back"] += 1
-                connection.execute(
-                    "UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = NULL WHERE id = ?",
-                    ("rolled_back", item["id"]),
-                )
-                self._append_log(log_path, f"ROLLED BACK {label} {record_uuid} ({expected_doi})\n")
-
-            connection.commit()
-
-        self._append_log(
-            log_path,
-            (
-                f"Rollback checked {stats['checked']} items, "
-                f"rolled back {stats['rolled_back']}, "
-                f"skipped {stats['conflicts']} conflicts, "
-                f"failed {stats['failed']}.\n"
-            ),
-        )
-        return stats
-
-    def _delete_job_created_external_person(self, person: dict[str, Any], log_path: Path) -> None:
-        person_uuid = str(person.get("uuid") or "").strip()
-        if not person_uuid:
-            return
-        try:
-            response = requests.get(
-                f"{_pure_base_url()}external-persons/{person_uuid}",
-                headers=_pure_headers(),
-                timeout=30,
-            )
-            response.raise_for_status()
-            current_person = response.json()
-        except requests.RequestException as exc:
-            self._append_log(log_path, f"WARNING Could not load created external person {person_uuid}: {exc}\n")
-            return
-
-        current_name = current_person.get("name") or {}
-        expected_first = str(person.get("first_name") or "")
-        expected_last = str(person.get("last_name") or "")
-        if expected_first and current_name.get("firstName") != expected_first:
-            self._append_log(log_path, f"WARNING Skipped external person rollback for {person_uuid}: first name mismatch\n")
-            return
-        if expected_last and current_name.get("lastName") != expected_last:
-            self._append_log(log_path, f"WARNING Skipped external person rollback for {person_uuid}: last name mismatch\n")
-            return
-
-        try:
-            delete_response = requests.delete(
-                f"{_pure_base_url()}external-persons/{person_uuid}",
-                headers=_pure_headers(),
-                timeout=30,
-            )
-            delete_response.raise_for_status()
-            self._append_log(log_path, f"ROLLED BACK external person {person_uuid}\n")
-        except requests.RequestException as exc:
-            self._append_log(log_path, f"WARNING Could not delete created external person {person_uuid}: {exc}\n")
 
     @staticmethod
     def _research_output_dois(record: dict[str, Any]) -> list[str]:
