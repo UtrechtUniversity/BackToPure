@@ -1,11 +1,11 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { AppShell } from "../../components/AppShell";
 import { JobDetailPage } from "./JobDetailPage";
-import { api } from "../../lib/api";
+import { ApiError, api } from "../../lib/api";
 import { renderWithRouter } from "../../test/test-utils";
-import type { JobRecord } from "../../lib/types";
+import type { JobChangeSet, JobRecord, JobReviewTableResponse } from "../../lib/types";
 
 vi.mock("../../lib/api", async (importOriginal) => ({
   ...await importOriginal<typeof import("../../lib/api")>(),
@@ -188,7 +188,7 @@ describe("JobDetailPage", () => {
       });
     mockedApi.getJobArtifacts
       .mockResolvedValueOnce({ jobId: "job-001", directory: "output/internal_persons", items: [] })
-      .mockResolvedValueOnce({
+      .mockResolvedValue({
         jobId: "job-001",
         directory: "output/internal_persons",
         items: [
@@ -230,8 +230,8 @@ describe("JobDetailPage", () => {
 
     await waitFor(() => expect(mockedApi.runJob).toHaveBeenCalledWith("job-001"));
     await waitFor(() => expect(mockedApi.getJob).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(mockedApi.getJobLogs).toHaveBeenCalledTimes(3));
-    await waitFor(() => expect(mockedApi.getJobArtifacts).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockedApi.getJobLogs).toHaveBeenCalledTimes(4));
+    await waitFor(() => expect(mockedApi.getJobArtifacts).toHaveBeenCalledTimes(3));
   });
 
   it("applies a reviewable job and refreshes job detail and logs", async () => {
@@ -1635,6 +1635,163 @@ describe("JobDetailPage", () => {
     expect(await screen.findByText("Unknown rollback outcomes")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Rollback Updates" })).not.toBeInTheDocument();
     expect(screen.getByText(/Reconcile unknown rollback outcomes in Pure before retrying/)).toBeInTheDocument();
+  });
+
+  function setupDeferredEvidence() {
+    mockedApi.getJobLogs.mockResolvedValue({ jobId: "job-001", logPath: null, content: "" });
+    mockedApi.getJobArtifacts.mockResolvedValue({ jobId: "job-001", directory: "output", items: [] });
+  }
+
+  function makeReviewTable(): JobReviewTableResponse {
+    return {
+      jobId: "job-001", fileName: "review.csv", revision: "v1",
+      columns: ["to_be_updated", "updated", "FULL_NAME"],
+      rows: [
+        { _rowIndex: 0, to_be_updated: "X", updated: "", FULL_NAME: "Alpha" },
+        { _rowIndex: 1, to_be_updated: "", updated: "", FULL_NAME: "Beta" },
+      ],
+      rowCount: 2, selectionColumn: "to_be_updated", editableColumns: ["to_be_updated"],
+    };
+  }
+
+  function makeAppliedChangeSet(): JobChangeSet {
+    return {
+      id: "cs", job_id: "job-001", job_type: "internal_persons", status: "applied",
+      created_at: "2026-10-13", applied_at: "2026-10-13", item_count: 1, applied_item_count: 1,
+      items: [{
+        id: 1, change_set_id: "cs", item_key: "p|orcid", entity_uuid: "p", entity_label: "P",
+        field_name: "orcid", identifier_type: "orcid", old_value: null, new_value: { value: "id" },
+        apply_status: "applied", rollback_status: "pending", conflict_reason: null,
+      }],
+    };
+  }
+
+  function renderDetail() {
+    return renderWithRouter({
+      routes: [{ path: "/jobs/:jobId", element: <JobDetailPage /> }],
+      initialEntries: ["/jobs/job-001"],
+    });
+  }
+
+  it("refreshes apply evidence when an accepted pending apply later completes", async () => {
+    setupDeferredEvidence();
+    let job = makeJob({ status: "needs_review", canApply: true });
+    let table = makeReviewTable();
+    let changeSet: JobChangeSet | null = null;
+    mockedApi.getJob.mockImplementation(async () => job);
+    mockedApi.getJobReviewTable.mockImplementation(async () => table);
+    mockedApi.getJobChangeSet.mockImplementation(async () => changeSet);
+    mockedApi.applyJob.mockImplementation(async () => (job = { ...job, status: "applying", canApply: false }));
+    const { queryClient } = renderDetail();
+    queryClient.setQueryData(["jobs"], { items: [] });
+    queryClient.setQueryData(["results-dashboard", "all"], {});
+    await userEvent.click(await screen.findByRole("button", { name: "Apply Updates" }));
+    await screen.findByRole("button", { name: "Stop Job" });
+    expect(screen.queryByRole("button", { name: "Rollback Updates" })).not.toBeInTheDocument();
+    // The worker completes after the acceptance-time requests have returned.
+    await waitFor(() => expect(mockedApi.getJobChangeSet).toHaveBeenCalledTimes(2));
+    changeSet = makeAppliedChangeSet();
+    table = { ...table, revision: "v2", rows: table.rows.map(row => ({ ...row, updated: "X" })) };
+    job = { ...job, status: "completed", results: { ...job.results, updated_count: 1 } };
+    expect(await screen.findByRole("button", { name: "Rollback Updates" }, { timeout: 4500 })).toBeEnabled();
+    expect(await screen.findByText("1 updated successfully.")).toBeInTheDocument();
+    expect(queryClient.getQueryState(["jobs"])?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(["results-dashboard", "all"])?.isInvalidated).toBe(true);
+    await waitFor(() => expect(screen.getAllByRole("cell", { name: "X" })).toHaveLength(2));
+    const calls = mockedApi.getJobChangeSet.mock.calls.length;
+    await act(async () => { await queryClient.refetchQueries({ queryKey: ["job", "job-001"] }); });
+    expect(mockedApi.getJobChangeSet).toHaveBeenCalledTimes(calls);
+  }, 7000);
+
+  it("refreshes review evidence when accepted harvest later reaches needs_review", async () => {
+    setupDeferredEvidence();
+    let job = makeJob();
+    let table: JobReviewTableResponse | null = null;
+    mockedApi.getJob.mockImplementation(async () => job);
+    mockedApi.getJobReviewTable.mockImplementation(async () => table);
+    mockedApi.getJobChangeSet.mockResolvedValue(null);
+    mockedApi.runJob.mockImplementation(async () => (job = { ...job, status: "running" }));
+    renderDetail();
+    await userEvent.click(await screen.findByRole("button", { name: "Run Job" }));
+    await screen.findByRole("button", { name: "Stop Job" });
+    await waitFor(() => expect(mockedApi.getJobArtifacts).toHaveBeenCalledTimes(2));
+    table = makeReviewTable();
+    job = { ...job, status: "needs_review", canApply: true, canOpen: true };
+    expect(await screen.findByRole("checkbox", { name: "Select row 2" }, { timeout: 4500 })).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "Apply Updates" })).toBeEnabled();
+  }, 7000);
+
+  it("refreshes source counts and evidence when accepted rollback later completes", async () => {
+    setupDeferredEvidence();
+    let source = makeJob({ status: "completed" });
+    let rollback = makeJob({ id: "rollback-001", status: "queued" });
+    let changeSet = makeAppliedChangeSet();
+    mockedApi.getJob.mockImplementation(async id => id === "rollback-001" ? rollback : source);
+    mockedApi.getJobChangeSet.mockImplementation(async () => changeSet);
+    mockedApi.rollbackJob.mockImplementation(async () => {
+      source = { ...source, rollback_job_id: rollback.id };
+      return rollback;
+    });
+    renderDetail();
+    await userEvent.click(await screen.findByRole("button", { name: "Rollback Updates" }));
+    await screen.findByText("queued in rollback job rollback-001");
+    changeSet = { ...changeSet, status: "rolled_back", items: changeSet.items.map(item => ({ ...item, rollback_status: "rolled_back" })) };
+    source = { ...source, results: { ...source.results, updated_count: 0, rolled_back_label: "Persons rolled back", rolled_back_count: 1 } };
+    rollback = { ...rollback, status: "completed" };
+    expect(await screen.findByText("Persons rolled back", {}, { timeout: 4500 })).toBeInTheDocument();
+    expect(screen.getByText("Persons updated", { selector: ".result-metric-card span" }).nextElementSibling).toHaveTextContent("0");
+    expect(screen.getByText("Rolled back").nextElementSibling).toHaveTextContent("1");
+  }, 7000);
+
+  it.each(["same selection", "different selection"])("preserves dirty selection and its save revision across changed background review data (%s)", async (serverSelection) => {
+    setupDeferredEvidence();
+    const table = makeReviewTable();
+    let serverTable = table;
+    mockedApi.getJob.mockResolvedValue(makeJob({ status: "needs_review", canApply: true }));
+    mockedApi.getJobReviewTable.mockImplementation(async () => serverTable);
+    mockedApi.getJobChangeSet.mockResolvedValue(null);
+    mockedApi.updateJobReviewTable.mockRejectedValue(new ApiError("Review file changed. Reload before saving.", 409));
+    const { queryClient } = renderDetail();
+    await userEvent.click(await screen.findByRole("checkbox", { name: "Select row 2" }));
+    // Another tab saved the same selection; it still must not erase this draft/baseline.
+    serverTable = { ...table, revision: "v2", rows: table.rows.map(row => ({ ...row, to_be_updated: serverSelection === "same selection" ? "X" : "" })) };
+    await act(async () => { await queryClient.refetchQueries({ queryKey: ["jobReviewTable", "job-001"] }); });
+    expect(await screen.findByText(/changed.*unsaved/i)).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Select row 2" })).toBeChecked();
+    expect(screen.getByRole("button", { name: "Apply Updates" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Save Review" }));
+    await screen.findByText("Review file changed. Reload before saving.");
+    expect(mockedApi.updateJobReviewTable).toHaveBeenCalledWith("job-001", {
+      fileName: "review.csv", expectedRowCount: 2, expectedRevision: "v1",
+      updates: [{ rowIndex: 1, to_be_updated: "X" }],
+    });
+    expect(screen.getByRole("button", { name: "Apply Updates" })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "Select row 2" })).toBeChecked();
+    // Returning to the old baseline does not resolve a known stale revision.
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select row 2" }));
+    expect(screen.getByRole("button", { name: "Apply Updates" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Reset Changes" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Apply Updates" })).toBeEnabled());
+    expect(screen.getByRole("checkbox", { name: "Select row 2" }).matches(":checked")).toBe(serverSelection === "same selection");
+    expect(screen.queryByText(/changed.*unsaved/i)).not.toBeInTheDocument();
+  });
+
+  it("adopts clean background review data and isolates drafts when navigating jobs", async () => {
+    setupDeferredEvidence();
+    let table = makeReviewTable();
+    mockedApi.getJob.mockImplementation(async id => makeJob({ id, status: "needs_review", canApply: true }));
+    mockedApi.getJobReviewTable.mockImplementation(async id => ({ ...table, jobId: id }));
+    mockedApi.getJobChangeSet.mockResolvedValue(null);
+    const { queryClient, router } = renderDetail();
+    await screen.findByRole("checkbox", { name: "Select row 2" });
+    table = { ...table, revision: "v2", rows: table.rows.map(row => ({ ...row, to_be_updated: "X" })) };
+    await act(async () => { await queryClient.refetchQueries({ queryKey: ["jobReviewTable", "job-001"] }); });
+    await waitFor(() => expect(screen.getByRole("checkbox", { name: "Select row 2" })).toBeChecked());
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select row 2" }));
+    expect(screen.getByRole("button", { name: "Apply Updates" })).toBeDisabled();
+    await act(async () => { await router.navigate("/jobs/job-002"); });
+    await waitFor(() => expect(screen.getByRole("checkbox", { name: "Select row 2" })).toBeChecked());
+    expect(screen.getByRole("button", { name: "Apply Updates" })).toBeEnabled();
   });
 
 });

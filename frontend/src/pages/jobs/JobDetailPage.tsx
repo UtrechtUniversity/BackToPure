@@ -16,7 +16,7 @@ import {
   isActiveJobStatus,
   nextUserAction,
 } from "../../lib/job-ui";
-import type { JobType } from "../../lib/types";
+import type { JobRecord, JobReviewTableResponse, JobStatus, JobType } from "../../lib/types";
 
 function formatReviewCell(column: string, value: string | number | undefined) {
   const rawValue = String(value ?? "");
@@ -195,12 +195,42 @@ function formatApplyErrorMessage(rawLine: string) {
   return cleaned.slice(0, 320);
 }
 
+function getReviewSelection(table: JobReviewTableResponse | null | undefined) {
+  const selection: Record<number, boolean> = {};
+  if (table?.selectionColumn) {
+    for (const row of table.rows) {
+      selection[row._rowIndex] = String(row[table.selectionColumn] ?? "").trim().toUpperCase() === "X";
+    }
+  }
+  return selection;
+}
+
+function getReviewSelectionUpdates(table: JobReviewTableResponse | null | undefined, selection: Record<number, boolean>) {
+  return table?.rows.flatMap((row) => {
+    if (!table.selectionColumn) {
+      return [];
+    }
+    const originalSelected = String(row[table.selectionColumn] ?? "").trim().toUpperCase() === "X";
+    const currentSelected = selection[row._rowIndex] ?? originalSelected;
+    return originalSelected === currentSelected
+      ? []
+      : [{ rowIndex: row._rowIndex, to_be_updated: currentSelected ? "X" : "" }];
+  }) ?? [];
+}
+
+interface ReviewDraft {
+  jobId: string;
+  table: JobReviewTableResponse | null | undefined;
+  selection: Record<number, boolean>;
+  stale: boolean;
+}
+
 export function JobDetailPage() {
   const [showMainLog, setShowMainLog] = useState(false);
   const [showRollbackLog, setShowRollbackLog] = useState(false);
   const [reviewSearch, setReviewSearch] = useState("");
   const [reviewFilter, setReviewFilter] = useState<"all" | "selected" | "unselected">("all");
-  const [reviewSelection, setReviewSelection] = useState<Record<number, boolean>>({});
+  const [reviewDraft, setReviewDraft] = useState<ReviewDraft | null>(null);
   const [reviewScrollTop, setReviewScrollTop] = useState(0);
   const [jobActionInProgress, setJobActionInProgress] = useState(false);
   const { jobId = "" } = useParams();
@@ -208,6 +238,20 @@ export function JobDetailPage() {
   const queryClient = useQueryClient();
   const deferredReviewSearch = useDeferredValue(reviewSearch);
   const reviewTableRef = useRef<HTMLDivElement | null>(null);
+  const previousExecution = useRef<{
+    jobId: string;
+    status?: JobStatus;
+    rollbackId?: string | null;
+    rollbackStatus?: JobStatus;
+  } | null>(null);
+  const reviewTable = reviewDraft?.jobId === jobId ? reviewDraft.table : null;
+  const reviewSelection = reviewDraft?.jobId === jobId ? reviewDraft.selection : {};
+  const reviewIsStale = reviewDraft?.jobId === jobId && reviewDraft.stale;
+  const setReviewSelection = (update: (current: Record<number, boolean>) => Record<number, boolean>) => {
+    setReviewDraft((current) => current?.jobId === jobId
+      ? { ...current, selection: update(current.selection) }
+      : current);
+  };
 
   const jobQuery = useQuery({
     queryKey: ["job", jobId],
@@ -246,18 +290,15 @@ export function JobDetailPage() {
 
   useEffect(() => {
     const table = reviewTableQuery.data;
-    if (!table) {
-      setReviewSelection({});
-      return;
-    }
-    const nextSelection: Record<number, boolean> = {};
-    if (table.selectionColumn) {
-      for (const row of table.rows) {
-        nextSelection[row._rowIndex] = String(row[table.selectionColumn] ?? "").trim().toUpperCase() === "X";
+    setReviewDraft((current) => {
+      if (current?.jobId === jobId && (current.stale || getReviewSelectionUpdates(current.table, current.selection).length > 0)) {
+        // Keep the exact revision and row identities that the user started editing.
+        const changed = table?.revision !== current.table?.revision || table?.fileName !== current.table?.fileName;
+        return changed && !current.stale ? { ...current, stale: true } : current;
       }
-    }
-    setReviewSelection(nextSelection);
-  }, [reviewTableQuery.data]);
+      return { jobId, table, selection: getReviewSelection(table), stale: false };
+    });
+  }, [jobId, reviewTableQuery.data]);
 
   const rollbackJobQuery = useQuery({
     queryKey: ["rollbackJob", jobQuery.data?.rollback_job_id],
@@ -287,6 +328,39 @@ export function JobDetailPage() {
       rollbackJobQuery.data && isActiveJobStatus(rollbackJobQuery.data.status) ? 3000 : false,
   });
 
+  useEffect(() => {
+    const current = {
+      jobId,
+      status: jobQuery.data?.status,
+      rollbackId: jobQuery.data?.rollback_job_id,
+      rollbackStatus: rollbackJobQuery.data?.status,
+    };
+    const previous = previousExecution.current;
+    previousExecution.current = current;
+    if (!previous || previous.jobId !== jobId) {
+      return;
+    }
+    const jobFinished = previous.status && current.status &&
+      isActiveJobStatus(previous.status) && !isActiveJobStatus(current.status);
+    const rollbackFinished = previous.rollbackId === current.rollbackId &&
+      previous.rollbackStatus && current.rollbackStatus &&
+      isActiveJobStatus(previous.rollbackStatus) && !isActiveJobStatus(current.rollbackStatus);
+    if (!jobFinished && !rollbackFinished) {
+      return;
+    }
+    // Acceptance only queues work. Refresh dependent evidence once the worker finishes.
+    for (const queryKey of [
+      ["jobLogs", jobId], ["jobArtifacts", jobId], ["jobChangeSet", jobId],
+      ["jobReviewTable", jobId], ["jobs"], ["results-dashboard"],
+    ]) {
+      void queryClient.invalidateQueries({ queryKey });
+    }
+    if (rollbackFinished) {
+      void queryClient.invalidateQueries({ queryKey: ["job", jobId] });
+      void queryClient.invalidateQueries({ queryKey: ["rollbackJobLogs", current.rollbackId] });
+    }
+  }, [jobId, jobQuery.data?.status, jobQuery.data?.rollback_job_id, rollbackJobQuery.data?.status, queryClient]);
+
   const runJobMutation = useMutation({
     mutationFn: () => api.runJob(jobId),
     onError: () => {
@@ -297,7 +371,8 @@ export function JobDetailPage() {
       setJobActionInProgress(true);
       void logsQuery.refetch();
     },
-    onSuccess: () => {
+    onSuccess: (acceptedJob) => {
+      queryClient.setQueryData(["job", jobId], acceptedJob);
       void jobQuery.refetch();
       void logsQuery.refetch();
       void artifactsQuery.refetch();
@@ -336,7 +411,10 @@ export function JobDetailPage() {
       setJobActionInProgress(true);
       void rollbackLogsQuery.refetch();
     },
-    onSuccess: () => {
+    onSuccess: (acceptedJob) => {
+      queryClient.setQueryData(["rollbackJob", acceptedJob.id], acceptedJob);
+      queryClient.setQueryData<JobRecord>(["job", jobId], (source) =>
+        source ? { ...source, rollback_job_id: acceptedJob.id } : source);
       void jobQuery.refetch();
       void logsQuery.refetch();
       void changeSetQuery.refetch();
@@ -368,23 +446,10 @@ export function JobDetailPage() {
 
   const saveReviewTableMutation = useMutation({
     mutationFn: () => {
-      if (!reviewTableQuery.data) {
+      if (!reviewTable) {
         throw new Error("No review table is loaded.");
       }
-      const reviewTable = reviewTableQuery.data;
-      const selectionColumn = reviewTable.selectionColumn;
-      const updates =
-        reviewTable.rows.flatMap((row) => {
-          if (!selectionColumn) {
-            return [];
-          }
-          const originalSelected = String(row[selectionColumn] ?? "").trim().toUpperCase() === "X";
-          const currentSelected = reviewSelection[row._rowIndex] ?? originalSelected;
-          if (originalSelected === currentSelected) {
-            return [];
-          }
-          return [{ rowIndex: row._rowIndex, to_be_updated: currentSelected ? "X" : "" }];
-        }) ?? [];
+      const updates = getReviewSelectionUpdates(reviewTable, reviewSelection);
       return api.updateJobReviewTable(jobId, {
         fileName: reviewTable.fileName,
         expectedRowCount: reviewTable.rowCount,
@@ -393,6 +458,9 @@ export function JobDetailPage() {
       });
     },
     onSuccess: async (savedTable) => {
+      setReviewDraft((current) => current?.jobId === jobId
+        ? { jobId, table: savedTable, selection: getReviewSelection(savedTable), stale: false }
+        : current);
       queryClient.setQueryData(["jobReviewTable", jobId], savedTable);
       await Promise.all([reviewTableQuery.refetch(), jobQuery.refetch()]);
     },
@@ -439,7 +507,6 @@ export function JobDetailPage() {
   const rollbackLogLineCount = rollbackLogContent
     ? rollbackLogContent.split("\n").filter((line) => line.trim().length > 0).length
     : 0;
-  const reviewTable = reviewTableQuery.data;
   const reviewColumns = getReviewColumns(job.job_type, reviewTable?.columns ?? []);
   const isEmptyReviewTable = Boolean(reviewTable) && (reviewTable?.rowCount ?? 0) === 0;
   const selectionColumn = reviewTable?.selectionColumn ?? null;
@@ -493,18 +560,7 @@ export function JobDetailPage() {
   const reviewBottomSpacerHeight = shouldVirtualizeReviewRows
     ? Math.max(0, (totalFilteredReviewRows - virtualReviewEndIndex) * REVIEW_TABLE_ROW_HEIGHT)
     : 0;
-  const reviewSelectionUpdates =
-    reviewTable?.rows.flatMap((row) => {
-      if (!selectionColumn) {
-        return [];
-      }
-      const originalSelected = String(row[selectionColumn] ?? "").trim().toUpperCase() === "X";
-      const currentSelected = reviewSelection[row._rowIndex] ?? originalSelected;
-      if (originalSelected === currentSelected) {
-        return [];
-      }
-      return [{ rowIndex: row._rowIndex, to_be_updated: currentSelected ? "X" : "" }];
-    }) ?? [];
+  const reviewSelectionUpdates = getReviewSelectionUpdates(reviewTable, reviewSelection);
   const reviewHasUnsavedChanges = reviewSelectionUpdates.length > 0;
   const selectionLocked = job.status !== "needs_review" || saveReviewTableMutation.isPending || applyJobMutation.isPending;
   const applyErrorLines = logContent
@@ -635,7 +691,7 @@ export function JobDetailPage() {
                 className={`primary-action ${!hasSelectedUpdates ? "disabled-action" : ""}`}
                 type="button"
                 onClick={() => applyJobMutation.mutate()}
-                disabled={applyJobMutation.isPending || !hasSelectedUpdates || reviewHasUnsavedChanges || saveReviewTableMutation.isPending}
+                disabled={applyJobMutation.isPending || !hasSelectedUpdates || reviewHasUnsavedChanges || reviewIsStale || saveReviewTableMutation.isPending}
               >
                 {applyJobMutation.isPending ? "Applying..." : "Apply Updates"}
               </button>
@@ -932,17 +988,11 @@ export function JobDetailPage() {
                       className="secondary-action"
                       type="button"
                       onClick={() => {
-                        if (!reviewTable || !selectionColumn) {
-                          return;
-                        }
-                        const resetSelection: Record<number, boolean> = {};
-                        for (const row of reviewTable.rows) {
-                          resetSelection[row._rowIndex] =
-                            String(row[selectionColumn] ?? "").trim().toUpperCase() === "X";
-                        }
-                        setReviewSelection(resetSelection);
+                        const table = reviewTableQuery.data;
+                        setReviewDraft({ jobId, table, selection: getReviewSelection(table), stale: false });
+                        saveReviewTableMutation.reset();
                       }}
-                      disabled={!reviewHasUnsavedChanges || selectionLocked}
+                      disabled={(!reviewHasUnsavedChanges && !reviewIsStale) || selectionLocked}
                     >
                       Reset Changes
                     </button>
@@ -951,6 +1001,11 @@ export function JobDetailPage() {
                         ? `${reviewSelectionUpdates.length} row${reviewSelectionUpdates.length === 1 ? "" : "s"} changed`
                         : "No unsaved review changes"}
                     </p>
+                    {reviewIsStale ? (
+                      <p className="error-banner">
+                        The review file changed while you had unsaved edits. Your selection is preserved. Reset Changes loads the latest review; saving checks your original revision.
+                      </p>
+                    ) : null}
                     {saveReviewTableMutation.isError ? (
                       <p className="error-banner">
                         {saveReviewTableMutation.error instanceof ApiError
