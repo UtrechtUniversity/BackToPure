@@ -31,6 +31,7 @@
 
 
 import re
+from reviewed_changes import capture_apply_baseline
 import os
 import time
 import pandas as pd
@@ -340,6 +341,8 @@ def update_externalpersons_pure(persons, matched_personsjson, test_choice):
         if matched_person is None:
             logger.debug(f"Matched person not found for UUID {uuid}")
             continue
+
+        capture_apply_baseline(matched_person)
 
         # Initialize identifiers if not already present
         if 'identifiers' not in matched_person:

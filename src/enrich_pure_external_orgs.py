@@ -30,6 +30,7 @@
 
 import time
 import copy
+from reviewed_changes import capture_apply_baseline
 from pure_countries import load_external_org_countries, resolve_country
 from contextlib import contextmanager
 import csv
@@ -627,6 +628,7 @@ def update_externalorg_pure(orgs, test_choice, update, org_index=None):
             except ValueError:
                 logger.error(f"Invalid JSON response while fetching external organization {row['uuid']}")
                 continue
+        capture_apply_baseline(data)
         address_field = 'contactAddress' if 'contactAddress' in data else 'address'
         existing_address = data.get(address_field) or {}
         geo = row.get('geo_summary') or {}
