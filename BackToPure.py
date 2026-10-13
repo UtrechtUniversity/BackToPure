@@ -79,4 +79,15 @@ if __name__ == '__main__':
     debug = os.environ.get("FLASK_DEBUG", "0").lower() in {"1", "true", "yes", "on"}
     host = os.environ.get("BTP_HOST", "127.0.0.1")
     port = int(os.environ.get("BTP_PORT", "5002"))
+    # Standalone worker survives HTTP request/server process exits. The runtime
+    # flock makes repeated launchers and debug reloads safe. Imports never start it.
+    if os.environ.get("BTP_START_WORKER", "1").lower() not in {"0", "false", "no"}:
+        import subprocess
+        logs = Path(app.config["BTP_LOGS_DIR"])
+        logs.mkdir(parents=True, exist_ok=True)
+        with (logs / "worker.log").open("a") as worker_log:
+            subprocess.Popen([sys.executable, "-m", "app.worker"],
+                             cwd=Path(__file__).resolve().parent,
+                             stdin=subprocess.DEVNULL, stdout=worker_log,
+                             stderr=subprocess.STDOUT, start_new_session=True)
     app.run(host=host, port=port, debug=debug)

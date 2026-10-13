@@ -91,6 +91,16 @@ class FlaskRouteTests(unittest.TestCase):
         init_db(self.app)
         self.client = self.app.test_client()
 
+    def drain_worker(self):
+        from app.worker import Worker
+        with self.app.app_context():
+            worker = Worker(routes._job_service())
+        self.assertTrue(worker.acquire())
+        try:
+            self.assertTrue(worker.run_once())
+        finally:
+            worker.close()
+
     def tearDown(self):
         self.tempdir.cleanup()
 
@@ -775,7 +785,7 @@ class FlaskRouteTests(unittest.TestCase):
         result = self.client.post("/api/jobs/job-001/apply")
 
         self.assertEqual(400, result.status_code)
-        self.assertIn("must be in needs_review", result.get_json()["error"])
+        self.assertIn("selected review updates", result.get_json()["error"])
 
     @patch("app.services.jobs.subprocess.Popen")
     def test_api_run_job_executes_internal_persons_and_exposes_logs(self, mock_popen):
@@ -829,10 +839,13 @@ class FlaskRouteTests(unittest.TestCase):
         mock_popen.return_value = mock_process
 
         run_result = self.client.post(f"/api/jobs/{created['id']}/run")
-        run_body = run_result.get_json()
+        self.assertEqual("running", run_result.get_json()["status"])
+        mock_popen.assert_not_called()
+        self.drain_worker()
+        run_body = self.client.get(f"/api/jobs/{created['id']}").get_json()
         logs_result = self.client.get(f"/api/jobs/{created['id']}/logs")
 
-        self.assertEqual(200, run_result.status_code)
+        self.assertEqual(202, run_result.status_code)
         self.assertEqual("needs_review", run_body["status"])
         self.assertTrue(run_body["canOpen"])
         self.assertTrue(run_body["canApply"])
@@ -939,10 +952,13 @@ class FlaskRouteTests(unittest.TestCase):
         )
 
         apply_result = self.client.post("/api/jobs/job-001/apply")
-        apply_body = apply_result.get_json()
+        self.assertEqual("applying", apply_result.get_json()["status"])
+        mock_popen.assert_not_called()
+        self.drain_worker()
+        apply_body = self.client.get("/api/jobs/job-001").get_json()
         logs_result = self.client.get("/api/jobs/job-001/logs")
 
-        self.assertEqual(200, apply_result.status_code)
+        self.assertEqual(202, apply_result.status_code)
         self.assertEqual("completed", apply_body["status"])
         self.assertEqual(200, logs_result.status_code)
         self.assertIn("apply ok", logs_result.get_json()["content"])
@@ -1019,8 +1035,11 @@ class FlaskRouteTests(unittest.TestCase):
 
         result = self.client.post("/api/jobs/job-rollback-source/rollback")
 
-        body = result.get_json()
-        self.assertEqual(200, result.status_code)
+        self.assertEqual(202, result.status_code)
+        self.assertEqual("applying", result.get_json()["status"])
+        mock_put.assert_not_called()
+        self.drain_worker()
+        body = self.client.get(f"/api/jobs/{result.get_json()['id']}").get_json()
         self.assertTrue(body["id"].startswith("rollback_"))
         self.assertEqual("completed", body["status"])
 

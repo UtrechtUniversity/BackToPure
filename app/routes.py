@@ -170,13 +170,13 @@ def init_app(app):
     def api_run_job(job_id):
         service = _job_service()
         try:
-            job = service.run_job(job_id)
+            job = service.enqueue_action(job_id, "run")
         except ValueError as exc:
             return jsonify({'error': str(exc)}), 400
 
         if job is None:
             return jsonify({'error': f'Job not found: {job_id}'}), 404
-        return jsonify(job)
+        return jsonify(job), 202
 
     @app.route('/api/jobs/<job_id>/cancel', methods=['POST'])
     def api_cancel_job(job_id):
@@ -194,25 +194,25 @@ def init_app(app):
     def api_apply_job(job_id):
         service = _job_service()
         try:
-            job = service.apply_job(job_id)
+            job = service.enqueue_action(job_id, "apply")
         except ValueError as exc:
             return jsonify({'error': str(exc)}), 400
 
         if job is None:
             return jsonify({'error': f'Job not found: {job_id}'}), 404
-        return jsonify(job)
+        return jsonify(job), 202
 
     @app.route('/api/jobs/<job_id>/rollback', methods=['POST'])
     def api_rollback_job(job_id):
         service = _job_service()
         try:
-            rollback_job = service.rollback_job(job_id)
+            rollback_job = service.enqueue_action(job_id, "rollback")
         except ValueError as exc:
             return jsonify({'error': str(exc)}), 400
 
         if rollback_job is None:
             return jsonify({'error': f'Job not found: {job_id}'}), 404
-        return jsonify(rollback_job)
+        return jsonify(rollback_job), 202
 
     @app.route('/api/jobs/<job_id>/change-set', methods=['GET'])
     def api_get_job_change_set(job_id):

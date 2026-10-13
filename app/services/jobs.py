@@ -105,6 +105,25 @@ class JobService:
         self.logs_dir = Path(logs_dir) if logs_dir is not None else self.runtime_root / "logs" / "jobs"
         self.python_executable = python_executable or self._default_python_executable()
 
+    def enqueue_action(self, job_id: str, action: str) -> dict | None:
+        from app.task_queue import enqueue
+        return enqueue(self, job_id, action)
+
+    def _launch_process(self, *args, **kwargs):
+        task = getattr(self, "execution_task", None)
+        if not task:
+            return subprocess.Popen(*args, **kwargs)
+        # Serialize the last cancellation check with process creation, so a
+        # cancellation acknowledged before launch cannot start a Pure write.
+        with connect_db(self.db_path) as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT cancel_requested FROM execution_tasks WHERE id=?", (task["id"],)).fetchone()
+            if row is None or row[0]:
+                raise ValueError("Job was cancelled before process launch")
+            process = subprocess.Popen(*args, **kwargs)
+            self.active_process = process
+            return process
+
     def healthcheck(self) -> dict:
         return {
             "status": "ok",
@@ -348,6 +367,9 @@ class JobService:
         job = self.get_job(job_id)
         if job is None:
             return False
+        from app.task_queue import has_active_task
+        if has_active_task(self.db_path, job_id):
+            raise ValueError(f"Job {job_id} has an unfinished execution task")
         if job["status"] in {
             JobStatus.RUNNING.value,
             JobStatus.APPLYING.value,
@@ -375,6 +397,9 @@ class JobService:
         if job["status"] not in {JobStatus.RUNNING.value, JobStatus.APPLYING.value}:
             raise ValueError(f"Job {job_id} is not active")
 
+        from app.task_queue import cancel
+        if cancel(self, job_id):
+            return self.get_job(job_id)
         pids = self._find_active_job_pids(job)
         message = "Job was cancelled by user" if pids else "Interrupted job recovered: no active process remains. Review saved results before retrying."
         log_path = self._runtime_path(job["log_path"]) if job.get("log_path") else self.logs_dir / f"{job_id}.log"
@@ -487,6 +512,8 @@ class JobService:
 
     def _claim_job(self, job_id: str, expected: JobStatus, target: JobStatus) -> None:
         """Only one request may start a job, even across server workers."""
+        if getattr(self, "execution_task", None):
+            return
         with connect_db(self.db_path) as connection:
             claimed = connection.execute(
                 "UPDATE jobs SET status = ? WHERE id = ? AND status = ?",
@@ -516,12 +543,12 @@ class JobService:
         if job is None:
             return None
 
-        if job["status"] != JobStatus.QUEUED.value:
+        if job["status"] != JobStatus.QUEUED.value and not getattr(self, "execution_task", None):
             raise ValueError(f"Job {job_id} must be queued before it can run")
 
         definition = get_job_type_definition(job["job_type"])
         script_path = self.project_root / definition.script_path
-        stored_log_path = Path("logs") / "jobs" / f"{job_id}.log"
+        stored_log_path = self._storage_path(self.logs_dir / f"{job_id}.log")
         log_path = self._runtime_path(stored_log_path)
         self.logs_dir.mkdir(parents=True, exist_ok=True)
 
@@ -549,7 +576,7 @@ class JobService:
         env = dict(os.environ)
         env["BTP_OUTPUT_DIR"] = str(self._artifact_directory(job.get("artifact_dir")))
         try:
-            process = subprocess.Popen(
+            process = self._launch_process(
                 command,
                 cwd=self.project_root,
                 stdout=subprocess.PIPE,
@@ -557,7 +584,9 @@ class JobService:
                 text=True,
                 bufsize=1,
                 env=env,
+                **({"pass_fds": (self.worker_lock_fd,)} if hasattr(self, "worker_lock_fd") else {}),
             )
+            self.active_process = process
             self._stop_if_cancelled(job_id, process)
             stdout, stderr = self._communicate_and_stream_log(process, log_path)
         except OSError as exc:
@@ -622,7 +651,7 @@ class JobService:
         job = self.get_job(job_id)
         if job is None:
             return None
-        if job["status"] != JobStatus.NEEDS_REVIEW.value:
+        if job["status"] != JobStatus.NEEDS_REVIEW.value and not getattr(self, "execution_task", None):
             raise ValueError(f"Job {job_id} must be in needs_review before apply can run")
         if not job["canApply"]:
             raise ValueError(f"Job {job_id} is not ready to apply")
@@ -634,7 +663,7 @@ class JobService:
             raise ValueError("This job already has apply evidence. Reconcile its results before another apply.")
 
         script_path = self.project_root / "src" / "apply_updates_to_pure.py"
-        log_path = self._runtime_path(job["log_path"] or Path("logs") / "jobs" / f"{job_id}.log")
+        log_path = self._runtime_path(job["log_path"] or self.logs_dir / f"{job_id}.log")
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         self._claim_job(job_id, JobStatus.NEEDS_REVIEW, JobStatus.APPLYING)
 
@@ -672,7 +701,7 @@ class JobService:
         self._append_log(log_path, f"\n=== APPLY START {self._utcnow()} ===\n")
 
         try:
-            process = subprocess.Popen(
+            process = self._launch_process(
                 [self.python_executable, "-u", str(script_path)],
                 cwd=self.project_root,
                 stdout=subprocess.PIPE,
@@ -680,7 +709,9 @@ class JobService:
                 text=True,
                 bufsize=1,
                 env=env,
+                **({"pass_fds": (self.worker_lock_fd,)} if hasattr(self, "worker_lock_fd") else {}),
             )
+            self.active_process = process
             self._stop_if_cancelled(job_id, process)
             stdout, stderr = self._communicate_and_stream_log(process, log_path)
         except OSError as exc:
@@ -775,51 +806,30 @@ class JobService:
         job = self.get_job(job_id)
         if job is None:
             return None
-        if job["job_type"] not in {
-            JobType.INTERNAL_PERSONS.value,
-            JobType.EXTERNAL_PERSONS.value,
-            JobType.EXTERNAL_ORGS.value,
-            JobType.RESEARCH_OUTPUTS.value,
-            JobType.DATASETS.value,
-            JobType.FULL_TEXT.value,
-        }:
-            raise ValueError(f"Rollback is not supported for job type {job['job_type']}")
-        if job["status"] not in {JobStatus.COMPLETED.value, JobStatus.FAILED.value}:
-            raise ValueError(f"Job {job_id} must be completed or failed before rollback can run")
-        existing_rollback_job = None
-        if job.get("rollback_job_id"):
-            existing_rollback_job = self.get_job(job["rollback_job_id"])
-            if existing_rollback_job is None:
-                raise ValueError(f"Job {job_id} references a missing rollback run")
-            if existing_rollback_job["status"] != JobStatus.FAILED.value:
-                raise ValueError(f"Job {job_id} already has a rollback run")
+        task = getattr(self, "execution_task", None)
+        if task:
+            change_set = self.get_job_change_set(job_id)
+        else:
+            self._validate_rollback(job)
+            change_set = self.get_job_change_set(job_id)
 
-        change_set = self.get_job_change_set(job_id)
-        if change_set is None:
-            raise ValueError(f"Job {job_id} has no rollbackable change set")
-        retryable_items = [
-            item
-            for item in change_set["items"]
-            if item["apply_status"] == "applied" and item["rollback_status"] not in {"rolled_back", "conflict", "skipped"}
-        ]
-        if change_set["status"] not in {"applied", "rolled_back_with_conflicts"}:
-            raise ValueError(f"Job {job_id} does not have an applied change set ready for rollback")
-        if change_set["applied_item_count"] == 0 or not retryable_items:
-            raise ValueError(f"Job {job_id} has no successfully applied changes to roll back")
-
-        rollback_job_id = f"rollback_{uuid.uuid4().hex[:12]}"
-        rollback_log_path = Path("logs") / "jobs" / f"{rollback_job_id}.log"
-        self.create_job(
-            job_id=rollback_job_id,
-            job_type=job["job_type"],
-            status=JobStatus.APPLYING,
-            params={},
-            created_at=self._utcnow(),
-            started_at=self._utcnow(),
-            log_path=str(rollback_log_path),
-            artifact_dir=job.get("artifact_dir"),
-        )
-        self.update_job(job_id, rollback_job_id=rollback_job_id)
+        if task:
+            rollback_job_id = task["result_job_id"]
+            rollback_log_path = self._storage_path(self.logs_dir / f"{rollback_job_id}.log")
+        else:
+            rollback_job_id = f"rollback_{uuid.uuid4().hex[:12]}"
+            rollback_log_path = self._storage_path(self.logs_dir / f"{rollback_job_id}.log")
+            self.create_job(
+                job_id=rollback_job_id,
+                job_type=job["job_type"],
+                status=JobStatus.APPLYING,
+                params={},
+                created_at=self._utcnow(),
+                started_at=self._utcnow(),
+                log_path=str(rollback_log_path),
+                artifact_dir=job.get("artifact_dir"),
+            )
+            self.update_job(job_id, rollback_job_id=rollback_job_id)
 
         log_path = self._runtime_path(rollback_log_path)
         self.logs_dir.mkdir(parents=True, exist_ok=True)
@@ -854,6 +864,41 @@ class JobService:
             exit_code=0 if rollback_status == JobStatus.COMPLETED else 1,
             error_message=error_message,
         )
+
+    def _validate_rollback(self, job):
+        job_id = job["id"]
+        if job["job_type"] not in {
+            JobType.INTERNAL_PERSONS.value,
+            JobType.EXTERNAL_PERSONS.value,
+            JobType.EXTERNAL_ORGS.value,
+            JobType.RESEARCH_OUTPUTS.value,
+            JobType.DATASETS.value,
+            JobType.FULL_TEXT.value,
+        }:
+            raise ValueError(f"Rollback is not supported for job type {job['job_type']}")
+        if job["status"] not in {JobStatus.COMPLETED.value, JobStatus.FAILED.value}:
+            raise ValueError(f"Job {job_id} must be completed or failed before rollback can run")
+        existing_rollback_job = None
+        if job.get("rollback_job_id"):
+            existing_rollback_job = self.get_job(job["rollback_job_id"])
+            if existing_rollback_job is None:
+                raise ValueError(f"Job {job_id} references a missing rollback run")
+            if existing_rollback_job["status"] != JobStatus.FAILED.value:
+                raise ValueError(f"Job {job_id} already has a rollback run")
+
+        change_set = self.get_job_change_set(job_id)
+        if change_set is None:
+            raise ValueError(f"Job {job_id} has no rollbackable change set")
+        retryable_items = [
+            item
+            for item in change_set["items"]
+            if item["apply_status"] == "applied" and item["rollback_status"] not in {"rolled_back", "conflict", "skipped"}
+        ]
+        if change_set["status"] not in {"applied", "rolled_back_with_conflicts"}:
+            raise ValueError(f"Job {job_id} does not have an applied change set ready for rollback")
+        if change_set["applied_item_count"] == 0 or not retryable_items:
+            raise ValueError(f"Job {job_id} has no successfully applied changes to roll back")
+
 
     def get_job_artifacts(self, job_id: str) -> dict | None:
         job = self.get_job(job_id)

@@ -73,7 +73,7 @@ def default_data_dir() -> Path:
 
 
 def connect_db(db_path: Path) -> sqlite3.Connection:
-    connection = sqlite3.connect(db_path)
+    connection = sqlite3.connect(db_path, timeout=30)
     connection.row_factory = sqlite3.Row
     return connection
 
@@ -81,6 +81,15 @@ def connect_db(db_path: Path) -> sqlite3.Connection:
 def initialize_database(db_path: Path) -> None:
     with connect_db(db_path) as connection:
         connection.execute(JOBS_SCHEMA)
+        connection.execute("""CREATE TABLE IF NOT EXISTS execution_tasks (
+            id TEXT PRIMARY KEY, job_id TEXT NOT NULL, result_job_id TEXT NOT NULL,
+            action TEXT NOT NULL, state TEXT NOT NULL DEFAULT 'queued',
+            owner TEXT, heartbeat TEXT, created_at TEXT NOT NULL,
+            started_at TEXT, finished_at TEXT, cancel_requested INTEGER NOT NULL DEFAULT 0,
+            error_message TEXT
+        )""")
+        connection.execute("""CREATE UNIQUE INDEX IF NOT EXISTS execution_tasks_active
+            ON execution_tasks(job_id) WHERE state IN ('queued', 'running', 'interrupted')""")
         connection.execute(JOB_CHANGE_SETS_SCHEMA)
         connection.execute(JOB_CHANGE_SET_ITEMS_SCHEMA)
         _ensure_column(
