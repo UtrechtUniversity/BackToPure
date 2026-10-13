@@ -624,7 +624,7 @@ class AppStructureTests(unittest.TestCase):
             try:
                 csv_file = pd.DataFrame([{"to_be_updated": "x", "updated": "", "doi": "10.1/test", "title": "Test"}])
                 big_json = [{"electronicVersions": [{"doi": "10.1/test"}], "title": {"value": "Test"}}]
-                with patch("apply_updates_to_pure.pure_researchoutputs.create_research_output") as mock_create:
+                with patch("apply_updates_to_pure.pure_researchoutputs.create_research_output") as mock_create, patch("apply_updates_to_pure.session.post", return_value=MagicMock(status_code=200, json=lambda: {"count": 0, "items": []})):
                     mock_create.return_value = {
                         "success": True,
                         "uuid": "ro-1",
@@ -1844,8 +1844,9 @@ class AppStructureTests(unittest.TestCase):
             with open(os.path.join(tmpdir, "logs", "jobs", "job-running.log"), "r", encoding="utf-8") as handle:
                 self.assertIn("Job was cancelled by user", handle.read())
 
+    @patch("apply_updates_to_pure.session.get")
     @patch("apply_updates_to_pure.session.put")
-    def test_apply_process_internal_persons_normalizes_orcid_before_put(self, mock_put):
+    def test_apply_process_internal_persons_normalizes_orcid_before_put(self, mock_put, mock_get):
         import apply_updates_to_pure
 
         csv_file = pd.DataFrame(
@@ -1860,6 +1861,7 @@ class AppStructureTests(unittest.TestCase):
             ]
         )
         json_data = [{"uuid": "pers-1", "identifiers": []}]
+        mock_get.return_value = MagicMock(status_code=200, json=lambda: {"uuid": "pers-1", "version": "2", "identifiers": []})
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_put.return_value = mock_response
@@ -1877,8 +1879,9 @@ class AppStructureTests(unittest.TestCase):
 
         self.assertEqual("0000-0003-2472-6589", mock_put.call_args.kwargs["json"]["orcid"])
 
+    @patch("apply_updates_to_pure.session.get")
     @patch("apply_updates_to_pure.session.put")
-    def test_apply_process_external_persons_updates_duplicate_rows_once_per_uuid(self, mock_put):
+    def test_apply_process_external_persons_updates_duplicate_rows_once_per_uuid(self, mock_put, mock_get):
         import apply_updates_to_pure
 
         csv_file = pd.DataFrame(
@@ -1901,7 +1904,9 @@ class AppStructureTests(unittest.TestCase):
                 },
             ]
         )
-        json_data = [{"UUID": "ext-1", "identifiers": []}]
+        json_data = [{"uuid": "ext-1", "version": "1", "identifiers": [
+            {"id": value, "type": {"uri": uri}} for uri, values in [(ORCID_ID_URI, ["0000-0001", "0000-0002"]), (OPENALEXEX_ID_URI, ["A1", "A2"])] for value in values]}]
+        mock_get.return_value = MagicMock(status_code=200, json=lambda: {"uuid": "ext-1", "version": "1", "identifiers": []})
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_put.return_value = mock_response
@@ -1921,8 +1926,9 @@ class AppStructureTests(unittest.TestCase):
         self.assertEqual(["X"], csv_file["updated"].dropna().unique().tolist())
         self.assertEqual([], [value for value in csv_file["to_be_updated"].fillna("").tolist() if value])
 
+    @patch("apply_updates_to_pure.session.get")
     @patch("apply_updates_to_pure.session.put")
-    def test_apply_process_external_orgs_updates_duplicate_rows_once_per_uuid(self, mock_put):
+    def test_apply_process_external_orgs_updates_duplicate_rows_once_per_uuid(self, mock_put, mock_get):
         import apply_updates_to_pure
 
         csv_file = pd.DataFrame(
@@ -1941,7 +1947,10 @@ class AppStructureTests(unittest.TestCase):
                 },
             ]
         )
-        json_data = [{"UUID": "org-1", "identifiers": [], "name": "Alpha"}]
+        csv_file['needs_ror_update'] = True
+        csv_file['ror'] = 'https://ror.org/one'
+        json_data = [{"uuid": "org-1", "version": "1", "identifiers": [{"id": "https://ror.org/one", "type": {"uri": ROR_ID_URI}}], "name": "Alpha"}]
+        mock_get.side_effect = lambda url, **kwargs: MagicMock(status_code=200, json=lambda: {"classifications": [{"uri": "/country/us", "term": {"en_GB": "US"}}]} if url.endswith('allowed-address-countries') else {"uuid": "org-1", "version": "1", "identifiers": []})
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_put.return_value = mock_response
@@ -2169,7 +2178,7 @@ class AppStructureTests(unittest.TestCase):
                     {"id": "A1", "type": {"uri": OPENALEXEX_ID_URI}},
                 ],
             }
-            mock_get.side_effect = [first_get_response, second_get_response, second_get_response]
+            mock_get.side_effect = [second_get_response, second_get_response]
             put_response = MagicMock()
             mock_put.return_value = put_response
 

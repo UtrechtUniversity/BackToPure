@@ -20,20 +20,23 @@ def test_unknown_country_is_not_fabricated():
 
 def test_apply_repairs_legacy_name_only_country_and_blocks_unsupported(tmp_path, monkeypatch):
     monkeypatch.setenv('BTP_OUTPUT_DIR', str(tmp_path))
-    get = Mock(return_value=Mock(status_code=200, json=lambda: {'classifications': COUNTRIES}))
+    get = Mock(side_effect=lambda url, **kwargs: Mock(status_code=200, json=lambda: {'classifications': COUNTRIES} if url.endswith('allowed-address-countries') else {'uuid': url.rsplit('/', 1)[-1], 'version': '1'}))
     put = Mock(return_value=Mock(status_code=200, text=''))
     monkeypatch.setattr(apply.session, 'get', get)
     monkeypatch.setattr(apply.session, 'put', put)
-    frame = pd.DataFrame([{'uuid': key, 'to_be_updated': 'X', 'updated': ''} for key in ['a', 'b']])
+    frame = pd.DataFrame([{'uuid': key, 'to_be_updated': 'X', 'updated': '', 'needs_geo_update': True} for key in ['a', 'b']])
     records = [{'uuid': 'a', 'address': {'country': {'term': {'en_GB': 'United States'}}}},
                {'uuid': 'b', 'address': {'country': {'uri': '/dk/atira/pure/core/countries/xk', 'term': {'en_GB': 'Kosovo'}}}}]
+    for record in records:
+        record['version'] = '1'
+        record['_btp_match_metadata'] = {'pure_address_field': 'address', 'previous_address': None, 'pure_address_payload': record['address']}
     apply.process_external_orgs('update.csv', frame, records)
     assert put.call_count == 1
     assert put.call_args.kwargs['json']['address']['country'] == COUNTRIES[0]
     assert frame.loc[0, 'updated'].lower() == 'x'
     assert 'not supported' in frame.loc[1, 'apply_error']
-    assert get.call_count == 1
-    assert get.call_args.args[0].endswith('/external-organizations/allowed-address-countries')
+    assert get.call_count == 3
+    assert get.call_args_list[1].args[0].endswith('/external-organizations/allowed-address-countries')
     assert 'uri' not in records[0]['address']['country']
 
 
@@ -62,12 +65,12 @@ def test_harvest_resolves_name_only_country(monkeypatch):
 def test_country_vocabulary_failure_stops_before_writes(tmp_path, monkeypatch):
     from workflow_http import FatalWorkflowError
     monkeypatch.setenv('BTP_OUTPUT_DIR', str(tmp_path))
-    monkeypatch.setattr(apply.session, 'get', Mock(return_value=Mock(status_code=200, json=lambda: {})))
+    monkeypatch.setattr(apply.session, 'get', Mock(side_effect=lambda url, **kwargs: Mock(status_code=200, json=lambda: {} if url.endswith('allowed-address-countries') else {'uuid': 'a', 'version': '1'})))
     put = Mock()
     monkeypatch.setattr(apply.session, 'put', put)
-    frame = pd.DataFrame([{'uuid': 'a', 'to_be_updated': 'X', 'updated': ''}])
+    frame = pd.DataFrame([{'uuid': 'a', 'to_be_updated': 'X', 'updated': '', 'needs_geo_update': True}])
     with pytest.raises(FatalWorkflowError, match='invalid address-country vocabulary'):
-        apply.process_external_orgs('update.csv', frame, [{'uuid': 'a', 'address': {'country': {'term': {'en_GB': 'US'}}}}])
+        apply.process_external_orgs('update.csv', frame, [{'uuid': 'a', 'version': '1', 'address': {'country': {'term': {'en_GB': 'US'}}}}])
     put.assert_not_called()
 
 

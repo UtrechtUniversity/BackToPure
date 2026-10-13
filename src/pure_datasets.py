@@ -30,7 +30,7 @@
 import pandas as pd
 import json
 import requests
-from apply_state import request_write, created_uuid, record_child
+from apply_state import request_write, created_uuid, record_child, created_record_evidence
 from workflow_http import request_read, json_object, records, FatalWorkflowError
 import configparser
 import os
@@ -482,7 +482,7 @@ def create_dataset(dataset_json):
     response = request_write(session.put, PURE_BASE_URL + 'data-sets',
                              headers=PURE_HEADERS, data=json.dumps(payload), timeout=30)
     if response.status_code in (200, 201):
-        return {'success': True, 'uuid': created_uuid(response),
+        return {'success': True, **created_record_evidence(response),
                 'created_external_persons': people}
     return {'success': False, 'uuid': None, 'created_external_persons': people,
             'error': f'HTTP {response.status_code}: {response.text[:300]}'}

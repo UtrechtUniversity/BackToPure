@@ -59,3 +59,11 @@ def created_uuid(response):
     if not uuid:
         raise FatalWorkflowError('Pure accepted a write but returned no valid UUID; reconcile the unknown outcome before retrying.')
     return uuid
+
+
+def created_record_evidence(response):
+    """Record acknowledged UUID and server version without a second remote read."""
+    record_uuid = created_uuid(response)
+    body = response.json()
+    version = body.get('version')
+    return {'uuid': record_uuid, 'created_version': version if isinstance(version, str) and version else None}

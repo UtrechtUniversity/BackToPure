@@ -146,7 +146,7 @@ def test_cancel_stale_apply_recovers_journal_without_replaying(service):
         assert service.rollback_job(job['id'])['status'] == 'completed'
 
 
-def test_apply_snapshot_auth_failure_is_not_treated_as_empty_person(service):
+def test_apply_snapshot_defers_network_to_fresh_apply_read(service):
     from unittest.mock import Mock
 
     import requests
@@ -158,9 +158,9 @@ def test_apply_snapshot_auth_failure_is_not_treated_as_empty_person(service):
     job['artifact_state']['artifacts'].update(csv=['ext_pers_update.csv'], json=['people.json'])
     response = Mock(status_code=401)
     response.raise_for_status.side_effect = requests.HTTPError(response=response)
-    with patch('app.services.jobs.requests.get', return_value=response):
-        with pytest.raises(RuntimeError, match='401'):
-            service._collect_external_persons_apply_changes(job)
+    with patch('app.services.jobs.requests.get', return_value=response) as get:
+        assert service._collect_external_persons_apply_changes(job) == []
+        get.assert_not_called()
 
 
 def test_cancel_during_spawn_terminates_child_and_keeps_failed_status(service):

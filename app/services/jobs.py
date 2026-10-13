@@ -33,6 +33,7 @@ from config import (
     is_excluded_organization_key,
 )
 from workflow_http import json_object, request_read
+from safe_creation import normalize_doi
 
 _APPLY_SUPPORTED_JOB_TYPES = {
     JobType.INTERNAL_PERSONS.value,
@@ -684,6 +685,8 @@ class JobService:
         env["BTP_TARGET_JSON_FILES"] = ",".join(artifact_summary["artifacts"]["json"])
         apply_manifest_path = self._artifact_directory(job.get("artifact_dir")) / "apply_manifest.jsonl"
         env["BTP_APPLY_MANIFEST_FILE"] = str(apply_manifest_path)
+        env["BTP_RUNTIME_DB"] = str(self.db_path.resolve())
+        env["BTP_JOB_ID"] = job_id
         try:
             change_set_id = self._capture_apply_change_set(job)
         except Exception as exc:
@@ -738,9 +741,11 @@ class JobService:
                 applied_count, tracked_count = self._finalize_apply_change_set(job, change_set_id)
             # The apply script exits 0 even when Pure rejected every record, so
             # returncode alone would report a clean apply that changed nothing.
-            if tracked_count and applied_count == 0:
+            handled_count = self._handled_apply_count(change_set_id) if change_set_id else 0
+            untracked_failures = self._failed_apply_rows(job) if change_set_id is None else 0
+            if (tracked_count and applied_count == 0 and handled_count < tracked_count) or untracked_failures:
                 message = (
-                    f"Apply failed: none of the {tracked_count} selected item(s) were "
+                    f"Apply failed: none of the {tracked_count or untracked_failures} selected item(s) were "
                     "written to Pure. See the job log for the per-item errors."
                 )
                 self._append_log(log_path, f"ERROR {message}\n")
@@ -753,9 +758,9 @@ class JobService:
                     error_message=message,
                 )
             partial_message = None
-            if tracked_count and applied_count < tracked_count:
+            if tracked_count and applied_count + handled_count < tracked_count:
                 partial_message = (
-                    f"Applied {applied_count} of {tracked_count} selected item(s); "
+                    f"Applied {applied_count} of {tracked_count} selected item(s) ({handled_count} already handled); "
                     "the rest were rejected by Pure. See the job log."
                 )
                 self._append_log(log_path, f"WARNING {partial_message}\n")
@@ -1733,7 +1738,6 @@ class JobService:
                 if item_uuid:
                     json_by_uuid[str(item_uuid)] = item
 
-        current_person_cache: dict[str, dict[str, Any]] = {}
         changes: list[dict[str, Any]] = []
         for csv_path in self._matching_csv_paths(artifact_dir, definition, tracked_names=tracked_csv):
             with open(csv_path, "r", encoding="utf-8", newline="") as handle:
@@ -1745,24 +1749,9 @@ class JobService:
                     if not entity_uuid:
                         continue
                     source_person = json_by_uuid.get(entity_uuid, {})
-                    current_person = current_person_cache.get(entity_uuid)
-                    if current_person is None:
-                        response = request_read(
-                            requests.get, f"{_pure_base_url()}external-persons/{entity_uuid}",
-                            headers=_pure_headers(), timeout=30,
-                        )
-                        current_person = json_object(response)
-                        current_person_cache[entity_uuid] = current_person
-
                     for column_name, identifier_uri in (("ORCID", ORCID_ID_URI), ("Alex_ID", OPENALEXEX_ID_URI)):
                         identifier_value = self._normalized_csv_value(row.get(column_name))
                         if not identifier_value:
-                            continue
-                        if self._identifier_exists(
-                            current_person.get("identifiers", []),
-                            identifier_value,
-                            identifier_uri,
-                        ):
                             continue
                         if not self._identifier_exists(
                             source_person.get("identifiers", []),
@@ -1948,7 +1937,7 @@ class JobService:
                     "uri": entry_uri,
                 }
                 break
-        return old_identifier, {"id": new_value, "uri": target_uri}, "identifier"
+        return None, {"id": new_value, "uri": target_uri}, "identifier"
 
     def _finalize_apply_change_set(self, job: dict, change_set_id: str) -> tuple[int, int]:
         definition = get_job_type_definition(job["job_type"])
@@ -1984,7 +1973,7 @@ class JobService:
 
         with connect_db(self.db_path) as connection:
             item_rows = connection.execute(
-                "SELECT id, item_key, entity_uuid, new_value_json FROM job_change_set_items WHERE change_set_id = ?",
+                "SELECT id, item_key, entity_uuid, old_value_json, new_value_json FROM job_change_set_items WHERE change_set_id = ?",
                 (change_set_id,),
             ).fetchall()
             applied_count = 0
@@ -2005,20 +1994,44 @@ class JobService:
                 reason = None
                 if event:
                     event_status = event.get("status")
-                    if event_status == "success" and event.get("record_uuid"):
+                    disposition = event.get("disposition")
+                    if event_status == "success" and disposition in {"existing", "noop"}:
+                        status = "handled"
+                        new_value_json = json.dumps({**json.loads(row["new_value_json"]),
+                                                     "disposition": disposition,
+                                                     "target_tenant": event.get("target_tenant")}, sort_keys=True)
+                    elif event_status == "success" and "owned_changes" in event:
+                        owned = next((change for change in event["owned_changes"] if change.get("item_key") == row["item_key"]), None)
+                        status = "applied" if owned else "handled"
+                        if owned:
+                            new_value_json = json.dumps({**owned["new_value"], "target_tenant": event.get("target_tenant"),
+                                                         "disposition": "updated"}, sort_keys=True)
+                            connection.execute("UPDATE job_change_set_items SET old_value_json = ? WHERE id = ?",
+                                               (json.dumps(owned.get("old_value"), sort_keys=True), row["id"]))
+                        else:
+                            new_value_json = json.dumps({**json.loads(row["new_value_json"]), "disposition": "noop",
+                                                         "target_tenant": event.get("target_tenant")}, sort_keys=True)
+                    elif event_status == "success" and event.get("record_uuid"):
                         status = "applied"
                         if job["job_type"] in created_kinds:
                             new_value_json = json.dumps({**event, "doi": row["item_key"]}, sort_keys=True)
-                    elif status != "applied" and event_status in {"started", "unknown"}:
+                    elif event_status in {"started", "writing", "unknown"}:
                         status = "unknown"
                         reason = "Write outcome unknown; reconcile in Pure before retrying. " + str(event.get("error") or "")
                     elif status != "applied":
                         reason = str(event.get("error") or "Record was not applied.")
                     if event.get("created_external_persons") and status != "applied":
-                        payload = json.loads(row["new_value_json"])
+                        payload = json.loads(new_value_json or row["new_value_json"])
                         payload["created_external_persons"] = event["created_external_persons"]
+                        payload["target_tenant"] = event.get("target_tenant")
                         new_value_json = json.dumps(payload, sort_keys=True)
                         reason = (reason or "") + " Child external persons were created; review recorded UUIDs before retrying."
+                elif job["job_type"] in created_kinds and applied_record and applied_record.get("disposition") in {"existing", "noop"}:
+                    status = "handled"
+                if event and event.get("target_tenant"):
+                    payload = json.loads(new_value_json or row["new_value_json"])
+                    payload["target_tenant"] = event["target_tenant"]
+                    new_value_json = json.dumps(payload, sort_keys=True)
                 if status == "applied":
                     applied_count += 1
                 if new_value_json is not None:
@@ -2042,6 +2055,21 @@ class JobService:
             connection.commit()
 
         return applied_count, len(item_rows)
+
+    def _failed_apply_rows(self, job: dict) -> int:
+        artifacts = (job.get("artifact_state") or {}).get("artifacts") or {}
+        definition = get_job_type_definition(job["job_type"])
+        count = 0
+        for path in self._matching_csv_paths(self._artifact_directory(job.get("artifact_dir")), definition,
+                                             tracked_names=tuple(artifacts.get("csv") or ())):
+            with path.open(encoding="utf-8", newline="") as handle:
+                count += sum(row.get("apply_status") in {"failed", "partial", "unknown"} for row in csv.DictReader(handle))
+        return count
+
+    def _handled_apply_count(self, change_set_id: str) -> int:
+        with connect_db(self.db_path) as connection:
+            return connection.execute("SELECT COUNT(*) FROM job_change_set_items WHERE change_set_id = ? AND apply_status = 'handled'",
+                                      (change_set_id,)).fetchone()[0]
 
     def _load_apply_journal(self, job: dict) -> dict[str, dict[str, Any]]:
         path = self._artifact_directory(job.get("artifact_dir")) / "apply_journal.jsonl"
@@ -2157,6 +2185,7 @@ class JobService:
                 if not item_key:
                     continue
                 record: dict[str, Any] = {
+                    **entry,
                     "doi": item_key,
                     "record_type": entry.get("job_type"),
                     "record_uuid": entry.get("record_uuid"),
@@ -2173,7 +2202,7 @@ class JobService:
 
     @staticmethod
     def _normalize_doi(value: str) -> str:
-        return value.replace("https://doi.org/", "").replace("http://doi.org/", "").strip().lower()
+        return normalize_doi(value)
 
     @staticmethod
     def _normalized_csv_value(value: Any) -> str:
@@ -2755,6 +2784,11 @@ class JobService:
 
                 stats["checked"] += 1
                 item_payload = item.get("new_value") or {}
+                if item_payload.get("disposition") in {"existing", "noop"}:
+                    stats["conflicts"] += 1
+                    connection.execute("UPDATE job_change_set_items SET rollback_status = ?, conflict_reason = ? WHERE id = ?",
+                                       ("conflict", "This record was not created by this job.", item["id"]))
+                    continue
                 record_uuid = str(item_payload.get("record_uuid") or "").strip()
                 expected_doi = self._normalize_doi(str(item_payload.get("doi") or item["entity_uuid"] or ""))
                 if not record_uuid:

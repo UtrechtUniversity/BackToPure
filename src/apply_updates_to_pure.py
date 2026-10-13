@@ -2,7 +2,6 @@
 import logging
 import time
 import sys
-import enrich_internal_persons_with_ids as ipersons
 import pure_researchoutputs
 import pure_datasets as puda
 from config import PURE_BASE_URL, PURE_API_KEY, PURE_HEADERS
@@ -12,12 +11,13 @@ import json
 import pandas as pd
 import os
 import requests
-import copy
-from pure_countries import load_external_org_countries, resolve_country
+from pure_countries import load_external_org_countries
 import tempfile
 from functools import wraps
 from pathlib import Path
 from apply_state import append_jsonl, current_apply, journal_event, request_write
+from safe_creation import create_once, normalize_doi as normalize_write_doi, tenant_key
+from reviewed_changes import merge_reviewed_changes
 from workflow_http import FatalWorkflowError, request_read, json_object
 
 from requests.adapters import HTTPAdapter
@@ -230,34 +230,52 @@ def _history(path):
         for line in path.read_text(encoding='utf-8').splitlines():
             try:
                 event = json.loads(line)
+                if event.get('target_tenant') and event['target_tenant'] != tenant_key(PURE_BASE_URL):
+                    raise FatalWorkflowError('Apply journal belongs to a different Pure tenant; restore the original target before continuing.')
                 identity = (event['filename'], event['job_type'], event['item_key'])
                 if event['status'] == 'child_created':
-                    state[identity] = 'partial'
-                elif event['status'] == 'failed' and state.get(identity) == 'partial':
+                    state[identity] = {**event, 'status': 'partial'}
+                elif event['status'] == 'failed' and state.get(identity, {}).get('status') == 'partial':
                     pass
                 else:
-                    state[identity] = event['status']
+                    state[identity] = event
             except (ValueError, KeyError, TypeError) as exc:
                 raise FatalWorkflowError('Apply journal is damaged; reconcile previous writes before retrying.') from exc
     return state
 
 
+def _complete_rows(frame, indices, job_type, evidence):
+    handled_only = evidence.get('disposition') in ('existing', 'noop')
+    frame.loc[indices, 'updated'] = '' if handled_only else ('X' if job_type in ('internal_persons', 'external_persons', 'external_orgs') else 'x')
+    frame.loc[indices, 'to_be_updated'] = ''
+    frame.loc[indices, 'apply_error'] = ''
+    frame.loc[indices, 'apply_status'] = evidence['disposition'] if handled_only else 'success'
+    if job_type == 'internal_persons' and 'owned_changes' in evidence:
+        owned = {change['item_key'] for change in evidence['owned_changes']}
+        for index in indices:
+            row = frame.loc[index]
+            key = '|'.join(str(row[column]).strip() for column in ('PURE_UUID_PERS', 'new_id', 'new_value'))
+            if key not in owned:
+                frame.loc[index, 'updated'] = ''
+                frame.loc[index, 'apply_status'] = 'noop'
+
+
 def _run_item(filename, frame, indices, key, job_type, fallback, journal, operation):
-    identity = {'filename': filename, 'job_type': job_type, 'item_key': str(key)}
+    identity = {'filename': filename, 'job_type': job_type, 'item_key': str(key), 'target_tenant': tenant_key(PURE_BASE_URL)}
     history_key = (filename, job_type, str(key))
-    previous = journal['history'].get(history_key)
+    previous_event = journal['history'].get(history_key, {})
+    previous = previous_event.get('status')
     if previous == 'success':
-        frame.loc[indices, 'updated'] = 'X' if job_type in ('internal_persons', 'external_persons', 'external_orgs') else 'x'
-        frame.loc[indices, 'to_be_updated'] = ''
+        _complete_rows(frame, indices, job_type, previous_event)
         _checkpoint(filename, frame, fallback)
         return
-    if previous in ('started', 'unknown', 'partial'):
+    if previous in ('started', 'writing', 'unknown', 'partial'):
         raise FatalWorkflowError(f'Previous write for {key} has an unknown outcome; reconcile it in Pure before retrying.')
     children = []
     token = current_apply.set((journal['path'], identity, children))
     try:
         journal_event('started')
-        journal['history'][history_key] = 'started'
+        journal['history'][history_key] = {'status': 'started'}
         try:
             result = operation()
         except (ValueError, KeyError, TypeError) as exc:
@@ -272,17 +290,14 @@ def _run_item(filename, frame, indices, key, job_type, fallback, journal, operat
             entry = {**identity, **{k: v for k, v in result.items() if k != 'success'}}
             entry['record_uuid'] = entry.pop('uuid', entry.get('record_uuid'))
             journal_event('success', **{k: v for k, v in entry.items() if k not in identity})
-            journal['history'][history_key] = 'success'
+            journal['history'][history_key] = {**entry, 'status': 'success'}
             _append_apply_manifest_entry(entry)
-            frame.loc[indices, 'updated'] = 'X' if job_type in ('internal_persons', 'external_persons', 'external_orgs') else 'x'
-            frame.loc[indices, 'to_be_updated'] = ''
-            frame.loc[indices, 'apply_error'] = ''
-            frame.loc[indices, 'apply_status'] = 'success'
+            _complete_rows(frame, indices, job_type, entry)
         else:
             error = str(result.get('error') or 'Pure rejected the record; check the job log.')
             status = 'partial' if (children or result.get('created_external_persons')) else ('unknown' if result.get('unknown') else 'failed')
             journal_event(status, error=error)
-            journal['history'][history_key] = status
+            journal['history'][history_key] = {'status': status}
             frame.loc[indices, 'apply_error'] = error
             frame.loc[indices, 'apply_status'] = status
             logger.error(f'Could not apply {job_type} {key}: {error}')
@@ -320,32 +335,24 @@ def _update_people(filename, frame, data, kind, key_column, endpoint, fallback):
             source = lookup.get(key)
             if not source:
                 return {'success': False, 'error': 'No matching JSON record for Pure UUID'}
-            entry = copy.deepcopy(source)
-            if kind == 'external_orgs':
-                for field in ('address', 'contactAddress'):
-                    address = entry.get(field) or {}
-                    if address.get('country') is not None:
-                        if countries is None:
-                            countries = load_external_org_countries(session, PURE_BASE_URL, PURE_HEADERS)
-                        address['country'] = resolve_country(address['country'], countries)
-            if kind == 'internal_persons':
-                for _, row in group.iterrows():
-                    value = row['new_value']
-                    if pd.isna(value) or not str(value).strip():
-                        raise ValueError('Missing identifier value')
-                    if row['new_id'] == 'orcid':
-                        entry['orcid'] = ipersons._normalize_identifier(value)
-                    else:
-                        identifier = {'typeDiscriminator': 'ClassifiedId', 'id': str(value),
-                                      'type': {'uri': row.get('uri', '')}}
-                        identifiers = entry.get('identifiers') or []
-                        if identifier not in identifiers:
-                            identifiers.append(identifier)
-                        entry['identifiers'] = identifiers
-            entry = {k: v for k, v in entry.items() if not str(k).startswith('_')}
+            current = json_object(request_read(session.get, PURE_BASE_URL + endpoint + '/' + str(key), headers=PURE_HEADERS))
+            reviewed_rows = group.astype(object).where(pd.notna(group), None).to_dict('records')
+            # Keep original row keys for tracking while normalizing the written ORCID in the helper.
+            try:
+                entry, owned_changes = merge_reviewed_changes(kind, source, reviewed_rows, current, countries=countries)
+            except ValueError as exc:
+                if kind != 'external_orgs' or countries is not None or str(exc) != 'Country vocabulary required for reviewed country change':
+                    raise
+                countries = load_external_org_countries(session, PURE_BASE_URL, PURE_HEADERS)
+                entry, owned_changes = merge_reviewed_changes(kind, source, reviewed_rows, current, countries=countries)
+            if not owned_changes:
+                return {'success': True, 'uuid': str(key), 'disposition': 'noop', 'owned_changes': []}
+            # Intent is durable before the remote write; acknowledgement carries the same field ownership.
+            journal_event('writing', owned_changes=owned_changes)
             response = request_write(session.put, PURE_BASE_URL + endpoint + '/' + str(key),
                                      headers=PURE_HEADERS, json=entry)
             return {'success': response.status_code in (200, 201, 204), 'uuid': str(key),
+                    'disposition': 'updated', 'owned_changes': owned_changes,
                     'error': f'HTTP {response.status_code}: {response.text[:300]}'}
         _run_item(filename, frame, group.index, key, kind, fallback, journal, operation)
 
@@ -380,7 +387,7 @@ def process_external_orgs(filename, csv_file, big_json_data):
 def _doi(value):
     if not isinstance(value, str):
         return ''
-    return value.replace('https://doi.org/', '').replace('http://doi.org/', '').strip().lower()
+    return normalize_write_doi(value)
 
 
 def _create_records(filename, frame, data, kind, fallback, create):
@@ -402,9 +409,9 @@ def _create_records(filename, frame, data, kind, fallback, create):
             item = lookup.get(key)
             if not item:
                 return {'success': False, 'error': 'No matching JSON record for DOI'}
-            result = create(item)
+            result = create_once(session, PURE_BASE_URL, PURE_HEADERS, kind, key, lambda: create(item))
             if result.get('success'):
-                logger.info(f"created {kind} {result.get('uuid')} for DOI {key}")
+                logger.info(f"{result.get('disposition', 'handled')} {kind} {result.get('uuid')} for DOI {key}")
             return {**result, 'doi': key}
         _run_item(filename, frame, [index], key, kind, fallback, journal, operation)
 

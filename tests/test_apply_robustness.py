@@ -8,6 +8,11 @@ import requests
 import apply_updates_to_pure as apply
 
 
+@pytest.fixture(autouse=True)
+def pure_doi_lookup(monkeypatch):
+    monkeypatch.setattr(apply.session, 'post', Mock(return_value=Mock(status_code=200, json=lambda: {'count': 0, 'items': []})))
+
+
 def rows():
     return pd.DataFrame([{'to_be_updated': 'X', 'updated': '', 'doi': '10.1/a'},
                          {'to_be_updated': 'X', 'updated': '', 'doi': '10.1/b'}])
@@ -116,8 +121,20 @@ def test_accepted_create_with_null_response_is_unknown(tmp_path, monkeypatch):
 ])
 def test_person_updates_persist_before_next_failure(tmp_path, monkeypatch, processor, key, payload):
     monkeypatch.setenv('BTP_OUTPUT_DIR', str(tmp_path))
-    frame = pd.DataFrame([{'to_be_updated': 'X', 'updated': '', key: 'p', 'new_id': 'id', 'new_value': 'abc'},
-                          {'to_be_updated': 'X', 'updated': '', key: 'q', 'new_id': 'id', 'new_value': 'def'}])
+    from config import ORCID_ID_URI, ROR_ID_URI
+    uri = ROR_ID_URI if key == 'uuid' else ORCID_ID_URI
+    records = []
+    row_values = []
+    for identity, value in [('p', 'abc'), ('q', 'def')]:
+        record = {'uuid': identity, 'version': '1', 'identifiers': []}
+        if key != 'PURE_UUID_PERS':
+            record['identifiers'] = [{'id': value, 'type': {'uri': uri}, 'typeDiscriminator': 'ClassifiedId'}]
+        records.append(record)
+        row_values.append({'to_be_updated': 'X', 'updated': '', key: identity, 'new_id': 'id', 'new_value': value,
+                           'uri': uri, 'ORCID': value, 'ror': value, 'needs_ror_update': True})
+    frame = pd.DataFrame(row_values)
+    monkeypatch.setattr(apply.session, 'get', lambda url, **kwargs: Mock(status_code=200, json=lambda: {'uuid': url.rsplit('/', 1)[-1], 'version': '1', 'identifiers': []}))
+    monkeypatch.setattr(apply, 'load_external_org_countries', lambda *args: [])
     def put(url, **kwargs):
         if url.endswith('/p'):
             return Mock(status_code=200, text='')
@@ -127,7 +144,7 @@ def test_person_updates_persist_before_next_failure(tmp_path, monkeypatch, proce
     monkeypatch.setattr(apply.session, 'put', put)
     from workflow_http import FatalWorkflowError
     with pytest.raises(FatalWorkflowError):
-        processor('update.csv', frame, [None, payload, {'uuid': 'q'}])
+        processor('update.csv', frame, [None, *records])
 
 
 def test_fulltext_failure_reason_is_durable(tmp_path, monkeypatch):
