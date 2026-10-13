@@ -48,7 +48,8 @@ def _truth(value):
 def _merge_leaves(before, desired, current, path='address'):
     if before == desired:
         return deepcopy(current) if current is not _MISSING else _MISSING
-    if isinstance(desired, dict) and (isinstance(before, dict) or before is _MISSING or before is None):
+    # A country is one classification, not independent URI/translated-name leaves.
+    if not path.endswith('.country') and isinstance(desired, dict) and (isinstance(before, dict) or before is _MISSING or before is None):
         if current is not _MISSING and current is not None and not isinstance(current, dict):
             raise ValueError(f'{path} changed since review')
         original = before if isinstance(before, dict) else {}
@@ -78,6 +79,15 @@ def merge_reviewed_changes(kind, source, selected_rows, current, *, countries=No
     kind = {'internal_person': 'internal_persons', 'external_person': 'external_persons', 'external_org': 'external_orgs'}.get(kind, kind)
     if kind not in {'internal_persons', 'external_persons', 'external_orgs'}:
         raise ValueError(f'Unsupported merge kind: {kind}')
+    if kind == 'internal_persons':
+        from enrich_internal_persons_with_ids import _normalize_identifier
+        intentions = {
+            _normalize_identifier(_text(row.get('new_value')))
+            for row in selected_rows
+            if _text(row.get('new_id')) == 'orcid' and _text(row.get('new_value'))
+        }
+        if len(intentions) > 1:
+            raise ValueError('Conflicting selected ORCID intentions for this record')
     uuid = source.get('uuid')
     if not uuid or current.get('uuid') != uuid:
         raise ValueError('Fresh Pure UUID does not match source UUID')
@@ -124,6 +134,9 @@ def merge_reviewed_changes(kind, source, selected_rows, current, *, countries=No
             if identifier_type == 'orcid':
                 if not value:
                     raise ValueError('Reviewed ORCID is empty')
+                value = _normalize_identifier(value)
+                if not value:
+                    raise ValueError('Reviewed ORCID is empty after normalization')
                 if payload.get('orcid') == value:
                     continue
                 if current.get('orcid') != baseline.get('orcid'):

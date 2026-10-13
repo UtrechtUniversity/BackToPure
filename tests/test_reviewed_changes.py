@@ -209,3 +209,27 @@ def test_external_person_harvest_captures_baseline_before_first_of_repeated_matc
     for record in exported:
         assert record['_btp_apply_baseline'] == {'uuid': 'u', 'version': '1', 'identifiers': []}
         assert len(record['identifiers']) == 2
+
+
+def test_conflicting_selected_orcid_intentions_rejected_before_merge():
+    source = {'uuid': 'u', 'version': '1', 'orcid': None}
+    rows = [{'new_id': 'orcid', 'new_value': 'first'}, {'new_id': 'orcid', 'new_value': 'second'}]
+    with pytest.raises(ValueError, match='Conflicting.*ORCID'):
+        merge_reviewed_changes('internal_persons', source, rows, source)
+
+
+def test_country_classification_is_atomic_against_concurrent_country_addition():
+    source, current = org_source()
+    source['address']['country'] = {'uri': '/nl', 'term': {'en_GB': 'Netherlands'}}
+    current['address']['country'] = {'term': {'nl_NL': 'Duitsland'}}
+    with pytest.raises(ValueError, match='country.*changed'):
+        merge_reviewed_changes('external_orgs', source, [{'needs_geo_update': True}], current, countries=[source['address']['country']])
+
+
+def test_internal_orcid_normalized_value_retains_original_review_key():
+    source = {'uuid': 'u', 'version': '1', 'orcid': None}
+    value = 'https://orcid.org/0000-0000-0000-1234?lang=en#details'
+    payload, owned = merge_reviewed_changes('internal_persons', source, [{'new_id': 'orcid', 'new_value': value}], source)
+    assert payload['orcid'] == '0000-0000-0000-1234'
+    assert owned[0]['item_key'] == f'u|orcid|{value}'
+    assert owned[0]['new_value'] == {'value': '0000-0000-0000-1234'}
