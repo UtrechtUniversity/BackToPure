@@ -32,7 +32,7 @@ output/
 output.csv
 
 # Frontend local build tooling
-frontend/node_modules/
+frontend/node_modules
 frontend/dist/
 *.tsbuildinfo
 frontend/vite.config.js
