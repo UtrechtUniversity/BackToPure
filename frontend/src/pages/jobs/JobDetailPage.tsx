@@ -232,8 +232,9 @@ export function JobDetailPage() {
   const [reviewFilter, setReviewFilter] = useState<"all" | "selected" | "unselected">("all");
   const [reviewDraft, setReviewDraft] = useState<ReviewDraft | null>(null);
   const [reviewScrollTop, setReviewScrollTop] = useState(0);
-  const [jobActionInProgress, setJobActionInProgress] = useState(false);
+  const [jobActionJobId, setJobActionJobId] = useState<string | null>(null);
   const { jobId = "" } = useParams();
+  const jobActionInProgress = jobActionJobId === jobId;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const deferredReviewSearch = useDeferredValue(reviewSearch);
@@ -361,110 +362,100 @@ export function JobDetailPage() {
     }
   }, [jobId, jobQuery.data?.status, jobQuery.data?.rollback_job_id, rollbackJobQuery.data?.status, queryClient]);
 
+  const refreshJobQueries = (originJobId: string, ...names: string[]) => Promise.all(
+    names.map((name) => queryClient.invalidateQueries({ queryKey: [name, originJobId], exact: true })),
+  );
+  const finishJobAction = (_data: unknown, _error: unknown, originJobId: string) => {
+    setJobActionJobId((current) => current === originJobId ? null : current);
+  };
+
   const runJobMutation = useMutation({
-    mutationFn: () => api.runJob(jobId),
-    onError: () => {
-      void jobQuery.refetch();
-      void logsQuery.refetch();
+    mutationFn: (originJobId: string) => api.runJob(originJobId),
+    onError: (_error, originJobId) => {
+      void refreshJobQueries(originJobId, "job", "jobLogs");
     },
-    onMutate: () => {
-      setJobActionInProgress(true);
-      void logsQuery.refetch();
+    onMutate: (originJobId) => {
+      setJobActionJobId(originJobId);
+      void refreshJobQueries(originJobId, "jobLogs");
     },
-    onSuccess: (acceptedJob) => {
-      queryClient.setQueryData(["job", jobId], acceptedJob);
-      void jobQuery.refetch();
-      void logsQuery.refetch();
-      void artifactsQuery.refetch();
+    onSuccess: (acceptedJob, originJobId) => {
+      queryClient.setQueryData(["job", originJobId], acceptedJob);
+      void refreshJobQueries(originJobId, "job", "jobLogs", "jobArtifacts");
     },
-    onSettled: () => {
-      setJobActionInProgress(false);
-    },
+    onSettled: finishJobAction,
   });
 
   const applyJobMutation = useMutation({
-    mutationFn: () => api.applyJob(jobId),
-    onError: () => {
-      void jobQuery.refetch();
-      void logsQuery.refetch();
-      void changeSetQuery.refetch();
+    mutationFn: (originJobId: string) => api.applyJob(originJobId),
+    onError: (_error, originJobId) => {
+      void refreshJobQueries(originJobId, "job", "jobLogs", "jobChangeSet");
     },
-    onMutate: () => {
-      setJobActionInProgress(true);
-      void logsQuery.refetch();
+    onMutate: (originJobId) => {
+      setJobActionJobId(originJobId);
+      void refreshJobQueries(originJobId, "jobLogs");
     },
-    onSuccess: (acceptedJob) => {
-      queryClient.setQueryData(["job", jobId], acceptedJob);
-      void jobQuery.refetch();
-      void logsQuery.refetch();
-      void artifactsQuery.refetch();
-      void changeSetQuery.refetch();
+    onSuccess: (acceptedJob, originJobId) => {
+      queryClient.setQueryData(["job", originJobId], acceptedJob);
+      void refreshJobQueries(originJobId, "job", "jobLogs", "jobArtifacts", "jobChangeSet");
     },
-    onSettled: () => {
-      setJobActionInProgress(false);
-    },
+    onSettled: finishJobAction,
   });
 
   const rollbackJobMutation = useMutation({
-    mutationFn: () => api.rollbackJob(jobId),
-    onMutate: () => {
-      setJobActionInProgress(true);
-      void rollbackLogsQuery.refetch();
+    mutationFn: (originJobId: string) => api.rollbackJob(originJobId),
+    onMutate: (originJobId) => {
+      setJobActionJobId(originJobId);
+      const rollbackId = queryClient.getQueryData<JobRecord>(["job", originJobId])?.rollback_job_id;
+      if (rollbackId) {
+        void refreshJobQueries(rollbackId, "rollbackJobLogs");
+      }
     },
-    onSuccess: (acceptedJob) => {
+    onSuccess: (acceptedJob, originJobId) => {
       queryClient.setQueryData(["rollbackJob", acceptedJob.id], acceptedJob);
-      queryClient.setQueryData<JobRecord>(["job", jobId], (source) =>
+      queryClient.setQueryData<JobRecord>(["job", originJobId], (source) =>
         source ? { ...source, rollback_job_id: acceptedJob.id } : source);
-      void jobQuery.refetch();
-      void logsQuery.refetch();
-      void changeSetQuery.refetch();
-      void rollbackJobQuery.refetch();
-      void rollbackLogsQuery.refetch();
+      void refreshJobQueries(originJobId, "job", "jobLogs", "jobChangeSet");
+      void refreshJobQueries(acceptedJob.id, "rollbackJob", "rollbackJobLogs");
     },
-    onSettled: () => {
-      setJobActionInProgress(false);
-    },
+    onSettled: finishJobAction,
   });
 
   const cancelJobMutation = useMutation({
-    mutationFn: () => api.cancelJob(jobId),
-    onSuccess: () => {
-      setJobActionInProgress(false);
-      void jobQuery.refetch();
-      void logsQuery.refetch();
-      void artifactsQuery.refetch();
-      void changeSetQuery.refetch();
+    mutationFn: (originJobId: string) => api.cancelJob(originJobId),
+    onSuccess: (_cancelledJob, originJobId) => {
+      setJobActionJobId((current) => current === originJobId ? null : current);
+      void refreshJobQueries(originJobId, "job", "jobLogs", "jobArtifacts", "jobChangeSet");
     },
   });
 
   const deleteJobMutation = useMutation({
-    mutationFn: () => api.deleteJob(jobId),
-    onSuccess: () => {
-      void navigate("/");
+    mutationFn: (originJobId: string) => api.deleteJob(originJobId),
+    onSuccess: (_deletedJob, originJobId) => {
+      if (jobId === originJobId) {
+        void navigate("/");
+      }
     },
   });
 
   const saveReviewTableMutation = useMutation({
-    mutationFn: () => {
-      if (!reviewTable) {
-        throw new Error("No review table is loaded.");
-      }
-      const updates = getReviewSelectionUpdates(reviewTable, reviewSelection);
-      return api.updateJobReviewTable(jobId, {
-        fileName: reviewTable.fileName,
-        expectedRowCount: reviewTable.rowCount,
-        expectedRevision: reviewTable.revision,
-        updates,
-      });
-    },
-    onSuccess: async (savedTable) => {
-      setReviewDraft((current) => current?.jobId === jobId
-        ? { jobId, table: savedTable, selection: getReviewSelection(savedTable), stale: false }
+    mutationFn: ({ jobId: originJobId, input }: { jobId: string; input: Parameters<typeof api.updateJobReviewTable>[1] }) =>
+      api.updateJobReviewTable(originJobId, input),
+    onSuccess: async (savedTable, { jobId: originJobId }) => {
+      // MutationObserver callbacks can change after navigation; variables retain the request origin.
+      setReviewDraft((current) => current?.jobId === originJobId
+        ? { jobId: originJobId, table: savedTable, selection: getReviewSelection(savedTable), stale: false }
         : current);
-      queryClient.setQueryData(["jobReviewTable", jobId], savedTable);
-      await Promise.all([reviewTableQuery.refetch(), jobQuery.refetch()]);
+      queryClient.setQueryData(["jobReviewTable", originJobId], savedTable);
+      await refreshJobQueries(originJobId, "jobReviewTable", "job");
     },
   });
+
+  const runIsPending = runJobMutation.isPending && runJobMutation.variables === jobId;
+  const applyIsPending = applyJobMutation.isPending && applyJobMutation.variables === jobId;
+  const rollbackIsPending = rollbackJobMutation.isPending && rollbackJobMutation.variables === jobId;
+  const cancelIsPending = cancelJobMutation.isPending && cancelJobMutation.variables === jobId;
+  const deleteIsPending = deleteJobMutation.isPending && deleteJobMutation.variables === jobId;
+  const saveIsPending = saveReviewTableMutation.isPending && saveReviewTableMutation.variables?.jobId === jobId;
 
   useEffect(() => {
     setReviewScrollTop(0);
@@ -562,7 +553,7 @@ export function JobDetailPage() {
     : 0;
   const reviewSelectionUpdates = getReviewSelectionUpdates(reviewTable, reviewSelection);
   const reviewHasUnsavedChanges = reviewSelectionUpdates.length > 0;
-  const selectionLocked = job.status !== "needs_review" || saveReviewTableMutation.isPending || applyJobMutation.isPending;
+  const selectionLocked = job.status !== "needs_review" || saveIsPending || applyIsPending;
   const applyErrorLines = logContent
     .split("\n")
     .filter(
@@ -680,34 +671,34 @@ export function JobDetailPage() {
               <button
                 className="primary-action"
                 type="button"
-                onClick={() => runJobMutation.mutate()}
-                disabled={runJobMutation.isPending}
+                onClick={() => runJobMutation.mutate(jobId)}
+                disabled={runIsPending}
               >
-                {runJobMutation.isPending ? "Running..." : "Run Job"}
+                {runIsPending ? "Running..." : "Run Job"}
               </button>
             ) : null}
             {job.status === "needs_review" && job.canApply ? (
               <button
                 className={`primary-action ${!hasSelectedUpdates ? "disabled-action" : ""}`}
                 type="button"
-                onClick={() => applyJobMutation.mutate()}
-                disabled={applyJobMutation.isPending || !hasSelectedUpdates || reviewHasUnsavedChanges || reviewIsStale || saveReviewTableMutation.isPending}
+                onClick={() => applyJobMutation.mutate(jobId)}
+                disabled={applyIsPending || !hasSelectedUpdates || reviewHasUnsavedChanges || reviewIsStale || saveIsPending}
               >
-                {applyJobMutation.isPending ? "Applying..." : "Apply Updates"}
+                {applyIsPending ? "Applying..." : "Apply Updates"}
               </button>
             ) : null}
             {canRollback ? (
               <button
                 className="secondary-action"
                 type="button"
-                onClick={() => rollbackJobMutation.mutate()}
-                disabled={rollbackJobMutation.isPending}
+                onClick={() => rollbackJobMutation.mutate(jobId)}
+                disabled={rollbackIsPending}
               >
-                {rollbackJobMutation.isPending ? "Rolling Back..." : "Rollback Updates"}
+                {rollbackIsPending ? "Rolling Back..." : "Rollback Updates"}
               </button>
             ) : null}
             {applyDisabledReason ? <p className="hint">{applyDisabledReason}</p> : null}
-            {rollbackJobMutation.isError ? (
+            {rollbackJobMutation.isError && rollbackJobMutation.variables === jobId ? (
               <p className="error-banner">
                 {rollbackJobMutation.error instanceof ApiError
                   ? rollbackJobMutation.error.message
@@ -723,12 +714,12 @@ export function JobDetailPage() {
                 type="button"
                 onClick={() => {
                   if (window.confirm("Stop this running job?")) {
-                    cancelJobMutation.mutate();
+                    cancelJobMutation.mutate(jobId);
                   }
                 }}
-                disabled={cancelJobMutation.isPending}
+                disabled={cancelIsPending}
               >
-                {cancelJobMutation.isPending ? "Stopping..." : "Stop Job"}
+                {cancelIsPending ? "Stopping..." : "Stop Job"}
               </button>
             ) : null}
             {canDelete ? (
@@ -737,36 +728,36 @@ export function JobDetailPage() {
                 type="button"
                 onClick={() => {
                   if (window.confirm("Delete this tracked job and its stored log?")) {
-                    deleteJobMutation.mutate();
+                    deleteJobMutation.mutate(jobId);
                   }
                 }}
-                disabled={deleteJobMutation.isPending}
+                disabled={deleteIsPending}
               >
-                {deleteJobMutation.isPending ? "Deleting..." : "Delete Job"}
+                {deleteIsPending ? "Deleting..." : "Delete Job"}
               </button>
             ) : null}
-            {runJobMutation.isError && job.status === "queued" ? (
+            {runJobMutation.isError && runJobMutation.variables === jobId && job.status === "queued" ? (
               <p className="error-banner">
                 {runJobMutation.error instanceof ApiError
                   ? runJobMutation.error.message
                   : "Could not confirm whether the job started. Refresh its status before trying again."}
               </p>
             ) : null}
-            {applyJobMutation.isError && job.status === "needs_review" ? (
+            {applyJobMutation.isError && applyJobMutation.variables === jobId && job.status === "needs_review" ? (
               <p className="error-banner">
                 {applyJobMutation.error instanceof ApiError
                   ? applyJobMutation.error.message
                   : "Could not confirm the apply result. Refresh the job status before trying again."}
               </p>
             ) : null}
-            {deleteJobMutation.isError ? (
+            {deleteJobMutation.isError && deleteJobMutation.variables === jobId ? (
               <p className="error-banner">
                 {deleteJobMutation.error instanceof ApiError
                   ? deleteJobMutation.error.message
                   : "Could not delete the job."}
               </p>
             ) : null}
-            {cancelJobMutation.isError ? (
+            {cancelJobMutation.isError && cancelJobMutation.variables === jobId ? (
               <p className="error-banner">
                 {cancelJobMutation.error instanceof ApiError
                   ? cancelJobMutation.error.message
@@ -979,10 +970,22 @@ export function JobDetailPage() {
                     <button
                       className="primary-action"
                       type="button"
-                      onClick={() => saveReviewTableMutation.mutate()}
+                      onClick={() => {
+                        if (reviewTable) {
+                          saveReviewTableMutation.mutate({
+                            jobId,
+                            input: {
+                              fileName: reviewTable.fileName,
+                              expectedRowCount: reviewTable.rowCount,
+                              expectedRevision: reviewTable.revision,
+                              updates: reviewSelectionUpdates,
+                            },
+                          });
+                        }
+                      }}
                       disabled={!reviewHasUnsavedChanges || selectionLocked}
                     >
-                      {saveReviewTableMutation.isPending ? "Saving..." : "Save Review"}
+                      {saveIsPending ? "Saving..." : "Save Review"}
                     </button>
                     <button
                       className="secondary-action"
@@ -1006,7 +1009,7 @@ export function JobDetailPage() {
                         The review file changed while you had unsaved edits. Your selection is preserved. Reset Changes loads the latest review; saving checks your original revision.
                       </p>
                     ) : null}
-                    {saveReviewTableMutation.isError ? (
+                    {saveReviewTableMutation.isError && saveReviewTableMutation.variables?.jobId === jobId ? (
                       <p className="error-banner">
                         {saveReviewTableMutation.error instanceof ApiError
                           ? saveReviewTableMutation.error.message

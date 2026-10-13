@@ -1794,4 +1794,100 @@ describe("JobDetailPage", () => {
     expect(screen.getByRole("button", { name: "Apply Updates" })).toBeEnabled();
   });
 
+  it("keeps a deferred save bound to its origin after the mounted route switches jobs", async () => {
+    setupDeferredEvidence();
+    let sourceTable = makeReviewTable();
+    const otherTable = {
+      ...makeReviewTable(), jobId: "job-002", fileName: "other.csv", revision: "other-v1",
+      rows: [{ _rowIndex: 0, to_be_updated: "", updated: "", FULL_NAME: "Other person" }], rowCount: 1,
+    };
+    mockedApi.getJob.mockImplementation(async id => makeJob({ id, status: "needs_review", canApply: true }));
+    mockedApi.getJobReviewTable.mockImplementation(async id => id === "job-001" ? sourceTable : otherTable);
+    mockedApi.getJobChangeSet.mockResolvedValue(null);
+    let finishSave!: (table: JobReviewTableResponse) => void;
+    mockedApi.updateJobReviewTable.mockImplementation(() => new Promise(resolve => { finishSave = resolve; }));
+    const { queryClient, router } = renderDetail();
+    await userEvent.click(await screen.findByRole("checkbox", { name: "Select row 2" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save Review" }));
+    await act(async () => { await router.navigate("/jobs/job-002"); });
+    await screen.findByText("Other person");
+    expect(screen.getByRole("checkbox", { name: "Select row 1" })).toBeEnabled();
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select row 1" }));
+    // Hold any wrongly redirected refresh open so it cannot hide an incorrect cache write.
+    mockedApi.getJobReviewTable.mockImplementation(id => id === "job-001" ? Promise.resolve(sourceTable) : new Promise(() => {}));
+    sourceTable = { ...sourceTable, revision: "saved-a", rows: sourceTable.rows.map(row => ({ ...row, to_be_updated: "X" })) };
+    await act(async () => { finishSave(sourceTable); });
+    await waitFor(() => expect(queryClient.getQueryData(["jobReviewTable", "job-001"])).toEqual(sourceTable));
+    expect(queryClient.getQueryData(["jobReviewTable", "job-002"])).toEqual(otherTable);
+    expect(screen.getByText("Other person")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Select row 1" })).toBeChecked();
+    expect(screen.getByRole("button", { name: "Apply Updates" })).toBeDisabled();
+    expect(screen.getByText("1 row changed")).toBeInTheDocument();
+    expect(screen.queryByText("Alpha")).not.toBeInTheDocument();
+    expect(mockedApi.getJobReviewTable.mock.calls.filter(([id]) => id === "job-002")).toHaveLength(1);
+  });
+
+  it.each(["run", "apply", "rollback"] as const)("keeps deferred %s acceptance bound to its origin after navigation", async (action) => {
+    setupDeferredEvidence();
+    const origin = makeJob({ status: action === "run" ? "queued" : action === "apply" ? "needs_review" : "completed", canApply: action === "apply" });
+    const otherJob = makeJob({ id: "job-002", status: "needs_review", canApply: true });
+    mockedApi.getJob.mockImplementation(async id => id === "job-001" ? origin : otherJob);
+    mockedApi.getJobReviewTable.mockImplementation(async id => ({ ...makeReviewTable(), jobId: id }));
+    mockedApi.getJobChangeSet.mockResolvedValue(action === "rollback" ? makeAppliedChangeSet() : null);
+    let finishAction!: (job: JobRecord) => void;
+    const actionApi = action === "run" ? mockedApi.runJob : action === "apply" ? mockedApi.applyJob : mockedApi.rollbackJob;
+    actionApi.mockImplementation(() => new Promise(resolve => { finishAction = resolve; }));
+    const { queryClient, router } = renderDetail();
+    const button = action === "run" ? "Run Job" : action === "apply" ? "Apply Updates" : "Rollback Updates";
+    await userEvent.click(await screen.findByRole("button", { name: button }));
+    await act(async () => { await router.navigate("/jobs/job-002"); });
+    await screen.findByRole("heading", { name: "job-002" });
+    const accepted = makeJob({ id: action === "rollback" ? "rollback-001" : "job-001", status: action === "apply" ? "applying" : "queued" });
+    // Keep any acceptance-time refresh open; the accepted cache evidence must be assigned correctly.
+    mockedApi.getJob.mockImplementation(() => new Promise(() => {}));
+    await act(async () => { finishAction(accepted); });
+    await waitFor(() => {
+      const cachedOrigin = queryClient.getQueryData<JobRecord>(["job", "job-001"]);
+      if (action === "rollback") {
+        expect(cachedOrigin?.rollback_job_id).toBe("rollback-001");
+      } else {
+        expect(cachedOrigin).toEqual(accepted);
+      }
+    });
+    expect(queryClient.getQueryData(["job", "job-002"])).toEqual(otherJob);
+    expect(screen.getByRole("heading", { name: "job-002" })).toBeInTheDocument();
+    expect(actionApi).toHaveBeenCalledWith("job-001");
+    expect(mockedApi.getJob.mock.calls.filter(([id]) => id === "job-002")).toHaveLength(1);
+  });
+
+  it.each(["cancel", "delete"] as const)("keeps deferred %s completion scoped to its origin after navigation", async (action) => {
+    setupDeferredEvidence();
+    const origin = makeJob({ status: action === "cancel" ? "running" : "completed" });
+    const otherJob = makeJob({ id: "job-002", status: "needs_review", canApply: true });
+    mockedApi.getJob.mockImplementation(async id => id === "job-001" ? origin : otherJob);
+    mockedApi.getJobChangeSet.mockResolvedValue(null);
+    let finishAction!: () => void;
+    if (action === "cancel") {
+      mockedApi.cancelJob.mockImplementation(() => new Promise(resolve => {
+        finishAction = () => resolve({ ...origin, status: "failed" });
+      }));
+    } else {
+      mockedApi.deleteJob.mockImplementation(() => new Promise(resolve => { finishAction = resolve; }));
+    }
+    const { queryClient, router } = renderWithRouter({
+      routes: [{ path: "/", element: <div>Home</div> }, { path: "/jobs/:jobId", element: <JobDetailPage /> }],
+      initialEntries: ["/jobs/job-001"],
+    });
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    await userEvent.click(await screen.findByRole("button", { name: action === "cancel" ? "Stop Job" : "Delete Job" }));
+    confirm.mockRestore();
+    await act(async () => { await router.navigate("/jobs/job-002"); });
+    await screen.findByRole("heading", { name: "job-002" });
+    await act(async () => { finishAction(); });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Delete Job" })).toBeEnabled());
+    expect(router.state.location.pathname).toBe("/jobs/job-002");
+    expect(queryClient.getQueryData(["job", "job-002"])).toEqual(otherJob);
+    expect(mockedApi.getJob.mock.calls.filter(([id]) => id === "job-002")).toHaveLength(1);
+  });
+
 });
