@@ -62,7 +62,8 @@ from config import (
 )
 from typing import List, Dict
 import sys
-from urllib.parse import quote
+from urllib.parse import quote, unquote, urlsplit
+from uuid import UUID
 from openalex_cache import fetch_openalex_works_cached
 logger = setup_logging('btp', level=logging.INFO)
 datetimetoday = datetime.now().strftime('%Y%m%d')
@@ -162,14 +163,47 @@ def extract_researchoutput_doi(output):
 
 
 def extract_researchoutput_pure_uuid(output):
-    for key in ("pure_uuid", "uuid", "PURE_UUID", "pureId"):
-        value = output.get(key)
-        if value:
-            return str(value).strip()
+    def valid_uuid(value):
+        if not isinstance(value, str):
+            return None
+        try:
+            return str(UUID(value.strip()))
+        except ValueError:
+            return None
 
-    url_other = output.get("url_other", "")
-    if "publications/" in url_other:
-        return url_other.rstrip("/").split("/")[-1]
+    for key in ("pure_uuid", "uuid", "PURE_UUID", "pureId"):
+        if value := valid_uuid(output.get(key)):
+            return value
+
+    name = str(output.get("name") or "").lower()
+    if name == "pure_id_resout":
+        if value := valid_uuid(output.get("value")):
+            return value
+    node_key = str(output.get("_key") or "")
+    key_value, _, key_type = node_key.rpartition("|")
+    if key_type.lower() == "pure_id_resout" and name in ("", "pure_id_resout"):
+        if value := valid_uuid(key_value):
+            return value
+
+    for field in ("url_other", "url_main"):
+        urls = output.get(field)
+        if isinstance(urls, str):
+            urls = [urls]
+        if not isinstance(urls, list):
+            continue
+        for url in urls:
+            if not isinstance(url, str):
+                continue
+            try:
+                parts = urlsplit(url)
+            except ValueError:
+                continue
+            if parts.scheme not in ("http", "https") or not parts.netloc:
+                continue
+            path_parts = parts.path.rstrip("/").split("/")
+            if len(path_parts) >= 2 and path_parts[-2].lower() == "publications":
+                if value := valid_uuid(unquote(path_parts[-1])):
+                    return value
     return None
 
 def get_ro_from_openalex(item, openalexworks):
