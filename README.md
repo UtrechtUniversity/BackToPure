@@ -24,7 +24,7 @@ Every workflow runs in two phases. A job first produces a review file listing wh
 ### System Requirements
 - **OS:** Windows, macOS, or Linux
 - **Python:** Version 3.10 or higher
-- **Node.js:** Version 20 or higher for the React frontend
+- **Node.js:** 22.12+ on the Node 22 line, Node 24, or Node 26+ for frontend build/tests (`frontend/.nvmrc` selects Node 22)
 - **Virtual Environment:** Recommended to use `venv`
 
 ### Dependencies

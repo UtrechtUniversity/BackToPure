@@ -3,6 +3,10 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   base: "/app/",
+  build: {
+    // Preserve the Vite 5 browser target while updating the build toolchain.
+    target: ["es2020", "edge88", "firefox78", "chrome87", "safari14"],
+  },
   plugins: [react()],
   server: {
     port: 5173,

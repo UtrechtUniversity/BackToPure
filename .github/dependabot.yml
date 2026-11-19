@@ -1,0 +1,39 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Amsterdam
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      frontend-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+      frontend-toolchain:
+        applies-to: version-updates
+        patterns:
+          - vite
+          - vite-node
+          - vitest
+          - "@vitest/*"
+          - "@vitejs/*"
+      frontend-routing:
+        applies-to: version-updates
+        patterns:
+          - react-router
+          - react-router-dom
+          - "@remix-run/router"
+      frontend-routine:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+        patterns:
+          - "*"
