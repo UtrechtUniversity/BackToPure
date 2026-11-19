@@ -252,7 +252,7 @@ class InternalPersonsTests(unittest.TestCase):
     def test_external_select_persons_researchoutput_does_not_treat_uuid_as_doi(self, mock_select_outputs, mock_roots):
         mock_roots.return_value = [{"_key": "person-root-1"}]
         mock_select_outputs.return_value = [
-            {"_key": "455d8d8f-fe6a-4e66-ac51-39b354bb1754", "url_other": "https://pure.example/publications/pure-1"},
+            {"_key": "455d8d8f-fe6a-4e66-ac51-39b354bb1754", "url_other": "https://pure.example/publications/455d8d8f-fe6a-4e66-ac51-39b354bb1754"},
             {"_key": "10.1234/alpha|journal article"},
             {"_key": "not-a-doi"},
         ]
@@ -263,7 +263,7 @@ class InternalPersonsTests(unittest.TestCase):
             [
                 {
                     "doi": None,
-                    "pure_uuid": "pure-1",
+                    "pure_uuid": "455d8d8f-fe6a-4e66-ac51-39b354bb1754",
                     "researchoutput_key": "455d8d8f-fe6a-4e66-ac51-39b354bb1754",
                 },
                 {

@@ -28,6 +28,7 @@
 # ########################################################################
 
 
+from ricgraph_client import read_results
 import logging
 import argparse
 import openalex_utils
@@ -82,9 +83,9 @@ def fetch_personroots(faculty_key):
     try:
         params = {'key': faculty_key, 'max_nr_items': '0'}
         url = RIC_BASE_URL + 'get_all_personroot_nodes'
-        response = request_read(session.get, url, params=params, timeout=30)
+        ricgraph_payload = {"results": read_results(session.get, url, params=params, timeout=30)}
 
-        return records(json_object(response), "results")
+        return records(ricgraph_payload, "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching person-roots for faculty {faculty_key}: {e}")
         return []
@@ -96,8 +97,8 @@ def select_faculties(faculty_choice):
         'value': FACULTY_PREFIX,
     }
     url = RIC_BASE_URL + 'organization/search'
-    response = request_read(session.get, url, params=params, timeout=30)
-    data = json_object(response)
+    ricgraph_payload = {"results": read_results(session.get, url, params=params, timeout=30)}
+    data = ricgraph_payload
 
     return resolve_faculty_selection(
         faculty_choice,
@@ -150,9 +151,9 @@ def select_researchoutputs(persoonroot_key):
     try:
         params = {'key': persoonroot_key, 'category_want': 'journal article'}
         url = RIC_BASE_URL + 'get_all_neighbor_nodes'
-        response = request_read(session.get, url, params=params, timeout=30)
+        ricgraph_payload = {"results": read_results(session.get, url, params=params, timeout=30)}
 
-        return records(json_object(response), "results")
+        return records(ricgraph_payload, "results")
 
     except requests.RequestException as e:
         logger.error(f"Error fetching person IDs for person-root {persoonroot_key}: {e}")
