@@ -17,6 +17,23 @@ PrimaryOrganizationPrefixes = your primary organization key prefix:
 ExcludedOrganizationPrefixes = your excluded organization key prefix:
 ```
 
+## Cursor pagination in Ricgraph 3.5
+
+Collection reads use `ricgraph_client.read_results`. Ricgraph 3.5 returns up to
+`page_size` results per response (default 50, supported maximum 250) and provides
+`meta.next_cursor` when more results remain. Keep the same route and search filters
+and send that opaque value as the next request's `cursor`. Stop when the cursor is
+empty or absent. `max_nr_items=0` alone does not retrieve all pages in 3.5.
+
+The shared reader preserves legacy parameters for older servers and accepts
+single-page legacy responses without cursor metadata. A failed later page,
+invalid results, repeated cursor/page or empty intermediate page stops the harvest
+with an explicit error rather than returning a successful partial collection.
+
+This applies to faculty selection, person roots, person identifiers, author and
+organization neighbours, and advanced searches used by imports. The
+`person/enrich` endpoint may still return a single legacy-style response.
+
 ## Required Routes
 
 ### `GET organization/search`
@@ -99,6 +116,12 @@ Important fields used by different workflows:
 - `value`: display value such as organization or person name.
 - `url_other`: Pure URL or Pure UUID-bearing URL when present.
 - `_source`: source labels used by some import workflows.
+
+In Ricgraph 3.5, `url_main` and `url_other` are lists. Earlier releases used
+strings. Both representations are supported when resolving Pure output UUIDs.
+For a typed `PURE_ID_RESOUT` node without a DOI, its UUID is available in `value`
+or in the typed `_key`; its Pure publication URL may be in `url_main`. UUID values
+are validated, and unrelated identifiers or non-publication URLs are ignored.
 
 ### `GET advanced_search`
 
@@ -215,6 +238,24 @@ Do not use public Explorer for:
 - Any apply workflow unless the operator has verified that the public Ricgraph data belongs to the same Pure target.
 
 ## Smoke Check
+
+Opt-in live checks compare production readers with an independent cursor
+traversal, using current API counts rather than fixed totals. All requests are
+restricted to GET/HEAD on the selected Ricgraph API origin and path, including
+redirects. No updates to Pure are sent.
+
+```bash
+BTP_RICGRAPH_TEST_BASE_URL=http://127.0.0.1:3030/api/ \
+BTP_RICGRAPH_TEST_ORG_VALUE='uu faculty' \
+BTP_RICGRAPH_TEST_OUTPUT_KEY='10.1038/s41586-025-09962-4|doi' \
+  .venv/bin/python -m pytest tests/test_ricgraph_smoke.py -q
+```
+
+`BTP_RICGRAPH_TEST_FACULTY_KEY` can select a particular faculty. The output key is
+optional, but should identify a publication with more than 50 authors to exercise
+the old truncation bug. Graph-specific book checks skip when suitable source data
+is absent. Live checks include a selector bounded to one real author and verify
+that a DOI-less book survives research-output selection.
 
 Run the doctor command for local checks and optional API reachability:
 

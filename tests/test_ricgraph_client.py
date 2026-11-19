@@ -60,6 +60,56 @@ def test_workflow_reads_every_cursor_page(monkeypatch, module_name, function_nam
     assert calls[0][1].get("category_want") == calls[1][1].get("category_want")
 
 
+@pytest.mark.parametrize("module_name,transport,args", [
+    ("btp", "requests", ("all",)),
+    ("enrich_pure_external_persons", "session", ("all",)),
+    ("enrich_pure_external_orgs", "requests", ("all", "yes")),
+    ("update_datasets_from_ricgraph", "session", ("all",)),
+    ("update_researchoutput_from_ricgraph", "session", ("all",)),
+])
+def test_faculty_selectors_include_faculties_after_first_page(monkeypatch, module_name, transport, args):
+    import config
+
+    monkeypatch.setattr(config, "PRIMARY_ORGANIZATION_PREFIXES", ("uu faculty:",))
+    monkeypatch.setattr(config, "EXCLUDED_ORGANIZATION_PREFIXES", ("uu faculty research:",))
+    module = importlib.import_module(module_name)
+    send, _ = sender([
+        response({"results": [{"_key": "uu faculty: first|organization_name"}], "meta": {"next_cursor": "more"}}),
+        response({"results": [{"_key": "uu faculty: last|organization_name"}], "meta": {"next_cursor": ""}}),
+    ])
+    monkeypatch.setattr(getattr(module, transport), "get", send)
+    assert module.select_faculties(*args) == ["uu faculty: first|organization_name", "uu faculty: last|organization_name"]
+
+
+def test_faculty_api_facade_includes_later_pages(monkeypatch):
+    import config
+    from app import routes
+
+    monkeypatch.setattr(config, "PRIMARY_ORGANIZATION_PREFIXES", ("uu faculty:",))
+    monkeypatch.setattr(config, "EXCLUDED_ORGANIZATION_PREFIXES", ("uu faculty research:",))
+    send, _ = sender([
+        response({"results": [{"_key": "uu faculty: first|organization_name", "value": "First"}], "meta": {"next_cursor": "more"}}),
+        response({"results": [{"_key": "uu faculty: last|organization_name", "value": "Last"}], "meta": {"next_cursor": ""}}),
+    ])
+    monkeypatch.setattr(routes.requests, "get", send)
+    assert routes._fetch_faculties() == [
+        {"value": "uu faculty: first|organization_name", "label": "First"},
+        {"value": "uu faculty: last|organization_name", "label": "Last"},
+    ]
+
+
+def test_dataset_all_mode_includes_later_advanced_search_pages(monkeypatch):
+    import update_datasets_from_ricgraph as datasets
+
+    send, calls = sender([
+        response({"results": [{"_key": "10.1234/first|doi"}], "meta": {"next_cursor": "more"}}),
+        response({"results": [{"_key": "10.1234/last|doi"}], "meta": {"next_cursor": ""}}),
+    ])
+    monkeypatch.setattr(datasets.session, "get", send)
+    assert datasets.select_persons_datasets([], "all") == ["10.1234/first", "10.1234/last"]
+    assert calls[1][1]["category"] == "data set"
+
+
 def reader():
     try:
         from ricgraph_client import read_results
