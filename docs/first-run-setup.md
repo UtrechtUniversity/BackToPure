@@ -6,7 +6,7 @@ Audience: operators or developers setting up BackToPure for a new Pure/Ricgraph 
 ## What You Need
 
 - Python 3.10 or newer.
-- Node.js 20 or newer.
+- Node.js 22.12+ on the Node 22 line, Node 24, or Node 26+ (`frontend/.nvmrc` selects Node 22).
 - Access to a Pure API tenant and API key.
 - Access to a Ricgraph API endpoint with data that matches the target Pure tenant.
 - The Pure source/type URIs used by your tenant for ORCID, OpenAlex, ROR, research output roles, dataset roles, and dataset types.
