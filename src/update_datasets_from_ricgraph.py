@@ -35,6 +35,7 @@
 # Copyright (c) 2024 David Grote Beverborg
 # ########################################################################
 
+from ricgraph_client import read_results
 import logging
 import requests
 from workflow_http import FatalWorkflowError, request_read, json_object, records
@@ -81,9 +82,9 @@ def fetch_personroots(faculty_key):
     try:
         params = {'key': faculty_key, 'max_nr_items': '0'}
         url = RIC_BASE_URL + 'get_all_personroot_nodes'
-        response = request_read(session.get, url, params=params, timeout=30)
+        ricgraph_payload = {"results": read_results(session.get, url, params=params, timeout=30)}
 
-        return records(json_object(response), "results")
+        return records(ricgraph_payload, "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching person-roots for faculty {faculty_key}: {e}")
         return []
@@ -97,9 +98,9 @@ def select_faculties(faculty_choice):
     }
     try:
         url = RIC_BASE_URL + 'organization/search'
-        response = request_read(session.get, url, params=params, timeout=30)
+        ricgraph_payload = {"results": read_results(session.get, url, params=params, timeout=30)}
 
-        data = json_object(response)
+        data = ricgraph_payload
     except requests.RequestException as e:
         logger.error(f"Error fetching faculties from Ricgraph: {e}")
         return []
@@ -120,8 +121,8 @@ def select_persons_datasets(faculties, faculty_choice):
         }
         data = []
         url = RIC_BASE_URL + 'advanced_search'
-        response = request_read(session.get, url, params=params, timeout=30)
-        datasets = records(json_object(response), "results")
+        ricgraph_payload = {"results": read_results(session.get, url, params=params, timeout=30)}
+        datasets = records(ricgraph_payload, "results")
         for set in datasets:
             if not isinstance(set.get("_key"), str) or not set["_key"]:
                 logger.warning("Skipping invalid Ricgraph record without a key")
@@ -154,9 +155,9 @@ def select_datasets(persoonroot_key):
     try:
         params = {'key': persoonroot_key, 'category_want': 'data set'}
         url = RIC_BASE_URL + 'get_all_neighbor_nodes'
-        response = request_read(session.get, url, params=params, timeout=30)
+        ricgraph_payload = {"results": read_results(session.get, url, params=params, timeout=30)}
 
-        return records(json_object(response), "results")
+        return records(ricgraph_payload, "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching person IDs for person-root {persoonroot_key}: {e}")
         return []

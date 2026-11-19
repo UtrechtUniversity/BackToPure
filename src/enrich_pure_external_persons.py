@@ -30,6 +30,7 @@
 # ########################################################################
 
 
+from ricgraph_client import read_results
 import re
 from reviewed_changes import capture_apply_baseline
 import os
@@ -560,9 +561,9 @@ def select_faculties(faculty_choice):
     }
     url = RIC_BASE_URL + 'organization/search'
     try:
-        response = request_read(session.get, url, params=params, timeout=REQUEST_TIMEOUT)
+        ricgraph_payload = {"results": read_results(session.get, url, params=params, timeout=REQUEST_TIMEOUT)}
 
-        data = json_object(response)
+        data = ricgraph_payload
     except requests.RequestException as e:
         logger.error(f"Error fetching faculties from Ricgraph: {e}")
         return []
@@ -577,9 +578,9 @@ def fetch_personroots(faculty_key):
     try:
         params = {'key': faculty_key, 'max_nr_items': '0'}
         url = RIC_BASE_URL + 'get_all_personroot_nodes'
-        response = request_read(session.get, url, params=params, timeout=REQUEST_TIMEOUT)
+        ricgraph_payload = {"results": read_results(session.get, url, params=params, timeout=REQUEST_TIMEOUT)}
 
-        return records(json_object(response), "results")
+        return records(ricgraph_payload, "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching person-roots for faculty {faculty_key}: {e}")
         return []
@@ -594,9 +595,9 @@ def select_researchoutputs(persoonroot_key):
         try:
             params = {'key': persoonroot_key, 'category_want': categorie}
             url = RIC_BASE_URL + 'get_all_neighbor_nodes'
-            response = request_read(session.get, url, params=params, timeout=REQUEST_TIMEOUT)
+            ricgraph_payload = {"results": read_results(session.get, url, params=params, timeout=REQUEST_TIMEOUT)}
 
-            results = records(json_object(response), "results")
+            results = records(ricgraph_payload, "results")
             all_results.extend(results)
         except requests.RequestException as e:
             logger.error(f"Error fetching person IDs for person-root {persoonroot_key}: {e}")
@@ -702,9 +703,9 @@ def fetch_ricgraph_persons_for_output(researchoutput_key):
             'category_want': 'person',
             'max_nr_items': '0',
         }
-        response = request_read(session.get, RIC_BASE_URL + 'get_all_neighbor_nodes', params=params, timeout=REQUEST_TIMEOUT)
+        ricgraph_payload = {"results": read_results(session.get, RIC_BASE_URL + 'get_all_neighbor_nodes', params=params, timeout=REQUEST_TIMEOUT)}
 
-        return records(json_object(response), "results")
+        return records(ricgraph_payload, "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching Ricgraph person neighbors for output {researchoutput_key}: {e}")
         return []
@@ -720,9 +721,9 @@ def fetch_ricgraph_person_details(person_key):
             'category_want': 'person',
             'max_nr_items': '0',
         }
-        response = request_read(session.get, RIC_BASE_URL + 'get_all_neighbor_nodes', params=params, timeout=REQUEST_TIMEOUT)
+        ricgraph_payload = {"results": read_results(session.get, RIC_BASE_URL + 'get_all_neighbor_nodes', params=params, timeout=REQUEST_TIMEOUT)}
 
-        return records(json_object(response), "results")
+        return records(ricgraph_payload, "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching Ricgraph person details for {person_key}: {e}")
         return []

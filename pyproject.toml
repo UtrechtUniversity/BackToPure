@@ -62,6 +62,7 @@ py-modules = [
   "update_datasets_from_ricgraph",
   "update_researchoutput_from_ricgraph",
   "workflow_http",
+  "ricgraph_client",
   "pure_countries",
   "yoda_utils",
 ]

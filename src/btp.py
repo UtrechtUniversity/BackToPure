@@ -1,3 +1,4 @@
+from ricgraph_client import read_results
 import logging
 import sys
 from logging_config import setup_logging
@@ -55,14 +56,14 @@ def select_faculties(faculty_choice):
     url = f"{RIC_BASE_URL}organization/search"
 
     try:
-        response = request_read(requests.get, url, params=params)
+        ricgraph_payload = {"results": read_results(requests.get, url, params=params)}
 
     except requests.RequestException as e:
         logger.error(f"Error conntecting to Ricgraph: {e}")
         raise SystemExit()
 
     try:
-        data = json_object(response)
+        data = ricgraph_payload
     except ValueError:
         raise SystemExit("Failed to decode JSON from response.")
 

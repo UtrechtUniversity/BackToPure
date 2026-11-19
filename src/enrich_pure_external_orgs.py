@@ -28,6 +28,7 @@
 # Copyright (c) 2024 David Grote Beverborg
 # ########################################################################
 
+from ricgraph_client import read_results
 import time
 import copy
 from reviewed_changes import capture_apply_baseline
@@ -769,8 +770,8 @@ def select_faculties(faculty_choice, test_choice):
         'value': FACULTY_PREFIX,
     }
     url = RIC_BASE_URL + 'organization/search'
-    response = request_read(requests.get, url, params=params)
-    data = json_object(response)
+    ricgraph_payload = {"results": read_results(requests.get, url, params=params)}
+    data = ricgraph_payload
     return resolve_faculty_selection(
         faculty_choice,
         [item.get('_key') for item in records(data, "results")],
@@ -781,9 +782,9 @@ def fetch_personroots(faculty_key):
     try:
         params = {'key': faculty_key, 'max_nr_items': '0'}
         url = RIC_BASE_URL + 'get_all_personroot_nodes'
-        response = request_read(requests.get, url, params=params)
+        ricgraph_payload = {"results": read_results(requests.get, url, params=params)}
         # response.raise_for_status()
-        return records(json_object(response), "results")
+        return records(ricgraph_payload, "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching person-roots for faculty {faculty_key}: {e}")
         return []
@@ -792,9 +793,9 @@ def fetch_personroots(faculty_key):
 def fetch_ricgraph_organization_neighbors(personroot_key):
     try:
         params = {'key': personroot_key, 'category_want': 'organization', 'max_nr_items': '0'}
-        response = request_read(session.get, RIC_BASE_URL + 'get_all_neighbor_nodes', params=params, timeout=30)
+        ricgraph_payload = {"results": read_results(session.get, RIC_BASE_URL + 'get_all_neighbor_nodes', params=params, timeout=30)}
 
-        return records(json_object(response), "results")
+        return records(ricgraph_payload, "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching organization neighbors for person-root {personroot_key}: {e}")
         return []
@@ -805,11 +806,11 @@ def select_researchoutputs(persoonroot_key):
     try:
         params = {'key': persoonroot_key, 'category_want': 'journal article'}
         url = RIC_BASE_URL + 'get_all_neighbor_nodes'
-        response = request_read(requests.get, url, params=params)
+        ricgraph_payload = {"results": read_results(requests.get, url, params=params)}
 
         # response.raise_for_status()
 
-        return records(json_object(response), "results")
+        return records(ricgraph_payload, "results")
 
     except requests.RequestException as e:
         logger.error(f"Error fetching person IDs for person-root {persoonroot_key}: {e}")

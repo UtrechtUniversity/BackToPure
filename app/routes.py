@@ -6,6 +6,8 @@ from flask import current_app, jsonify, redirect, request, send_from_directory
 
 from app.services import JobService
 from config import FACULTY_PREFIX, RIC_BASE_URL, is_primary_organization_key
+from ricgraph_client import read_results
+from workflow_http import FatalWorkflowError
 
 # Paths served by the old Flask UI. The UI is gone, but people have these
 # bookmarked, so they redirect to the React app rather than 404.
@@ -54,9 +56,9 @@ def _frontend_dist_dir() -> Path:
 def _fetch_faculties():
     params = {'value': FACULTY_PREFIX}
     url = RIC_BASE_URL + 'organization/search'
-    response = requests.get(url, params=params)
-    response.raise_for_status()
-    data = response.json()
+    ricgraph_payload = {"results": read_results(requests.get, url, params=params)}
+    
+    data = ricgraph_payload
     faculties = data.get("results", [])
     return [
         {'value': f['_key'], 'label': f['value']}
@@ -101,7 +103,7 @@ def init_app(app):
     def api_get_faculties():
         try:
             faculty_options = _fetch_faculties()
-        except requests.exceptions.RequestException:
+        except (requests.exceptions.RequestException, FatalWorkflowError):
             return jsonify({'error': 'Cannot connect to ricgraph'}), 500
 
         return jsonify({'items': faculty_options})

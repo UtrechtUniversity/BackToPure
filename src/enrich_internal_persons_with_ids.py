@@ -30,6 +30,7 @@
 # ########################################################################
 
 
+from ricgraph_client import read_results
 import argparse
 import logging
 import requests
@@ -112,9 +113,9 @@ def fetch_personroots(faculty_key):
     try:
         params = {'key': faculty_key, 'max_nr_items': '0'}
         url = RIC_BASE_URL + 'get_all_personroot_nodes'
-        response = request_read(requests.get, url, params=params, timeout=REQUEST_TIMEOUT)
+        ricgraph_payload = {"results": read_results(requests.get, url, params=params, timeout=REQUEST_TIMEOUT)}
 
-        return records(json_object(response), "results")
+        return records(ricgraph_payload, "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching person-roots for faculty {faculty_key}: {e}")
         return []
@@ -123,9 +124,9 @@ def fetch_person_ids(persoonroot_key):
     try:
         params = {'key': persoonroot_key, 'category_want': 'person'}
         url = RIC_BASE_URL + 'get_all_neighbor_nodes'
-        response = request_read(requests.get, url, params=params, timeout=REQUEST_TIMEOUT)
+        ricgraph_payload = {"results": read_results(requests.get, url, params=params, timeout=REQUEST_TIMEOUT)}
 
-        return records(json_object(response), "results")
+        return records(ricgraph_payload, "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching person IDs for person-root {persoonroot_key}: {e}")
         return []
@@ -134,9 +135,9 @@ def checkenrichement(persoonroot_key):
     try:
         params = {'key': persoonroot_key, 'source_system': 'pure uu', 'max_nr_items': 0}
         url = RIC_BASE_URL + 'person/enrich'
-        response = request_read(requests.get, url, params=params, timeout=REQUEST_TIMEOUT)
+        ricgraph_payload = {"results": read_results(requests.get, url, params=params, timeout=REQUEST_TIMEOUT)}
 
-        return records(json_object(response), "results")
+        return records(ricgraph_payload, "results")
     except requests.RequestException as e:
         logger.error(f"Error fetching person IDs for person-root {persoonroot_key}: {e}")
         return []
