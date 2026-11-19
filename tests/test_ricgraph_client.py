@@ -137,6 +137,21 @@ def test_reader_accepts_legacy_single_page(payload):
     assert len(calls) == 1
 
 
+def test_reader_requests_unlimited_results_from_legacy_api_without_cursors():
+    # Ricgraph 3.3 caps the default at 250 and has no next_cursor. Zero means
+    # unlimited; page_size is ignored by that API.
+    available = [{"_key": str(index)} for index in range(300)]
+
+    def legacy_server(url, *, params, **kwargs):
+        maximum = int(params.get("max_nr_items", 250))
+        rows = available if maximum == 0 else available[:min(maximum, 250)]
+        return response({"results": rows, "meta": {"count": len(rows), "page": 1, "per_page": len(rows), "status": 200}})
+
+    rows = reader()(legacy_server, "http://localhost/api/advanced_search", params={"category": "journal article"})
+
+    assert len(rows) == 300
+
+
 @pytest.mark.parametrize("payload", [
     {"results": [None]},
     {"results": "invalid"},

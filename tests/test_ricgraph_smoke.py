@@ -65,6 +65,7 @@ def test_ricgraph_person_enrich_route_shape():
 def complete_reference(route, params):
     """Independent traversal with a different page size from the production reader."""
     params = dict(params, page_size=137)
+    params.setdefault("max_nr_items", "0")
     result = []
     cursors = set()
     while True:
@@ -116,6 +117,17 @@ def test_live_large_publication_author_read_is_complete(monkeypatch):
     assert len(reference) > 50, "Choose a publication that exercises the old first-page limit"
     monkeypatch.setattr(external, "RIC_BASE_URL", BASE_URL.rstrip("/") + "/")
     actual = external.fetch_ricgraph_persons_for_output(key)
+    assert len(actual) == len(reference)
+    assert {row["_key"] for row in actual} == {row["_key"] for row in reference}
+
+
+def test_live_advanced_search_exceeds_legacy_default_cap():
+    from ricgraph_client import read_results
+
+    reference = complete_reference("advanced_search", {"category": "journal article"})
+    if len(reference) <= 250:
+        pytest.skip("Select a graph with more than 250 journal articles for the legacy-cap regression")
+    actual = read_results(requests.get, urljoin(BASE_URL, "advanced_search"), params={"category": "journal article"})
     assert len(actual) == len(reference)
     assert {row["_key"] for row in actual} == {row["_key"] for row in reference}
 

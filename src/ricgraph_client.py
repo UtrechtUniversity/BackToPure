@@ -15,6 +15,7 @@ def read_results(send, url, *, params=None, timeout=30):
     3.5 uses page_size and an opaque cursor returned in response metadata.
     """
     query = dict(params or {})
+    query.setdefault("max_nr_items", "0")
     query.setdefault("page_size", 250)
     seen_cursors = set()
     if query.get("cursor"):

@@ -30,6 +30,18 @@ single-page legacy responses without cursor metadata. A failed later page,
 invalid results, repeated cursor/page or empty intermediate page stops the harvest
 with an explicit error rather than returning a successful partial collection.
 
+For legacy APIs such as Ricgraph 3.3, the reader defaults `max_nr_items` to `0`
+(unlimited). Those APIs default to at most 250 results and do not provide a cursor,
+so accepting their response shape alone is insufficient to guarantee completeness.
+Explicit caller limits remain respected. Collection callers should use `0` rather
+than a large positive value, because the legacy API clamps positive values to 250.
+
+Compatibility was live-checked on 2026-11-19 against actual Ricgraph API source
+versions 3.2, 3.3 and 3.5: each passed all ten opt-in tests. The older APIs ran as
+temporary read-only instances against the same 2026 graph; the production 3.5
+service and graph were not downgraded. Legacy string-URL representations are also
+covered by the offline UUID tests. Other versions have not been separately tested.
+
 This applies to faculty selection, person roots, person identifiers, author and
 organization neighbours, and advanced searches used by imports. The
 `person/enrich` endpoint may still return a single legacy-style response.
